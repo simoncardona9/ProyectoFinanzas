@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { authRepository } from "@/modules/auth/auth.repository";
 import { requireAuth } from "@/shared/auth/request-auth";
+import { FeatureNavigationCard } from "@/shared/ui/navigation";
 import { LogoutButton } from "./logout-button";
 export default async function SettingsPage() {
   let context;
@@ -26,12 +27,23 @@ export default async function SettingsPage() {
           </div>
           <LogoutButton />
         </div>
-        <a
-          className="mt-5 inline-block text-sm font-medium text-emerald-700"
-          href="/structure"
-        >
-          Administrar cuentas y categorías
-        </a>
+        <nav aria-label="Secciones principales" className="mt-6 grid gap-3">
+          <FeatureNavigationCard
+            href="/structure"
+            title="Cuentas y categorías"
+            description="Crear y organizar la estructura financiera del hogar."
+          />
+          <FeatureNavigationCard
+            href="/transactions"
+            title="Registro de movimientos"
+            description="Registrar y revisar ingresos y egresos pagados."
+          />
+          <FeatureNavigationCard
+            href="/obligations"
+            title="Obligaciones y proyección"
+            description="Planificar vencimientos y revisar el efectivo proyectado."
+          />
+        </nav>
         <dl className="mt-8 divide-y divide-zinc-200">
           <div className="py-3">
             <dt className="text-sm text-zinc-500">Usuario</dt>

@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
 import { transactionRepository } from "@/modules/transactions/transaction.repository";
 import { requireAuth } from "@/shared/auth/request-auth";
+import { BackLink } from "@/shared/ui/navigation";
 import { TransactionActions } from "./transaction-actions";
 
 function formatMoney(amountMinor: number, currency: string) {
@@ -38,12 +38,7 @@ export default async function TransactionDetailPage({
   return (
     <main className="flex flex-1 justify-center bg-zinc-50 p-6">
       <section className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-sm ring-1 ring-zinc-950/5">
-        <Link
-          className="text-sm text-emerald-700 underline"
-          href="/transactions"
-        >
-          Volver al registro
-        </Link>
+        <BackLink href="/transactions">Volver al registro</BackLink>
         <p className="mt-5 text-sm font-semibold text-emerald-700">
           Movimiento pagado
         </p>

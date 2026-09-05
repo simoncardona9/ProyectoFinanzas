@@ -1,21 +1,19 @@
 import {
-  createPaidTransactionSchema,
-  listPaidTransactionsSchema,
-} from "@/modules/transactions/transaction.schemas";
-import { transactionRepository } from "@/modules/transactions/transaction.repository";
-import { createPaidTransaction } from "@/modules/transactions/transaction.service";
+  createObligationSchema,
+  listObligationsSchema,
+} from "@/modules/obligations/obligation.schemas";
+import { obligationRepository } from "@/modules/obligations/obligation.repository";
+import { createObligation } from "@/modules/obligations/obligation.service";
 import { requireRole } from "@/shared/auth/authorization";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { errorResponse } from "@/shared/errors/api-error";
-
-export const runtime = "nodejs";
 
 function validation(fields: Record<string, string[] | undefined>) {
   return Response.json(
     {
       error: {
         code: "VALIDATION_ERROR",
-        message: "Invalid transaction.",
+        message: "Invalid obligation.",
         fields,
       },
     },
@@ -26,12 +24,12 @@ function validation(fields: Record<string, string[] | undefined>) {
 export async function GET(request: Request) {
   try {
     const context = await requireAuth();
-    const input = listPaidTransactionsSchema.safeParse(
+    const input = listObligationsSchema.safeParse(
       Object.fromEntries(new URL(request.url).searchParams),
     );
     if (!input.success) return validation(input.error.flatten().fieldErrors);
     return Response.json({
-      data: await transactionRepository.listPaid(
+      data: await obligationRepository.list(
         context.membership.householdId,
         input.data,
       ),
@@ -45,10 +43,10 @@ export async function POST(request: Request) {
   try {
     const context = await requireAuth();
     requireRole(context, ["owner", "editor"]);
-    const input = createPaidTransactionSchema.safeParse(await request.json());
+    const input = createObligationSchema.safeParse(await request.json());
     if (!input.success) return validation(input.error.flatten().fieldErrors);
     return Response.json(
-      { data: await createPaidTransaction(context, input.data) },
+      { data: await createObligation(context, input.data) },
       { status: 201 },
     );
   } catch (error) {

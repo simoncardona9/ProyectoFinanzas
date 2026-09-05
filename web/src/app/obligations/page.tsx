@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/shared/auth/request-auth";
-import { TransactionRegister } from "./transaction-register";
+import { ObligationManager } from "./obligation-manager";
 
-export default async function TransactionsPage() {
+export default async function ObligationsPage() {
   let context;
   try {
     context = await requireAuth();
@@ -15,12 +15,14 @@ export default async function TransactionsPage() {
         <p className="text-sm font-semibold text-emerald-700">
           Finanzas Familiares
         </p>
-        <h1 className="mt-2 text-2xl font-semibold">Registro de movimientos</h1>
+        <h1 className="mt-2 text-2xl font-semibold">
+          Obligaciones y proyección mensual
+        </h1>
         <p className="mt-2 text-zinc-600">
-          Registra ingresos y egresos pagados en pesos uruguayos o dólares
-          estadounidenses.
+          Las obligaciones pendientes afectan la proyección, pero no el efectivo
+          actual hasta registrar un pago.
         </p>
-        <TransactionRegister
+        <ObligationManager
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />
       </section>

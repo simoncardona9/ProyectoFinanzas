@@ -4,6 +4,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -141,6 +142,7 @@ export const auditLogs = pgTable("audit_logs", {
   action: text("action").notNull(),
   entityType: text("entity_type").notNull(),
   entityId: uuid("entity_id"),
+  details: jsonb("details").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -236,11 +238,60 @@ export const transactions = pgTable(
       .defaultNow(),
   },
   (table) => [
-    index("transactions_household_date_idx").on(
-      table.householdId,
-      table.date,
-    ),
+    index("transactions_household_date_idx").on(table.householdId, table.date),
     index("transactions_account_date_idx").on(table.accountId, table.date),
     index("transactions_category_date_idx").on(table.categoryId, table.date),
+  ],
+);
+
+export const obligations = pgTable(
+  "obligations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    originalAmountMinor: integer("original_amount_minor").notNull(),
+    remainingAmountMinor: integer("remaining_amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    dueDate: date("due_date").notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "restrict" }),
+    classification: categoryClassification("classification").notNull(),
+    status: transactionStatus("status").notNull().default("pending"),
+    recurrenceRule: text("recurrence_rule"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("obligations_household_due_idx").on(table.householdId, table.dueDate),
+    index("obligations_category_idx").on(table.categoryId),
+  ],
+);
+
+export const obligationPayments = pgTable(
+  "obligation_payments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    obligationId: uuid("obligation_id")
+      .notNull()
+      .references(() => obligations.id, { onDelete: "restrict" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("obligation_payments_transaction_unique").on(table.transactionId),
+    index("obligation_payments_obligation_idx").on(table.obligationId),
   ],
 );

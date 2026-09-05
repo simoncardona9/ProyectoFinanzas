@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeDashboardCurrencies } from "./dashboard.rules";
+import { lowBufferAlerts, mergeDashboardCurrencies } from "./dashboard.rules";
 
 describe("dashboard currency rollup", () => {
   it("keeps currencies separate while joining forecast and income totals", () => {
@@ -44,5 +44,13 @@ describe("dashboard currency rollup", () => {
         oneOffIncomeMinor: 1_000,
       },
     ]);
+  });
+  it("alerts only for the default currency below its configured buffer", () => {
+    const summaries = mergeDashboardCurrencies([
+      { currency: "UYU", currentCashMinor: 500 },
+      { currency: "USD", currentCashMinor: 10 },
+    ]);
+    expect(lowBufferAlerts(summaries, "UYU", 600)).toHaveLength(1);
+    expect(lowBufferAlerts(summaries, "USD", 10)).toHaveLength(0);
   });
 });

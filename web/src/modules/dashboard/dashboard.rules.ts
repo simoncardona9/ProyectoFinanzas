@@ -38,3 +38,15 @@ export function mergeDashboardCurrencies(inputs: CurrencyDashboardInput[]) {
     }))
     .sort((a, b) => a.currency.localeCompare(b.currency));
 }
+
+export function lowBufferAlerts(
+  summaries: ReturnType<typeof mergeDashboardCurrencies>,
+  defaultCurrency: string,
+  lowBufferMinor: number,
+) {
+  return summaries.filter(
+    (summary) =>
+      summary.currency === defaultCurrency &&
+      summary.projectedCashMinor < lowBufferMinor,
+  );
+}

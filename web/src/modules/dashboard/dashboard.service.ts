@@ -1,7 +1,7 @@
 import { obligationRepository } from "@/modules/obligations/obligation.repository";
 import { authRepository } from "@/modules/auth/auth.repository";
 import { dashboardRepository } from "./dashboard.repository";
-import { mergeDashboardCurrencies } from "./dashboard.rules";
+import { lowBufferAlerts, mergeDashboardCurrencies } from "./dashboard.rules";
 
 export async function getDashboard(householdId: string, period: string) {
   const [year, month] = period.split("-").map(Number);
@@ -22,10 +22,10 @@ export async function getDashboard(householdId: string, period: string) {
     period,
     currencies,
     alerts: household
-      ? currencies.filter(
-          (item) =>
-            item.currency === household.defaultCurrency &&
-            item.projectedCashMinor < household.lowBufferMinor,
+      ? lowBufferAlerts(
+          currencies,
+          household.defaultCurrency,
+          household.lowBufferMinor,
         )
       : [],
     capabilities: {

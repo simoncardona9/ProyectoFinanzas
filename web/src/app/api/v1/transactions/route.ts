@@ -1,9 +1,13 @@
 import {
+  createExpectedIncomeSchema,
   createPaidTransactionSchema,
   listPaidTransactionsSchema,
 } from "@/modules/transactions/transaction.schemas";
 import { transactionRepository } from "@/modules/transactions/transaction.repository";
-import { createPaidTransaction } from "@/modules/transactions/transaction.service";
+import {
+  createExpectedIncome,
+  createPaidTransaction,
+} from "@/modules/transactions/transaction.service";
 import { requireRole } from "@/shared/auth/authorization";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { errorResponse } from "@/shared/errors/api-error";
@@ -45,10 +49,18 @@ export async function POST(request: Request) {
   try {
     const context = await requireAuth();
     requireRole(context, ["owner", "editor"]);
-    const input = createPaidTransactionSchema.safeParse(await request.json());
-    if (!input.success) return validation(input.error.flatten().fieldErrors);
+    const body = await request.json();
+    const paidInput = createPaidTransactionSchema.safeParse(body);
+    if (paidInput.success)
+      return Response.json(
+        { data: await createPaidTransaction(context, paidInput.data) },
+        { status: 201 },
+      );
+    const expectedInput = createExpectedIncomeSchema.safeParse(body);
+    if (!expectedInput.success)
+      return validation(expectedInput.error.flatten().fieldErrors);
     return Response.json(
-      { data: await createPaidTransaction(context, input.data) },
+      { data: await createExpectedIncome(context, expectedInput.data) },
       { status: 201 },
     );
   } catch (error) {

@@ -74,6 +74,7 @@ export const households = pgTable("households", {
   name: text("name").notNull(),
   locale: text("locale").notNull().default("es-UY"),
   defaultCurrency: text("default_currency").notNull().default("UYU"),
+  lowBufferMinor: integer("low_buffer_minor").notNull().default(0),
   timeZone: text("time_zone").notNull().default("America/Montevideo"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

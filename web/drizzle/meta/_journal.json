@@ -43,6 +43,13 @@
       "when": 1788581403676,
       "tag": "0005_condemned_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788586392167,
+      "tag": "0006_pretty_emma_frost",
+      "breakpoints": true
     }
   ]
 }

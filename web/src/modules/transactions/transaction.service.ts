@@ -1,6 +1,7 @@
 import type { AuthContext } from "@/shared/auth/auth.types";
 import { structureRepository } from "@/modules/structure/structure.repository";
 import type {
+  CreateExpectedIncome,
   CreatePaidTransaction,
   UpdatePaidTransaction,
 } from "./transaction.schemas";
@@ -48,6 +49,34 @@ export async function createPaidTransaction(
     ),
   ]);
   return { transaction, accountBalanceMinor, categoryTotalMinor };
+}
+
+export async function createExpectedIncome(
+  context: AuthContext,
+  values: CreateExpectedIncome,
+) {
+  const [account, category] = await Promise.all([
+    structureRepository.findAccount(
+      context.membership.householdId,
+      values.accountId,
+    ),
+    structureRepository.findCategory(
+      context.membership.householdId,
+      values.categoryId,
+    ),
+  ]);
+  validatePaidTransactionReferences(
+    "income",
+    values.currency,
+    account,
+    category,
+  );
+  const transaction = await transactionRepository.createPaid(
+    context.membership.householdId,
+    context.user.id,
+    values,
+  );
+  return { transaction };
 }
 
 function auditSnapshot(transaction: {

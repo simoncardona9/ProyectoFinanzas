@@ -104,7 +104,7 @@ financial items remain Step 4 obligation behavior.
 - Added the audit metadata migration `0004_futuristic_zarda.sql` and correction
   and void controls to the transaction detail screen.
 
-## Step 4 — Obligations and monthly forecast — implemented, pending local acceptance
+## Step 4 — Obligations and monthly forecast — completed
 
 - Added household-scoped obligations with amount remaining, due date, expense
   category, fixed/variable/discretionary classification, planned/pending/paid/
@@ -123,3 +123,37 @@ financial items remain Step 4 obligation behavior.
 - Added migration `0005_condemned_deathbird.sql` for obligations and payment
   links, and unit coverage for category, payment, deferral, and lifecycle
   validation.
+
+### Verification and local acceptance
+
+- Reviewed the Step 4 acceptance flow with synthetic data: pending obligations
+  affect the monthly forecast without changing paid cash; payments create the
+  linked paid expense and reduce the remaining amount; and deferrals require a
+  strictly later due date and move the obligation into its new period.
+- Confirmed that UYU and USD forecast totals are returned separately.
+- `pnpm test` — passed (21 tests).
+- `pnpm exec tsc --noEmit` — passed.
+- `pnpm lint` — passed.
+- `pnpm db:check` — passed.
+- `pnpm build` — passed.
+
+## Step 5 — First usable dashboard — in progress
+
+### Slice 5.1 — Traceable cash and monthly projection
+
+- Added a protected monthly dashboard at `/dashboard` and `GET /api/v1/dashboard`.
+- The dashboard shows, separately for UYU and USD, current spendable cash,
+  paid income for the selected month, one-off income, pending obligations, and
+  projected cash. Its inputs remain traceable through links to the transaction
+  and obligation registers.
+- Expected income and tax reserves are intentionally presented as unavailable:
+  those data models do not exist yet, so displaying a zero would be misleading.
+- Added a unit test that verifies dashboard rollups never combine currencies.
+
+### Slice 5.2 — Expected income
+
+- Added planned and pending income records with an active, currency-matched
+  destination account and active income category.
+- Added an editor/owner dashboard form to register expected income. Expected
+  income changes the projection only; it does not affect current cash until it
+  is recorded as paid.

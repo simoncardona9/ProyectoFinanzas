@@ -11,6 +11,7 @@ This folder is the product and technical foundation for replacing the family-fin
 | [business-rules.md](business-rules.md) | Financial calculation and classification rules. |
 | [architecture.md](architecture.md) | Proposed cloud architecture and engineering principles. |
 | [technology-stack.md](technology-stack.md) | Chosen languages, frameworks, and database direction. |
+| [docker-compose.md](docker-compose.md) | Local Docker Compose runtime, GitHub checkout, and operations. |
 | [backend-api-design.md](backend-api-design.md) | Backend layers, controllers, endpoint contracts, and module boundaries. |
 | [api-documentation-policy.md](api-documentation-policy.md) | Mandatory endpoint-contract and OpenAPI documentation rules. |
 | [logging-error-policy.md](logging-error-policy.md) | Structured logging, error handling, and domain-exception rules. |

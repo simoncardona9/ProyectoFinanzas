@@ -18,10 +18,16 @@ Use **TypeScript** for the user interface and API, and **PostgreSQL with SQL** f
 | Validation | Zod | Provides shared, type-safe validation for API inputs and forms. |
 | Unit and component testing | Vitest with React Testing Library | Fast unit tests plus accessible UI-behavior tests. |
 | Formatting | Prettier | Gives the repository one consistent formatting command. |
+| Local runtime | Docker Compose | Reproducible local application, migration, and PostgreSQL services. |
 
 ## Why this is the right starting point
 
 The first release does not need multiple backend services or different programming languages. A single Node.js application written in TypeScript, with PostgreSQL, keeps development, testing, deployment, and agent coordination simpler. It also allows the UI and server to share precise types for transactions, currencies, dates, roles, and financial statuses.
+
+Docker Compose is the supported way to run the complete local stack on a new
+machine. It builds the source checked out from GitHub and runs the application,
+Drizzle migrations, and PostgreSQL in separate containers. See
+[docker-compose.md](docker-compose.md) for the operating procedure.
 
 TypeScript adds static type checking to JavaScript, which is valuable for financial workflows where a typo in an amount, status, or field name should be caught before execution. [TypeScript documentation](https://www.typescriptlang.org/glossary/) explains its static type system.
 

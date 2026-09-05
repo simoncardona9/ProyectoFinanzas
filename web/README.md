@@ -9,6 +9,11 @@ financieros reales.
 - Node.js 20 o posterior y pnpm.
 - PostgreSQL local.
 
+Para ejecutar todo el sistema mediante Docker Compose, consulta la guía de
+Docker en el [README principal](../README.md#ejecutar-con-docker). Esa opción
+crea los contenedores de Node.js y PostgreSQL, por lo que no requiere instalar
+estas dependencias en el equipo anfitrión.
+
 ## Configuración local
 
 1. Instalar dependencias con `pnpm install`.

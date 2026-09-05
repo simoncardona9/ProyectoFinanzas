@@ -84,10 +84,30 @@ reconciliación previstas por el proceso estén aprobadas.
 Docker Compose inicia la aplicación actual, PostgreSQL 17 y aplica las
 migraciones de Drizzle antes de arrancar la web.
 
-1. Copia `.env.docker.example` a `.env` y sustituye `POSTGRES_PASSWORD` por
-   una contraseña local segura.
-2. Ejecuta `docker compose up --build`.
-3. Abre `http://localhost:3000`. La verificación de disponibilidad está en
+En Windows instala Docker Desktop y habilita su motor WSL 2. No hace falta
+instalar Node.js, pnpm ni PostgreSQL: los contenedores los incluyen.
+
+1. Abre PowerShell y descarga el código desde GitHub:
+
+   ```powershell
+   git clone https://github.com/simoncardona9/ProyectoFinanzas.git
+   cd ProyectoFinanzas
+   ```
+
+   Si el repositorio es privado, inicia sesión en GitHub cuando Git lo solicite.
+2. Copia `.env.docker.example` a `.env` y sustituye `POSTGRES_PASSWORD` por
+   una contraseña local segura. En PowerShell:
+
+   ```powershell
+   Copy-Item .env.docker.example .env
+   notepad .env
+   ```
+3. Construye e inicia el sistema:
+
+   ```powershell
+   docker compose up --build
+   ```
+4. Abre `http://localhost:3000`. La verificación de disponibilidad está en
    `http://localhost:3000/api/health`.
 
 Los datos de PostgreSQL se conservan en el volumen `postgres_data`. Para

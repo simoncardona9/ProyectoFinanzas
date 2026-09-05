@@ -12,6 +12,18 @@ Record these items for the selected month:
 - A planned income of `20000` minor units.
 - A pending obligation of `25000` minor units.
 
+## UI entry notes
+
+In **Registro de movimientos**, choose **Ingreso** and enable **Ingreso único**
+when recording the `10000`-minor-unit one-off income. The checkbox is shown
+only for income and may also be changed from that transaction's correction
+screen. A one-off income remains a paid income and therefore affects both
+spendable cash and collected income; the dashboard also reports it separately.
+
+The transaction and obligation forms accept display-currency amounts, not raw
+minor units: enter `100,00` to represent `10000` minor units in a two-decimal
+currency. The application converts the value to minor units before saving it.
+
 Expected dashboard totals for that currency:
 
 | Figure | Expected minor units | Source |
@@ -31,5 +43,6 @@ Open the dashboard's per-currency source links and confirm that the listed
 income and obligation records match the inputs above. Repeat with a small USD
 dataset and confirm neither currency total is combined with the other.
 
-Do not mark Step 5 complete until this scenario has been reviewed locally by
-the household and its result recorded in `development-progress.md`.
+Step 5 was marked complete after the household reviewed this scenario locally
+with synthetic data on 2026-09-05; the result is recorded in
+`development-progress.md`.

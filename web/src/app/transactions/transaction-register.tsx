@@ -59,6 +59,7 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
   const [message, setMessage] = useState("");
   const [amount, setAmount] = useState("0,00");
   const [formKey, setFormKey] = useState(0);
+  const [isOneOff, setIsOneOff] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -109,10 +110,12 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
           accountId: form.get("accountId"),
           categoryId: form.get("categoryId"),
           description: form.get("description"),
+          isOneOff,
         }),
       });
       setFormKey((key) => key + 1);
       setAmount("0,00");
+      setIsOneOff(false);
       setMessage(
         `Movimiento registrado. Saldo de cuenta: ${formatMoney(result.accountBalanceMinor, currency)}. Total de categoría: ${formatMoney(result.categoryTotalMinor, currency)}.`,
       );
@@ -139,9 +142,11 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
           <form key={formKey} onSubmit={submit} className="mt-4 grid gap-3">
             <select
               value={type}
-              onChange={(event) =>
-                setType(event.target.value as "income" | "expense")
-              }
+              onChange={(event) => {
+                const nextType = event.target.value as "income" | "expense";
+                setType(nextType);
+                if (nextType === "expense") setIsOneOff(false);
+              }}
               className="rounded border p-2"
             >
               <option value="expense">Egreso</option>
@@ -198,6 +203,16 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
                 </option>
               ))}
             </select>
+            {type === "income" && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={isOneOff}
+                  onChange={(event) => setIsOneOff(event.target.checked)}
+                />
+                Ingreso único
+              </label>
+            )}
             <button className="rounded bg-emerald-700 p-2 text-white">
               Registrar movimiento
             </button>
@@ -210,6 +225,10 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
       </section>
       <section className="rounded-xl border border-zinc-200 p-5">
         <h2 className="text-xl font-semibold">Movimientos pagados</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Abre un movimiento para consultar su detalle y, si tienes permisos,
+          corregirlo o anularlo.
+        </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <select
             value={filters.type}
@@ -261,8 +280,11 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
         <ul className="mt-4 divide-y">
           {transactions.map((item) => (
             <li key={item.id} className="py-3">
-              <div className="flex justify-between gap-3">
-                <a className="underline" href={`/transactions/${item.id}`}>
+              <div className="flex items-center justify-between gap-3">
+                <a
+                  className="rounded border border-emerald-700 px-3 py-1.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+                  href={`/transactions/${item.id}`}
+                >
                   {item.description}
                 </a>
                 <strong>

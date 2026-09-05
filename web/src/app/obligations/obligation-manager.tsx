@@ -1,5 +1,9 @@
 "use client";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  formatMoneyInput,
+  parseMoneyToMinor,
+} from "@/shared/money/parse-money";
 
 type Category = {
   id: string;
@@ -54,6 +58,8 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [period, setPeriod] = useState(currentPeriod);
   const [message, setMessage] = useState("");
+  const [amount, setAmount] = useState("0,00");
+  const [formKey, setFormKey] = useState(0);
   const load = useCallback(async () => {
     try {
       const [nextCategories, nextAccounts, nextItems, nextForecast] =
@@ -82,12 +88,17 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const amountMinor = parseMoneyToMinor(String(form.get("amount")));
+    if (amountMinor === undefined || amountMinor <= 0) {
+      setMessage("Ingresa un importe válido, por ejemplo 1.234,56.");
+      return;
+    }
     try {
       await api("/api/v1/obligations", {
         method: "POST",
         body: JSON.stringify({
           description: form.get("description"),
-          amountMinor: Number(form.get("amountMinor")),
+          amountMinor,
           currency: form.get("currency"),
           dueDate: form.get("dueDate"),
           categoryId: form.get("categoryId"),
@@ -96,7 +107,8 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
           recurrenceRule: form.get("recurrenceRule") || null,
         }),
       });
-      event.currentTarget.reset();
+      setFormKey((key) => key + 1);
+      setAmount("0,00");
       setMessage("Obligación creada; no cambió el efectivo actual.");
       await load();
     } catch (error) {
@@ -186,6 +198,7 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
       )}
       {canEdit && (
         <form
+          key={formKey}
           onSubmit={submit}
           className="grid gap-2 rounded-xl border p-5 md:grid-cols-2"
         >
@@ -196,11 +209,24 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
             className="rounded border p-2"
           />
           <input
-            name="amountMinor"
-            type="number"
-            min="1"
+            name="amount"
+            type="text"
+            inputMode="decimal"
             required
-            placeholder="Importe en centésimos"
+            value={amount}
+            onChange={(event) => setAmount(formatMoneyInput(event.target.value))}
+            onFocus={(event) => event.currentTarget.select()}
+            onBlur={() => {
+              const minor = parseMoneyToMinor(amount);
+              if (minor !== undefined)
+                setAmount(
+                  new Intl.NumberFormat("es-UY", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }).format(minor / 100),
+                );
+            }}
+            placeholder="Importe (ej. 1.234,56)"
             className="rounded border p-2"
           />
           <select name="currency" className="rounded border p-2">

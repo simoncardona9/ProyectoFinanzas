@@ -89,6 +89,9 @@ registration or real financial data.
   are scoped to that currency; UYU and USD are never combined.
 - Added type, currency, recurring/one-off, date, account, and category list
   filters plus bounded offset pagination.
+- Added an **Ingreso único** control to paid-income creation and correction.
+  It records the `is_one_off` flag used by the dashboard's separate one-off
+  income total; the control is not available for expenses.
 - Added a household-scoped transaction-detail API and Spanish detail screen,
   including its available audit events.
 - Added unit coverage for USD account validation, currency-aware write input,
@@ -181,3 +184,5 @@ financial items remain Step 4 obligation behavior.
 - `pnpm build` — passed.
 - The approved synthetic reconciliation procedure is retained in
   `docs/dashboard-acceptance.md` for repeatable local review.
+- On 2026-09-05, the household completed the dashboard acceptance scenario
+  locally with synthetic data and confirmed the dashboard flow and figures.

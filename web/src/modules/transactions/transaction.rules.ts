@@ -34,3 +34,15 @@ export function applyPaidTransactionToBalance(
     ? openingBalanceMinor + amountMinor
     : openingBalanceMinor - amountMinor;
 }
+
+export function ensurePaidTransactionCanChange(transaction: {
+  status: string;
+  voidedAt: Date | null;
+}) {
+  if (transaction.status !== "paid" || transaction.voidedAt)
+    throw new ApiError(
+      422,
+      "INVALID_STATUS_TRANSITION",
+      "Only paid transactions that have not been voided can be changed.",
+    );
+}

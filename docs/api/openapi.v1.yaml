@@ -4,107 +4,677 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/obligations:
+    get:
+      operationId: listObligations
+      summary: List active-household obligations.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: dueFrom, in: query, schema: { type: string, format: date } }
+        - { name: dueTo, in: query, schema: { type: string, format: date } }
+        - { name: status, in: query, schema: { type: string, enum: [planned, pending, paid, deferred, cancelled] } }
+      responses: { "200": { description: Obligations } }
+    post:
+      operationId: createObligation
+      summary: Create a planned or pending household obligation.
+      security: [{ sessionCookie: [] }]
+      responses:
+        { "201": { description: Obligation created }, "400": { $ref: "#/components/responses/ValidationError" }, "403": { description: Editor or owner role required } }
+  /api/v1/obligations/{obligationId}/payments:
+    post:
+      operationId: payObligation
+      summary: Record a full or partial obligation payment as a paid expense transaction.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: obligationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        { "201": { description: Payment and linked transaction created }, "422": { description: Invalid account, closed obligation, or payment exceeding balance } }
+  /api/v1/obligations/{obligationId}/defer:
+    post:
+      operationId: deferObligation
+      summary: Move an open obligation to a later due date with an audit reason.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: obligationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses: { "200": { description: Obligation deferred } }
+  /api/v1/forecast:
+    get:
+      operationId: getMonthlyForecast
+      summary: Return current cash and pending-obligation projection by currency for a calendar month.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: period, in: query, required: true, schema: { type: string, pattern: '^\\d{4}-(0[1-9]|1[0-2])$' } }
+      responses: { "200": { description: Forecast with separate currency totals } }
   /api/v1/auth/login:
     post:
       operationId: login
       summary: Authenticate an active, provisioned user.
       description: Verifies an Argon2id password hash and issues a revocable opaque session cookie. No public registration exists.
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LoginRequest' } } } }
-      responses: { '200': { description: Session created }, '400': { $ref: '#/components/responses/ValidationError' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { description: User has no household membership } }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                { schema: { $ref: "#/components/schemas/LoginRequest" } },
+            },
+        }
+      responses:
+        {
+          "200": { description: Session created },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { description: User has no household membership },
+        }
   /api/v1/auth/logout:
     post:
       operationId: logout
       summary: Revoke the current session and clear its cookie.
-      responses: { '200': { description: Session revoked; idempotent when no session exists } }
+      responses:
+        {
+          "200":
+            { description: Session revoked; idempotent when no session exists },
+        }
   /api/v1/auth/me:
     get:
       operationId: getCurrentUser
       summary: Get the current user and memberships.
       security: [{ sessionCookie: [] }]
-      responses: { '200': { description: Current user and active membership }, '401': { $ref: '#/components/responses/Unauthorized' } }
+      responses:
+        {
+          "200": { description: Current user and active membership },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        }
   /api/v1/auth/active-household:
     post:
       operationId: setActiveHousehold
       summary: Select an existing membership as active household.
       security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [householdId], properties: { householdId: { type: string, format: uuid } } } } } }
-      responses: { '200': { description: Active household changed }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Membership required } }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [householdId],
+                      properties:
+                        { householdId: { type: string, format: uuid } },
+                    },
+                },
+            },
+        }
+      responses:
+        {
+          "200": { description: Active household changed },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Membership required },
+        }
   /api/v1/household:
     get:
       operationId: getHousehold
       summary: Get active household settings.
       security: [{ sessionCookie: [] }]
-      responses: { '200': { description: Active household }, '401': { $ref: '#/components/responses/Unauthorized' } }
+      responses:
+        {
+          "200": { description: Active household },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        }
     patch:
       operationId: updateHousehold
       summary: Update active household settings.
       description: Owner only. The active household is server-scoped.
       security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/HouseholdSettings' } } } }
-      responses: { '200': { description: Updated household }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Owner role required } }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                { schema: { $ref: "#/components/schemas/HouseholdSettings" } },
+            },
+        }
+      responses:
+        {
+          "200": { description: Updated household },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Owner role required },
+        }
   /api/v1/household/members:
     get:
       operationId: listHouseholdMembers
       summary: List active-household members.
       description: Owner only; all results are server-scoped to the active household.
       security: [{ sessionCookie: [] }]
-      responses: { '200': { description: Members }, '403': { description: Owner role required } }
+      responses:
+        {
+          "200": { description: Members },
+          "403": { description: Owner role required },
+        }
     post:
       operationId: inviteHouseholdMember
       summary: Add or update a provisioned user's household role.
       description: Owner only. The email must already be created by the controlled administrative process; this operation has no email-delivery side effect.
       security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MemberInvite' } } } }
-      responses: { '201': { description: Membership created or role updated }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Owner role required }, '422': { description: User is not provisioned } }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                { schema: { $ref: "#/components/schemas/MemberInvite" } },
+            },
+        }
+      responses:
+        {
+          "201": { description: Membership created or role updated },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Owner role required },
+          "422": { description: User is not provisioned },
+        }
   /api/v1/accounts:
-    get: { operationId: listAccounts, summary: List active-household accounts, security: [{ sessionCookie: [] }], responses: { '200': { description: Accounts } } }
-    post: { operationId: createAccount, summary: Create an active-household account, security: [{ sessionCookie: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AccountWrite' } } } }, responses: { '201': { description: Account created }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Editor or owner role required } } }
+    get:
+      {
+        operationId: listAccounts,
+        summary: List active-household accounts,
+        security: [{ sessionCookie: [] }],
+        responses: { "200": { description: Accounts } },
+      }
+    post:
+      {
+        operationId: createAccount,
+        summary: Create an active-household account,
+        security: [{ sessionCookie: [] }],
+        requestBody:
+          {
+            required: true,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/AccountWrite" } },
+              },
+          },
+        responses:
+          {
+            "201": { description: Account created },
+            "400": { $ref: "#/components/responses/ValidationError" },
+            "403": { description: Editor or owner role required },
+          },
+      }
   /api/v1/accounts/{accountId}:
-    parameters: [{ name: accountId, in: path, required: true, schema: { type: string, format: uuid } }]
-    get: { operationId: getAccount, summary: Get a household-scoped account, security: [{ sessionCookie: [] }], responses: { '200': { description: Account }, '404': { description: Not found } } }
-    patch: { operationId: updateAccount, summary: Update account metadata, security: [{ sessionCookie: [] }], responses: { '200': { description: Account updated } } }
+    parameters:
+      [
+        {
+          name: accountId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        },
+      ]
+    get:
+      {
+        operationId: getAccount,
+        summary: Get a household-scoped account,
+        security: [{ sessionCookie: [] }],
+        responses:
+          {
+            "200": { description: Account },
+            "404": { description: Not found },
+          },
+      }
+    patch:
+      {
+        operationId: updateAccount,
+        summary: Update account metadata,
+        security: [{ sessionCookie: [] }],
+        responses: { "200": { description: Account updated } },
+      }
   /api/v1/accounts/{accountId}/archive:
-    post: { operationId: archiveAccount, summary: Archive an account while retaining prior history, security: [{ sessionCookie: [] }], responses: { '200': { description: Account archived } } }
+    post:
+      {
+        operationId: archiveAccount,
+        summary: Archive an account while retaining prior history,
+        security: [{ sessionCookie: [] }],
+        responses: { "200": { description: Account archived } },
+      }
   /api/v1/categories:
-    get: { operationId: listCategories, summary: List active-household category hierarchy, security: [{ sessionCookie: [] }], responses: { '200': { description: Categories } } }
-    post: { operationId: createCategory, summary: Create a household-scoped category, security: [{ sessionCookie: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryWrite' } } } }, responses: { '201': { description: Category created }, '400': { $ref: '#/components/responses/ValidationError' } } }
+    get:
+      {
+        operationId: listCategories,
+        summary: List active-household category hierarchy,
+        security: [{ sessionCookie: [] }],
+        responses: { "200": { description: Categories } },
+      }
+    post:
+      {
+        operationId: createCategory,
+        summary: Create a household-scoped category,
+        security: [{ sessionCookie: [] }],
+        requestBody:
+          {
+            required: true,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/CategoryWrite" } },
+              },
+          },
+        responses:
+          {
+            "201": { description: Category created },
+            "400": { $ref: "#/components/responses/ValidationError" },
+          },
+      }
   /api/v1/categories/seed:
-    post: { operationId: seedCategories, summary: Install the controlled workbook-derived category set when no categories exist, security: [{ sessionCookie: [] }], responses: { '201': { description: Categories installed } } }
+    post:
+      {
+        operationId: seedCategories,
+        summary: Install the controlled workbook-derived category set when no categories exist,
+        security: [{ sessionCookie: [] }],
+        responses: { "201": { description: Categories installed } },
+      }
   /api/v1/categories/{categoryId}:
-    parameters: [{ name: categoryId, in: path, required: true, schema: { type: string, format: uuid } }]
-    get: { operationId: getCategory, summary: Get a household-scoped category, security: [{ sessionCookie: [] }], responses: { '200': { description: Category } } }
-    patch: { operationId: updateCategory, summary: Rename or reclassify a category, security: [{ sessionCookie: [] }], responses: { '200': { description: Category updated } } }
+    parameters:
+      [
+        {
+          name: categoryId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        },
+      ]
+    get:
+      {
+        operationId: getCategory,
+        summary: Get a household-scoped category,
+        security: [{ sessionCookie: [] }],
+        responses: { "200": { description: Category } },
+      }
+    patch:
+      {
+        operationId: updateCategory,
+        summary: Rename or reclassify a category,
+        security: [{ sessionCookie: [] }],
+        responses: { "200": { description: Category updated } },
+      }
   /api/v1/categories/{categoryId}/archive:
-    post: { operationId: archiveCategory, summary: Archive a category after child validation, security: [{ sessionCookie: [] }], responses: { '200': { description: Category archived }, '409': { description: Active child categories remain } } }
+    post:
+      {
+        operationId: archiveCategory,
+        summary: Archive a category after child validation,
+        security: [{ sessionCookie: [] }],
+        responses:
+          {
+            "200": { description: Category archived },
+            "409": { description: Active child categories remain },
+          },
+      }
   /api/v1/transactions:
     get:
       operationId: listPaidTransactions
-      summary: List paid UYU income and expense transactions for the active household.
-      description: This first transaction-register slice supports optional inclusive `from`/`to` dates and account/category UUID filters. Results are household-scoped and never combine currencies.
+      summary: List paid UYU or USD income and expense transactions for the active household.
+      description: Supports optional inclusive `from`/`to` dates, account/category UUIDs, type, currency, recurring/one-off flags, and offset pagination. Results are household-scoped; currency-specific totals are never combined.
       security: [{ sessionCookie: [] }]
       parameters:
-        - { name: from, in: query, required: false, schema: { type: string, format: date } }
-        - { name: to, in: query, required: false, schema: { type: string, format: date } }
-        - { name: accountId, in: query, required: false, schema: { type: string, format: uuid } }
-        - { name: categoryId, in: query, required: false, schema: { type: string, format: uuid } }
-      responses: { '200': { description: Paid transaction list }, '400': { $ref: '#/components/responses/ValidationError' }, '401': { $ref: '#/components/responses/Unauthorized' } }
+        - {
+            name: from,
+            in: query,
+            required: false,
+            schema: { type: string, format: date },
+          }
+        - {
+            name: to,
+            in: query,
+            required: false,
+            schema: { type: string, format: date },
+          }
+        - {
+            name: accountId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: categoryId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+          }
+        - {
+            name: type,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [income, expense] },
+          }
+        - {
+            name: currency,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [UYU, USD] },
+          }
+        - {
+            name: isRecurring,
+            in: query,
+            required: false,
+            schema: { type: boolean },
+          }
+        - {
+            name: isOneOff,
+            in: query,
+            required: false,
+            schema: { type: boolean },
+          }
+        - {
+            name: limit,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
+        - {
+            name: offset,
+            in: query,
+            required: false,
+            schema: { type: integer, minimum: 0, default: 0 },
+          }
+      responses:
+        {
+          "200": { description: Paid transaction list },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        }
     post:
-      operationId: createPaidUyuTransaction
-      summary: Record a paid UYU income or expense.
-      description: Owner/editor only. The operation validates active, household-scoped account and category references; their currency/type must match. It atomically creates the transaction and audit event, then returns the account balance and paid expense-category total. This operation is not idempotent: retry only after confirming that no transaction was created.
+      operationId: createPaidTransaction
+      summary: Record a paid UYU or USD income or expense.
+      description: "Owner/editor only. The operation validates active, household-scoped account and category references; their currency/type must match. It atomically creates the transaction and audit event, then returns the account balance and paid expense-category total. This operation is not idempotent: retry only after confirming that no transaction was created."
       security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PaidUyuTransactionWrite' }, example: { date: '2026-09-04', type: expense, status: paid, amountMinor: 125050, currency: UYU, accountId: '11111111-1111-4111-8111-111111111111', categoryId: '22222222-2222-4222-8222-222222222222', description: 'Compra de supermercado' } } } }
-      responses: { '201': { description: Transaction and updated financial totals }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Editor or owner role required }, '422': { description: INVALID_ACCOUNT, INVALID_CATEGORY, or CURRENCY_MISMATCH } }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema: { $ref: "#/components/schemas/PaidTransactionWrite" },
+                  example:
+                    {
+                      date: "2026-09-04",
+                      type: expense,
+                      status: paid,
+                      amountMinor: 125050,
+                      currency: UYU,
+                      accountId: "11111111-1111-4111-8111-111111111111",
+                      categoryId: "22222222-2222-4222-8222-222222222222",
+                      description: "Compra de supermercado",
+                    },
+                },
+            },
+        }
+      responses:
+        {
+          "201": { description: Transaction and updated financial totals },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Editor or owner role required },
+          "422":
+            {
+              description: INVALID_ACCOUNT,
+              INVALID_CATEGORY,
+              or CURRENCY_MISMATCH,
+            },
+        }
+  /api/v1/transactions/{transactionId}:
+    get:
+      operationId: getTransaction
+      summary: Get one household-scoped transaction and its audit events.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: transactionId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        {
+          "200": { description: Transaction detail },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { description: Transaction not found },
+        }
+    patch:
+      operationId: updatePaidTransaction
+      summary: Correct a paid transaction with an audit reason.
+      description: "Owner/editor only. The original values and correction reason are saved in the audit log atomically with the update. Cancelled or voided transactions cannot be changed."
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: transactionId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    { $ref: "#/components/schemas/PaidTransactionUpdate" },
+                },
+            },
+        }
+      responses:
+        {
+          "200": { description: Transaction corrected },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Editor or owner role required },
+          "409": { description: Concurrent modification },
+          "422": { description: Invalid references or status transition },
+        }
+  /api/v1/transactions/{transactionId}/void:
+    post:
+      operationId: voidPaidTransaction
+      summary: Void a paid transaction with an audit reason.
+      description: "Owner/editor only. The transaction becomes cancelled and no longer affects paid balances; the operation and original values are audit logged atomically."
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: transactionId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema: { $ref: "#/components/schemas/VoidTransactionWrite" },
+                },
+            },
+        }
+      responses:
+        {
+          "200": { description: Transaction voided },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Editor or owner role required },
+          "409": { description: Concurrent modification },
+          "422": { description: Invalid status transition },
+        }
 components:
-  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }
+  securitySchemes:
+    { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }
   schemas:
-    LoginRequest: { type: object, required: [email, password], properties: { email: { type: string, format: email, example: owner@example.test }, password: { type: string, format: password } } }
-    HouseholdSettings: { type: object, required: [name, locale, defaultCurrency, timeZone], properties: { name: { type: string, example: Hogar Pérez }, locale: { type: string, example: es-UY }, defaultCurrency: { type: string, enum: [UYU, USD] }, timeZone: { type: string, example: America/Montevideo } } }
-    MemberInvite: { type: object, required: [email, role], properties: { email: { type: string, format: email, example: viewer@example.test }, role: { type: string, enum: [editor, viewer, accountant] } } }
-    AccountWrite: { type: object, required: [name, type, currency, openingBalanceMinor, openingBalanceDate], properties: { name: { type: string }, type: { type: string, enum: [cash, bank, card, loan, reserve_envelope] }, currency: { type: string, enum: [UYU, USD] }, openingBalanceMinor: { type: integer }, openingBalanceDate: { type: string, format: date } } }
-    CategoryWrite: { type: object, required: [name, kind], properties: { name: { type: string }, kind: { type: string, enum: [income, expense, transfer] }, parentId: { type: [string, 'null'], format: uuid }, defaultClassification: { type: [string, 'null'], enum: [fixed, variable, discretionary, null] } } }
-    PaidUyuTransactionWrite: { type: object, required: [date, type, status, amountMinor, currency, accountId, categoryId, description], properties: { date: { type: string, format: date }, type: { type: string, enum: [income, expense] }, status: { type: string, enum: [paid] }, amountMinor: { type: integer, minimum: 1, maximum: 2000000000 }, currency: { type: string, enum: [UYU] }, accountId: { type: string, format: uuid }, categoryId: { type: string, format: uuid }, description: { type: string, minLength: 1, maxLength: 500 }, isRecurring: { type: boolean, default: false }, isOneOff: { type: boolean, default: false } } }
-    Error: { type: object, required: [error], properties: { error: { type: object, required: [code, message], properties: { code: { type: string }, message: { type: string }, fields: { type: object, additionalProperties: { type: string } } } } } }
+    LoginRequest:
+      {
+        type: object,
+        required: [email, password],
+        properties:
+          {
+            email: { type: string, format: email, example: owner@example.test },
+            password: { type: string, format: password },
+          },
+      }
+    HouseholdSettings:
+      {
+        type: object,
+        required: [name, locale, defaultCurrency, timeZone],
+        properties:
+          {
+            name: { type: string, example: Hogar Pérez },
+            locale: { type: string, example: es-UY },
+            defaultCurrency: { type: string, enum: [UYU, USD] },
+            timeZone: { type: string, example: America/Montevideo },
+          },
+      }
+    MemberInvite:
+      {
+        type: object,
+        required: [email, role],
+        properties:
+          {
+            email:
+              { type: string, format: email, example: viewer@example.test },
+            role: { type: string, enum: [editor, viewer, accountant] },
+          },
+      }
+    AccountWrite:
+      {
+        type: object,
+        required:
+          [name, type, currency, openingBalanceMinor, openingBalanceDate],
+        properties:
+          {
+            name: { type: string },
+            type:
+              {
+                type: string,
+                enum: [cash, bank, card, loan, reserve_envelope],
+              },
+            currency: { type: string, enum: [UYU, USD] },
+            openingBalanceMinor: { type: integer },
+            openingBalanceDate: { type: string, format: date },
+          },
+      }
+    CategoryWrite:
+      {
+        type: object,
+        required: [name, kind],
+        properties:
+          {
+            name: { type: string },
+            kind: { type: string, enum: [income, expense, transfer] },
+            parentId: { type: [string, "null"], format: uuid },
+            defaultClassification:
+              {
+                type: [string, "null"],
+                enum: [fixed, variable, discretionary, null],
+              },
+          },
+      }
+    PaidTransactionWrite:
+      {
+        type: object,
+        required:
+          [
+            date,
+            type,
+            status,
+            amountMinor,
+            currency,
+            accountId,
+            categoryId,
+            description,
+          ],
+        properties:
+          {
+            date: { type: string, format: date },
+            type: { type: string, enum: [income, expense] },
+            status: { type: string, enum: [paid] },
+            amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+            currency: { type: string, enum: [UYU, USD] },
+            accountId: { type: string, format: uuid },
+            categoryId: { type: string, format: uuid },
+            description: { type: string, minLength: 1, maxLength: 500 },
+            isRecurring: { type: boolean, default: false },
+            isOneOff: { type: boolean, default: false },
+          },
+      }
+    PaidTransactionUpdate:
+      {
+        type: object,
+        required:
+          [
+            date,
+            type,
+            amountMinor,
+            currency,
+            accountId,
+            categoryId,
+            description,
+            changeReason,
+          ],
+        properties:
+          {
+            date: { type: string, format: date },
+            type: { type: string, enum: [income, expense] },
+            amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+            currency: { type: string, enum: [UYU, USD] },
+            accountId: { type: string, format: uuid },
+            categoryId: { type: string, format: uuid },
+            description: { type: string, minLength: 1, maxLength: 500 },
+            isRecurring: { type: boolean, default: false },
+            isOneOff: { type: boolean, default: false },
+            changeReason: { type: string, minLength: 3, maxLength: 500 },
+          },
+      }
+    VoidTransactionWrite:
+      {
+        type: object,
+        required: [reason],
+        properties: { reason: { type: string, minLength: 3, maxLength: 500 } },
+      }
+    Error:
+      {
+        type: object,
+        required: [error],
+        properties:
+          {
+            error:
+              {
+                type: object,
+                required: [code, message],
+                properties:
+                  {
+                    code: { type: string },
+                    message: { type: string },
+                    fields:
+                      { type: object, additionalProperties: { type: string } },
+                  },
+              },
+          },
+      }
   responses:
-    ValidationError: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    Unauthorized: { description: Valid session required, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    ValidationError:
+      {
+        description: Invalid request,
+        content:
+          {
+            application/json:
+              { schema: { $ref: "#/components/schemas/Error" } },
+          },
+      }
+    Unauthorized:
+      {
+        description: Valid session required,
+        content:
+          {
+            application/json:
+              { schema: { $ref: "#/components/schemas/Error" } },
+          },
+      }

@@ -65,8 +65,8 @@ registration or real financial data.
 
 ### Slice 3.1 — Paid UYU income and expenses — implemented, pending verification
 
-- Added a household-scoped immutable transaction table and migration for the
-  broader transaction lifecycle. This slice only permits creating paid UYU
+- Added a household-scoped transaction table and migration for the broader
+  transaction lifecycle. This slice only permits creating paid UYU
   income and expense records.
 - Added active-account, category-kind, and currency-match validation. Creating
   a transaction and its audit event is atomic.
@@ -75,3 +75,51 @@ registration or real financial data.
   total; the UI immediately shows both values.
 - Deferred transaction edits, voids, filters beyond date/account/category,
   pending/planned status, transfers, and USD to subsequent Step 3 slices.
+
+### Slice 3.2 — USD-safe register and transaction details — implemented, pending verification
+
+- Extended paid income and expense entry to UYU and USD. Accounts are restricted
+  to the selected transaction currency, and category totals returned after entry
+  are scoped to that currency; UYU and USD are never combined.
+- Added type, currency, recurring/one-off, date, account, and category list
+  filters plus bounded offset pagination.
+- Added a household-scoped transaction-detail API and Spanish detail screen,
+  including its available audit events.
+- Added unit coverage for USD account validation, currency-aware write input,
+  mutually exclusive recurring/one-off flags, and list-filter parsing.
+
+Transaction edits and voids remain deferred to Slice 3.3. Planned and pending
+financial items remain Step 4 obligation behavior.
+
+### Slice 3.3 — Auditable corrections and voids — implemented, pending verification
+
+- Added owner/editor-only correction of paid transactions. Each correction
+  requires a reason and atomically records both the reason and previous values
+  in audit metadata.
+- Added owner/editor-only voiding. A void requires a reason, atomically changes
+  the transaction to `cancelled`, records the prior values, and therefore
+  removes it from paid balance and category-total calculations.
+- Prevented cancelled or already voided transactions from being changed again,
+  and added concurrent-modification protection for correction and void writes.
+- Added the audit metadata migration `0004_futuristic_zarda.sql` and correction
+  and void controls to the transaction detail screen.
+
+## Step 4 — Obligations and monthly forecast — implemented, pending local acceptance
+
+- Added household-scoped obligations with amount remaining, due date, expense
+  category, fixed/variable/discretionary classification, planned/pending/paid/
+  deferred/cancelled lifecycle, and optional monthly, quarterly, or yearly
+  recurrence metadata.
+- Added a payment endpoint that validates the active same-currency account,
+  prevents overpayment, atomically creates a paid expense transaction and
+  payment link, updates the remaining obligation amount, and writes an audit
+  event. Full payment marks the obligation paid; partial payment leaves it
+  pending.
+- Added audited deferral to a strictly later due date. Deferred obligations are
+  shown in their new month and remain included in the projection.
+- Added `/obligations`, a Spanish obligation register and monthly projection,
+  plus household-scoped API endpoints for create/list, payment, deferral, and
+  forecast. UYU and USD projected amounts are always shown separately.
+- Added migration `0005_condemned_deathbird.sql` for obligations and payment
+  links, and unit coverage for category, payment, deferral, and lifecycle
+  validation.

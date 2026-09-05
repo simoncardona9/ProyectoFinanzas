@@ -29,6 +29,20 @@
       "when": 1788569646525,
       "tag": "0003_wooden_starhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788580750311,
+      "tag": "0004_futuristic_zarda",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788581403676,
+      "tag": "0005_condemned_deathbird",
+      "breakpoints": true
     }
   ]
 }

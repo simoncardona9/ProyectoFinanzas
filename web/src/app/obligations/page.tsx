@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { BackLink } from "@/shared/ui/navigation";
-import { StructureManager } from "./structure-manager";
-export default async function StructurePage() {
+import { ObligationManager } from "./obligation-manager";
+
+export default async function ObligationsPage() {
   let context;
   try {
     context = await requireAuth();
@@ -18,15 +19,16 @@ export default async function StructurePage() {
               Finanzas Familiares
             </p>
             <h1 className="mt-2 text-2xl font-semibold">
-              Cuentas y categorías
+              Obligaciones y proyección mensual
             </h1>
           </div>
           <BackLink href="/settings">Volver a configuración</BackLink>
         </div>
         <p className="mt-2 text-zinc-600">
-          Define la estructura financiera antes de registrar movimientos.
+          Las obligaciones pendientes afectan la proyección, pero no el efectivo
+          actual hasta registrar un pago.
         </p>
-        <StructureManager
+        <ObligationManager
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />
       </section>

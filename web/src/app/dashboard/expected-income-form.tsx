@@ -1,6 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import {
+  formatMoneyInput,
+  parseMoneyToMinor,
+} from "@/shared/money/parse-money";
 
 type Account = { id: string; name: string; currency: "UYU" | "USD" };
 type Category = { id: string; name: string; kind: string };
@@ -15,6 +19,8 @@ export function ExpectedIncomeForm({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [message, setMessage] = useState("");
+  const [amount, setAmount] = useState("0,00");
+  const [formKey, setFormKey] = useState(0);
   useEffect(() => {
     void Promise.all([
       fetch("/api/v1/accounts?active=true").then((response) => response.json()),
@@ -29,6 +35,11 @@ export function ExpectedIncomeForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const amountMinor = parseMoneyToMinor(String(form.get("amount")));
+    if (amountMinor === undefined || amountMinor <= 0) {
+      setMessage("Ingresa un importe válido, por ejemplo 1.234,56.");
+      return;
+    }
     const response = await fetch("/api/v1/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -36,7 +47,7 @@ export function ExpectedIncomeForm({
         date: form.get("date"),
         type: "income",
         status: form.get("status"),
-        amountMinor: Number(form.get("amountMinor")),
+        amountMinor,
         currency: form.get("currency"),
         accountId: form.get("accountId"),
         categoryId: form.get("categoryId"),
@@ -50,7 +61,8 @@ export function ExpectedIncomeForm({
       );
       return;
     }
-    event.currentTarget.reset();
+    setFormKey((key) => key + 1);
+    setAmount("0,00");
     setMessage(
       "Ingreso esperado registrado; aún no modifica el efectivo disponible.",
     );
@@ -66,7 +78,11 @@ export function ExpectedIncomeForm({
         Se muestra en la proyección del mes, pero no aumenta el efectivo hasta
         cobrarlo.
       </p>
-      <form onSubmit={submit} className="mt-4 grid gap-2 md:grid-cols-2">
+      <form
+        key={formKey}
+        onSubmit={submit}
+        className="mt-4 grid gap-2 md:grid-cols-2"
+      >
         <input
           name="description"
           required
@@ -75,11 +91,24 @@ export function ExpectedIncomeForm({
           className="rounded border p-2"
         />
         <input
-          name="amountMinor"
-          type="number"
-          min="1"
+          name="amount"
+          type="text"
+          inputMode="decimal"
+          value={amount}
+          onChange={(event) => setAmount(formatMoneyInput(event.target.value))}
+          onFocus={(event) => event.currentTarget.select()}
+          onBlur={() => {
+            const minor = parseMoneyToMinor(amount);
+            if (minor !== undefined)
+              setAmount(
+                new Intl.NumberFormat("es-UY", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }).format(minor / 100),
+              );
+          }}
           required
-          placeholder="Importe en centésimos"
+          placeholder="Importe (ej. 1.234,56)"
           className="rounded border p-2"
         />
         <input

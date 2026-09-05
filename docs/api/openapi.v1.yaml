@@ -306,6 +306,44 @@ paths:
         security: [{ sessionCookie: [] }],
         responses: { "200": { description: Account archived } },
       }
+  /api/v1/accounts/{accountId}/activate:
+    parameters:
+      [
+        {
+          name: accountId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        },
+      ]
+    post:
+      {
+        operationId: activateAccount,
+        summary: Reactivate an archived account while retaining prior history,
+        description: Active-household owner/editor operation; the account is made available for new entries and its archived timestamp is cleared.
+        security: [{ sessionCookie: [] }],
+        responses:
+          {
+            "200": { description: Account reactivated },
+            "403": { description: Editor or owner role required },
+            "404": { description: Account not found },
+          },
+      }
+  /api/v1/household/reset-test-data:
+    post:
+      {
+        operationId: resetHouseholdTestData,
+        summary: Reset active-household financial test data in local development,
+        description: Development-only, owner-only destructive operation. It requires the exact confirmation `RESET TEST DATA`, removes financial structure, records, links, and audit logs for the active household, and preserves users, memberships, sessions, and household settings. It returns 404 in production.
+        security: [{ sessionCookie: [] }],
+        responses:
+          {
+            "200": { description: Active-household financial test data reset },
+            "400": { description: Missing or incorrect confirmation },
+            "403": { description: Owner role required },
+            "404": { description: Reset unavailable outside local development },
+          },
+      }
   /api/v1/categories:
     get:
       {

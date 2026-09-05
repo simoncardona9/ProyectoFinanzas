@@ -86,7 +86,9 @@ src/
 - Resource identifiers: UUID strings.
 - JSON request and response bodies.
 - Dates: ISO 8601 calendar dates, for example `2026-08-13`.
-- Money: `amountMinor` integer plus `currency` (`UYU` or `USD`) in write requests. The API may return a formatted value separately for display.
+- Money: APIs receive `amountMinor` integer plus `currency` (`UYU` or `USD`).
+  The Spanish Uruguay UI accepts formatted values such as `1.234,56` and
+  converts them to minor units before making a request.
 - Pagination query parameters: `page`, `pageSize` (maximum 100), `sort`, `order`.
 - List filters use explicit query parameters, never free-form SQL-like expressions.
 - Mutating endpoints require an authenticated `owner` or `editor`, unless a stricter rule is listed.
@@ -139,6 +141,7 @@ Authentication is first-party and database-backed. There is no public registrati
 | `POST /household/members`             | body: `email`, `role`                                 | Invite a member. Owner only.      |
 | `PATCH /household/members/:memberId`  | path: `memberId`; body: `role`                        | Change a member role. Owner only. |
 | `DELETE /household/members/:memberId` | path: `memberId`                                      | Remove a member. Owner only.      |
+| `POST /household/reset-test-data`     | body: exact development confirmation                  | Development-only owner reset of the active household's financial test data; unavailable in production. |
 
 This controller manages household membership and roles, not passwords or session tokens.
 
@@ -151,6 +154,7 @@ This controller manages household membership and roles, not passwords or session
 | `GET /accounts/:accountId`              | path: `accountId`                                                             | Return account details and computed balance.               |
 | `PATCH /accounts/:accountId`            | path; body: mutable account fields                                            | Update account metadata.                                   |
 | `POST /accounts/:accountId/archive`     | path                                                                          | Archive without deleting financial history.                |
+| `POST /accounts/:accountId/activate`    | path                                                                          | Reactivate an archived account without changing its history. |
 | `GET /accounts/:accountId/transactions` | path; date/status/category filters and pagination                             | List account activity.                                     |
 
 ### 3. `categories.controller`

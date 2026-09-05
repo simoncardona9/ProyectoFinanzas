@@ -53,6 +53,8 @@ There is no preview, staging, or cloud-production environment during the current
 **Goal:** Create the financial structure before recording money.
 
 - Add accounts: cash, banks, cards, loans, and reserve envelopes.
+- Use one localized monetary-input convention across every financial form; do
+  not expose minor units as the normal user entry format.
 - Add nested income/expense categories and fixed/variable/discretionary classifications.
 - Seed a controlled set of categories based on the workbook.
 

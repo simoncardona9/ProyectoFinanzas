@@ -52,6 +52,12 @@ registration or real financial data.
   plus editor/owner APIs and a Spanish management screen at `/structure`.
 - Viewers and accountants can list structure but cannot create, change, seed,
   or archive it. Every query and mutation is scoped to the active household.
+- The structure screen labels each account as active or archived. Owners and
+  editors can reactivate an archived account through an audited,
+  household-scoped operation; its financial history is preserved.
+- Account opening balances accept and format localized display amounts while
+  persisting integer minor units. Development-only owner reset support removes
+  active-household test financial data after typed confirmation.
 
 ### Verification
 

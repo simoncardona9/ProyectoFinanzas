@@ -1,6 +1,10 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  formatMoneyInput,
+  parseMoneyToMinor,
+} from "@/shared/money/parse-money";
 
 type Account = { id: string; name: string; currency: string; active: boolean };
 type Category = { id: string; name: string; kind: string; active: boolean };
@@ -53,6 +57,8 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
   });
   const [offset, setOffset] = useState(0);
   const [message, setMessage] = useState("");
+  const [amount, setAmount] = useState("0,00");
+  const [formKey, setFormKey] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -86,6 +92,11 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const amountMinor = parseMoneyToMinor(String(form.get("amount")));
+    if (amountMinor === undefined || amountMinor <= 0) {
+      setMessage("Ingresa un importe válido, por ejemplo 1.234,56.");
+      return;
+    }
     try {
       const result = await api<CreateResult>("/api/v1/transactions", {
         method: "POST",
@@ -93,14 +104,15 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
           date: form.get("date"),
           type,
           status: "paid",
-          amountMinor: Number(form.get("amountMinor")),
+          amountMinor,
           currency,
           accountId: form.get("accountId"),
           categoryId: form.get("categoryId"),
           description: form.get("description"),
         }),
       });
-      event.currentTarget.reset();
+      setFormKey((key) => key + 1);
+      setAmount("0,00");
       setMessage(
         `Movimiento registrado. Saldo de cuenta: ${formatMoney(result.accountBalanceMinor, currency)}. Total de categoría: ${formatMoney(result.categoryTotalMinor, currency)}.`,
       );
@@ -124,7 +136,7 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
       <section className="rounded-xl border border-zinc-200 p-5">
         <h2 className="text-xl font-semibold">Registrar movimiento pagado</h2>
         {canEdit ? (
-          <form onSubmit={submit} className="mt-4 grid gap-3">
+          <form key={formKey} onSubmit={submit} className="mt-4 grid gap-3">
             <select
               value={type}
               onChange={(event) =>
@@ -159,12 +171,15 @@ export function TransactionRegister({ canEdit }: { canEdit: boolean }) {
               <option value="USD">Dólares estadounidenses (USD)</option>
             </select>
             <input
-              name="amountMinor"
-              type="number"
-              min="1"
-              step="1"
+              name="amount"
+              type="text"
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) =>
+                setAmount(formatMoneyInput(event.target.value))
+              }
               required
-              placeholder="Importe en centésimos (ej. 125050)"
+              placeholder="Importe (ej. 1.250,50)"
               className="rounded border p-2"
             />
             <select name="accountId" required className="rounded border p-2">

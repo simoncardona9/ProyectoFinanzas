@@ -4,6 +4,7 @@ import { requireAuth } from "@/shared/auth/request-auth";
 import { FeatureNavigationCard } from "@/shared/ui/navigation";
 import { LogoutButton } from "./logout-button";
 import { LowBufferSettings } from "./low-buffer-settings";
+import { ResetTestData } from "./reset-test-data";
 export default async function SettingsPage() {
   let context;
   try {
@@ -69,7 +70,10 @@ export default async function SettingsPage() {
           </div>
         </dl>
         {household && context.membership.role === "owner" && (
-          <LowBufferSettings household={household} />
+          <>
+            <LowBufferSettings household={household} />
+            <ResetTestData />
+          </>
         )}
       </section>
     </main>

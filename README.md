@@ -78,3 +78,21 @@ para comenzar son:
 
 No introduzcas datos reales hasta que las etapas de estabilidad, respaldo y
 reconciliación previstas por el proceso estén aprobadas.
+
+## Ejecutar con Docker
+
+Docker Compose inicia la aplicación actual, PostgreSQL 17 y aplica las
+migraciones de Drizzle antes de arrancar la web.
+
+1. Copia `.env.docker.example` a `.env` y sustituye `POSTGRES_PASSWORD` por
+   una contraseña local segura.
+2. Ejecuta `docker compose up --build`.
+3. Abre `http://localhost:3000`. La verificación de disponibilidad está en
+   `http://localhost:3000/api/health`.
+
+Los datos de PostgreSQL se conservan en el volumen `postgres_data`. Para
+detener los servicios usa `docker compose down`. Para eliminar también los
+datos locales de Docker, usa `docker compose down --volumes`.
+
+PostgreSQL no se publica en el equipo anfitrión; para una consola de base de
+datos usa `docker compose exec db psql -U finanzas_app -d finanzas_dev`.

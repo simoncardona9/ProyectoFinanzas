@@ -60,3 +60,18 @@ registration or real financial data.
 - `pnpm db:migrate` — passed against the configured local PostgreSQL database.
 - `pnpm exec tsc --noEmit`, `pnpm lint`, and `pnpm test` — passed (9 tests).
 - `pnpm build` — passed.
+
+## Step 3 — Transaction register — in progress
+
+### Slice 3.1 — Paid UYU income and expenses — implemented, pending verification
+
+- Added a household-scoped immutable transaction table and migration for the
+  broader transaction lifecycle. This slice only permits creating paid UYU
+  income and expense records.
+- Added active-account, category-kind, and currency-match validation. Creating
+  a transaction and its audit event is atomic.
+- Added `GET`/`POST /api/v1/transactions` and the `/transactions` Spanish
+  register. Creation returns the resulting account balance and expense-category
+  total; the UI immediately shows both values.
+- Deferred transaction edits, voids, filters beyond date/account/category,
+  pending/planned status, transfers, and USD to subsequent Step 3 slices.

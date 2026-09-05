@@ -39,6 +39,22 @@ export const categoryClassification = pgEnum("category_classification", [
   "discretionary",
 ]);
 
+export const transactionType = pgEnum("transaction_type", [
+  "income",
+  "expense",
+  "transfer",
+  "debt_payment",
+  "adjustment",
+]);
+
+export const transactionStatus = pgEnum("transaction_status", [
+  "planned",
+  "pending",
+  "paid",
+  "deferred",
+  "cancelled",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
@@ -187,5 +203,44 @@ export const categories = pgTable(
       foreignColumns: [table.id],
       name: "categories_parent_category_id_categories_id_fk",
     }).onDelete("restrict"),
+  ],
+);
+
+export const transactions = pgTable(
+  "transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    type: transactionType("type").notNull(),
+    status: transactionStatus("status").notNull(),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "restrict" }),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "restrict" }),
+    description: text("description").notNull(),
+    isRecurring: boolean("is_recurring").notNull().default(false),
+    isOneOff: boolean("is_one_off").notNull().default(false),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("transactions_household_date_idx").on(
+      table.householdId,
+      table.date,
+    ),
+    index("transactions_account_date_idx").on(table.accountId, table.date),
+    index("transactions_category_date_idx").on(table.categoryId, table.date),
   ],
 );

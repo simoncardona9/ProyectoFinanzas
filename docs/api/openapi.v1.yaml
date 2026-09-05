@@ -76,6 +76,25 @@ paths:
     patch: { operationId: updateCategory, summary: Rename or reclassify a category, security: [{ sessionCookie: [] }], responses: { '200': { description: Category updated } } }
   /api/v1/categories/{categoryId}/archive:
     post: { operationId: archiveCategory, summary: Archive a category after child validation, security: [{ sessionCookie: [] }], responses: { '200': { description: Category archived }, '409': { description: Active child categories remain } } }
+  /api/v1/transactions:
+    get:
+      operationId: listPaidTransactions
+      summary: List paid UYU income and expense transactions for the active household.
+      description: This first transaction-register slice supports optional inclusive `from`/`to` dates and account/category UUID filters. Results are household-scoped and never combine currencies.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+        - { name: accountId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: categoryId, in: query, required: false, schema: { type: string, format: uuid } }
+      responses: { '200': { description: Paid transaction list }, '400': { $ref: '#/components/responses/ValidationError' }, '401': { $ref: '#/components/responses/Unauthorized' } }
+    post:
+      operationId: createPaidUyuTransaction
+      summary: Record a paid UYU income or expense.
+      description: Owner/editor only. The operation validates active, household-scoped account and category references; their currency/type must match. It atomically creates the transaction and audit event, then returns the account balance and paid expense-category total. This operation is not idempotent: retry only after confirming that no transaction was created.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PaidUyuTransactionWrite' }, example: { date: '2026-09-04', type: expense, status: paid, amountMinor: 125050, currency: UYU, accountId: '11111111-1111-4111-8111-111111111111', categoryId: '22222222-2222-4222-8222-222222222222', description: 'Compra de supermercado' } } } }
+      responses: { '201': { description: Transaction and updated financial totals }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Editor or owner role required }, '422': { description: INVALID_ACCOUNT, INVALID_CATEGORY, or CURRENCY_MISMATCH } }
 components:
   securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }
   schemas:
@@ -84,6 +103,7 @@ components:
     MemberInvite: { type: object, required: [email, role], properties: { email: { type: string, format: email, example: viewer@example.test }, role: { type: string, enum: [editor, viewer, accountant] } } }
     AccountWrite: { type: object, required: [name, type, currency, openingBalanceMinor, openingBalanceDate], properties: { name: { type: string }, type: { type: string, enum: [cash, bank, card, loan, reserve_envelope] }, currency: { type: string, enum: [UYU, USD] }, openingBalanceMinor: { type: integer }, openingBalanceDate: { type: string, format: date } } }
     CategoryWrite: { type: object, required: [name, kind], properties: { name: { type: string }, kind: { type: string, enum: [income, expense, transfer] }, parentId: { type: [string, 'null'], format: uuid }, defaultClassification: { type: [string, 'null'], enum: [fixed, variable, discretionary, null] } } }
+    PaidUyuTransactionWrite: { type: object, required: [date, type, status, amountMinor, currency, accountId, categoryId, description], properties: { date: { type: string, format: date }, type: { type: string, enum: [income, expense] }, status: { type: string, enum: [paid] }, amountMinor: { type: integer, minimum: 1, maximum: 2000000000 }, currency: { type: string, enum: [UYU] }, accountId: { type: string, format: uuid }, categoryId: { type: string, format: uuid }, description: { type: string, minLength: 1, maxLength: 500 }, isRecurring: { type: boolean, default: false }, isOneOff: { type: boolean, default: false } } }
     Error: { type: object, required: [error], properties: { error: { type: object, required: [code, message], properties: { code: { type: string }, message: { type: string }, fields: { type: object, additionalProperties: { type: string } } } } } }
   responses:
     ValidationError: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }

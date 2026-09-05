@@ -1,0 +1,90 @@
+openapi: 3.1.0
+info:
+  title: Finanzas Familiares API
+  version: 1.0.0
+  description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
+paths:
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      summary: Authenticate an active, provisioned user.
+      description: Verifies an Argon2id password hash and issues a revocable opaque session cookie. No public registration exists.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LoginRequest' } } } }
+      responses: { '200': { description: Session created }, '400': { $ref: '#/components/responses/ValidationError' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { description: User has no household membership } }
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current session and clear its cookie.
+      responses: { '200': { description: Session revoked; idempotent when no session exists } }
+  /api/v1/auth/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get the current user and memberships.
+      security: [{ sessionCookie: [] }]
+      responses: { '200': { description: Current user and active membership }, '401': { $ref: '#/components/responses/Unauthorized' } }
+  /api/v1/auth/active-household:
+    post:
+      operationId: setActiveHousehold
+      summary: Select an existing membership as active household.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [householdId], properties: { householdId: { type: string, format: uuid } } } } } }
+      responses: { '200': { description: Active household changed }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Membership required } }
+  /api/v1/household:
+    get:
+      operationId: getHousehold
+      summary: Get active household settings.
+      security: [{ sessionCookie: [] }]
+      responses: { '200': { description: Active household }, '401': { $ref: '#/components/responses/Unauthorized' } }
+    patch:
+      operationId: updateHousehold
+      summary: Update active household settings.
+      description: Owner only. The active household is server-scoped.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/HouseholdSettings' } } } }
+      responses: { '200': { description: Updated household }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Owner role required } }
+  /api/v1/household/members:
+    get:
+      operationId: listHouseholdMembers
+      summary: List active-household members.
+      description: Owner only; all results are server-scoped to the active household.
+      security: [{ sessionCookie: [] }]
+      responses: { '200': { description: Members }, '403': { description: Owner role required } }
+    post:
+      operationId: inviteHouseholdMember
+      summary: Add or update a provisioned user's household role.
+      description: Owner only. The email must already be created by the controlled administrative process; this operation has no email-delivery side effect.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MemberInvite' } } } }
+      responses: { '201': { description: Membership created or role updated }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Owner role required }, '422': { description: User is not provisioned } }
+  /api/v1/accounts:
+    get: { operationId: listAccounts, summary: List active-household accounts, security: [{ sessionCookie: [] }], responses: { '200': { description: Accounts } } }
+    post: { operationId: createAccount, summary: Create an active-household account, security: [{ sessionCookie: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AccountWrite' } } } }, responses: { '201': { description: Account created }, '400': { $ref: '#/components/responses/ValidationError' }, '403': { description: Editor or owner role required } } }
+  /api/v1/accounts/{accountId}:
+    parameters: [{ name: accountId, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { operationId: getAccount, summary: Get a household-scoped account, security: [{ sessionCookie: [] }], responses: { '200': { description: Account }, '404': { description: Not found } } }
+    patch: { operationId: updateAccount, summary: Update account metadata, security: [{ sessionCookie: [] }], responses: { '200': { description: Account updated } } }
+  /api/v1/accounts/{accountId}/archive:
+    post: { operationId: archiveAccount, summary: Archive an account while retaining prior history, security: [{ sessionCookie: [] }], responses: { '200': { description: Account archived } } }
+  /api/v1/categories:
+    get: { operationId: listCategories, summary: List active-household category hierarchy, security: [{ sessionCookie: [] }], responses: { '200': { description: Categories } } }
+    post: { operationId: createCategory, summary: Create a household-scoped category, security: [{ sessionCookie: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CategoryWrite' } } } }, responses: { '201': { description: Category created }, '400': { $ref: '#/components/responses/ValidationError' } } }
+  /api/v1/categories/seed:
+    post: { operationId: seedCategories, summary: Install the controlled workbook-derived category set when no categories exist, security: [{ sessionCookie: [] }], responses: { '201': { description: Categories installed } } }
+  /api/v1/categories/{categoryId}:
+    parameters: [{ name: categoryId, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { operationId: getCategory, summary: Get a household-scoped category, security: [{ sessionCookie: [] }], responses: { '200': { description: Category } } }
+    patch: { operationId: updateCategory, summary: Rename or reclassify a category, security: [{ sessionCookie: [] }], responses: { '200': { description: Category updated } } }
+  /api/v1/categories/{categoryId}/archive:
+    post: { operationId: archiveCategory, summary: Archive a category after child validation, security: [{ sessionCookie: [] }], responses: { '200': { description: Category archived }, '409': { description: Active child categories remain } } }
+components:
+  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }
+  schemas:
+    LoginRequest: { type: object, required: [email, password], properties: { email: { type: string, format: email, example: owner@example.test }, password: { type: string, format: password } } }
+    HouseholdSettings: { type: object, required: [name, locale, defaultCurrency, timeZone], properties: { name: { type: string, example: Hogar Pérez }, locale: { type: string, example: es-UY }, defaultCurrency: { type: string, enum: [UYU, USD] }, timeZone: { type: string, example: America/Montevideo } } }
+    MemberInvite: { type: object, required: [email, role], properties: { email: { type: string, format: email, example: viewer@example.test }, role: { type: string, enum: [editor, viewer, accountant] } } }
+    AccountWrite: { type: object, required: [name, type, currency, openingBalanceMinor, openingBalanceDate], properties: { name: { type: string }, type: { type: string, enum: [cash, bank, card, loan, reserve_envelope] }, currency: { type: string, enum: [UYU, USD] }, openingBalanceMinor: { type: integer }, openingBalanceDate: { type: string, format: date } } }
+    CategoryWrite: { type: object, required: [name, kind], properties: { name: { type: string }, kind: { type: string, enum: [income, expense, transfer] }, parentId: { type: [string, 'null'], format: uuid }, defaultClassification: { type: [string, 'null'], enum: [fixed, variable, discretionary, null] } } }
+    Error: { type: object, required: [error], properties: { error: { type: object, required: [code, message], properties: { code: { type: string }, message: { type: string }, fields: { type: object, additionalProperties: { type: string } } } } } }
+  responses:
+    ValidationError: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Unauthorized: { description: Valid session required, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }

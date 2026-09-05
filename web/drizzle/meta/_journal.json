@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788562874075,
+      "tag": "0000_condemned_fat_cobra",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788567630874,
+      "tag": "0001_plain_bushwacker",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788567761044,
+      "tag": "0002_eminent_dorian_gray",
+      "breakpoints": true
+    }
+  ]
+}

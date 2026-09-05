@@ -146,8 +146,9 @@ financial items remain Step 4 obligation behavior.
   paid income for the selected month, one-off income, pending obligations, and
   projected cash. Its inputs remain traceable through links to the transaction
   and obligation registers.
-- Expected income and tax reserves are intentionally presented as unavailable:
-  those data models do not exist yet, so displaying a zero would be misleading.
+- Tax reserves are intentionally presented as unavailable: their data model,
+  protection rules, and dashboard integration belong to Step 7, so displaying
+  a zero would be misleading.
 - Added a unit test that verifies dashboard rollups never combine currencies.
 
 ### Slice 5.2 — Expected income

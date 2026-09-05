@@ -12,7 +12,8 @@
 - Authentication and household roles.
 - Accounts, categories, transactions, and obligations.
 - UYU/USD support and manual exchange rate.
-- Dashboard and monthly forecast.
+- Dashboard and monthly forecast (tax-reserve separation follows the Step 7
+  tax-reserve model).
 - Data export and audit logging.
 
 ## Phase 2 — Finance operations

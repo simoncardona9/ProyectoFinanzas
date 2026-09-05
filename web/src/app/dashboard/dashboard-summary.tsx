@@ -113,6 +113,20 @@ export function DashboardSummary() {
                 </dd>
               </div>
             </dl>
+            <div className="mt-4 flex flex-wrap gap-3 text-sm">
+              <a
+                className="text-emerald-800 underline"
+                href={`/api/v1/transactions?from=${period}-01&to=${new Date(Number(period.slice(0, 4)), Number(period.slice(5)), 0).toISOString().slice(0, 10)}&type=income&currency=${summary.currency}`}
+              >
+                Datos de ingresos
+              </a>
+              <a
+                className="text-emerald-800 underline"
+                href={`/api/v1/obligations?dueFrom=${period}-01&dueTo=${new Date(Number(period.slice(0, 4)), Number(period.slice(5)), 0).toISOString().slice(0, 10)}&currency=${summary.currency}`}
+              >
+                Datos de obligaciones
+              </a>
+            </div>
           </section>
         ))}
       </div>

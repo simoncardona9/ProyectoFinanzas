@@ -22,6 +22,13 @@
       "when": 1788567761044,
       "tag": "0002_eminent_dorian_gray",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788569646525,
+      "tag": "0003_wooden_starhawk",
+      "breakpoints": true
     }
   ]
 }

@@ -27,6 +27,13 @@ export const createPaidTransactionSchema = paidTransactionFields
 
 export type CreatePaidTransaction = z.infer<typeof createPaidTransactionSchema>;
 
+export const createExpectedIncomeSchema = paidTransactionFields.extend({
+  type: z.literal("income"),
+  status: z.enum(["planned", "pending"]),
+});
+
+export type CreateExpectedIncome = z.infer<typeof createExpectedIncomeSchema>;
+
 export const updatePaidTransactionSchema = paidTransactionFields
   .extend({ changeReason: z.string().trim().min(3).max(500) })
   .refine(

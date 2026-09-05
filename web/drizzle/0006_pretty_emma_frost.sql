@@ -1,0 +1,1 @@
+ALTER TABLE "households" ADD COLUMN "low_buffer_minor" integer DEFAULT 0 NOT NULL;

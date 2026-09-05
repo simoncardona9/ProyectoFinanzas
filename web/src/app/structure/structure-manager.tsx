@@ -1,5 +1,9 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
+import {
+  formatMoneyInput,
+  parseMoneyToMinor,
+} from "@/shared/money/parse-money";
 
 type Account = {
   id: string;
@@ -33,6 +37,9 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [message, setMessage] = useState("");
+  const [openingBalance, setOpeningBalance] = useState("0,00");
+  const [accountFormKey, setAccountFormKey] = useState(0);
+  const [categoryFormKey, setCategoryFormKey] = useState(0);
   const load = async () => {
     try {
       const [nextAccounts, nextCategories] = await Promise.all([
@@ -52,6 +59,11 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
   const submitAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const openingBalanceMinor = parseMoneyToMinor(openingBalance);
+    if (openingBalanceMinor === undefined) {
+      setMessage("Ingresa un importe válido, por ejemplo 1.234,56.");
+      return;
+    }
     try {
       await api("/api/v1/accounts", {
         method: "POST",
@@ -59,11 +71,12 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
           name: form.get("name"),
           type: form.get("type"),
           currency: form.get("currency"),
-          openingBalanceMinor: Number(form.get("openingBalanceMinor")),
+          openingBalanceMinor,
           openingBalanceDate: form.get("openingBalanceDate"),
         }),
       });
-      event.currentTarget.reset();
+      setAccountFormKey((key) => key + 1);
+      setOpeningBalance("0,00");
       setMessage("Cuenta creada.");
       await load();
     } catch (error) {
@@ -85,7 +98,7 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
             kind === "expense" ? form.get("defaultClassification") : null,
         }),
       });
-      event.currentTarget.reset();
+      setCategoryFormKey((key) => key + 1);
       setMessage("Categoría creada.");
       await load();
     } catch (error) {
@@ -96,6 +109,15 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
     try {
       await api(`/api/v1/${resource}/${id}/archive`, { method: "POST" });
       setMessage("Elemento archivado; su historial se conserva.");
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Error.");
+    }
+  };
+  const activateAccount = async (id: string) => {
+    try {
+      await api(`/api/v1/accounts/${id}/activate`, { method: "POST" });
+      setMessage("Cuenta reactivada; su historial se conserva.");
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Error.");
@@ -138,7 +160,11 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
       <section className="rounded-xl border border-zinc-200 p-5">
         <h2 className="text-xl font-semibold">Cuentas</h2>
         {canEdit && (
-          <form onSubmit={submitAccount} className="mt-4 grid gap-2">
+          <form
+            key={accountFormKey}
+            onSubmit={submitAccount}
+            className="mt-4 grid gap-2"
+          >
             <input
               name="name"
               required
@@ -159,10 +185,15 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
               </select>
             </div>
             <input
-              name="openingBalanceMinor"
-              type="number"
+              name="openingBalance"
+              type="text"
+              inputMode="decimal"
               required
-              defaultValue="0"
+              value={openingBalance}
+              onChange={(event) =>
+                setOpeningBalance(formatMoneyInput(event.target.value))
+              }
+              placeholder="Saldo inicial (ej. 1.234,56)"
               className="rounded border p-2"
             />
             <input
@@ -185,7 +216,8 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
               <span>
                 {item.name}{" "}
                 <small className="text-zinc-500">
-                  {item.type} · {item.currency}
+                  {item.type} · {item.currency} ·{" "}
+                  {item.active ? "Activa" : "Archivada"}
                 </small>
               </span>
               {canEdit && (
@@ -196,12 +228,21 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
                   >
                     Editar
                   </button>
-                  <button
-                    onClick={() => void archive("accounts", item.id)}
-                    className="text-red-700"
-                  >
-                    Archivar
-                  </button>
+                  {item.active ? (
+                    <button
+                      onClick={() => void archive("accounts", item.id)}
+                      className="text-red-700"
+                    >
+                      Archivar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => void activateAccount(item.id)}
+                      className="text-emerald-700"
+                    >
+                      Reactivar
+                    </button>
+                  )}
                 </span>
               )}
             </li>
@@ -224,7 +265,11 @@ export function StructureManager({ canEdit }: { canEdit: boolean }) {
           )}
         </div>
         {canEdit && (
-          <form onSubmit={submitCategory} className="mt-4 grid gap-2">
+          <form
+            key={categoryFormKey}
+            onSubmit={submitCategory}
+            className="mt-4 grid gap-2"
+          >
             <input
               name="name"
               required

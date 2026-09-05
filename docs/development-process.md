@@ -53,6 +53,8 @@ There is no preview, staging, or cloud-production environment during the current
 **Goal:** Create the financial structure before recording money.
 
 - Add accounts: cash, banks, cards, loans, and reserve envelopes.
+- Use one localized monetary-input convention across every financial form; do
+  not expose minor units as the normal user entry format.
 - Add nested income/expense categories and fixed/variable/discretionary classifications.
 - Seed a controlled set of categories based on the workbook.
 
@@ -83,10 +85,12 @@ There is no preview, staging, or cloud-production environment during the current
 **Goal:** Replace the most important Excel dashboard view.
 
 - Show spendable cash, collected income, expected income, pending obligations, projected cash, and low-buffer alerts.
-- Keep tax reserves and one-off income visibly separate.
+- Keep one-off income visibly separate. Tax reserves are introduced and then
+  surfaced separately by Step 7; before then the dashboard must state that
+  reserve data is unavailable rather than treating it as zero.
 - Make every dashboard figure traceable to underlying records.
 
-**Acceptance:** The household can manually compare the dashboard against a small test dataset and explain each total from linked records.
+**Acceptance:** The household can manually compare the dashboard against a small test dataset and explain each implemented total from linked records. Tax-reserve totals are explicitly out of scope until Step 7.
 
 ### Step 6 — Debts, currencies, and exchange rates
 
@@ -99,10 +103,11 @@ There is no preview, staging, or cloud-production environment during the current
 
 ### Step 7 — Invoices, IVA, and tax reserves
 
-**Goal:** Reconcile teaching income and protect tax money.
+**Goal:** Reconcile teaching income and protect tax money, including its separate dashboard treatment.
 
 - Add invoices, IVA calculation, collection linkage, tax reserves, and settlement.
-- Keep protected funds out of spendable cash.
+- Keep protected funds out of spendable cash and expose the protected amount
+  separately in the dashboard.
 
 **Acceptance:** An invoice collection can be reconciled to an income transaction; IVA is traceable; settling a reserve records a tax payment.
 

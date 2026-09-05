@@ -52,6 +52,12 @@ registration or real financial data.
   plus editor/owner APIs and a Spanish management screen at `/structure`.
 - Viewers and accountants can list structure but cannot create, change, seed,
   or archive it. Every query and mutation is scoped to the active household.
+- The structure screen labels each account as active or archived. Owners and
+  editors can reactivate an archived account through an audited,
+  household-scoped operation; its financial history is preserved.
+- Account opening balances accept and format localized display amounts while
+  persisting integer minor units. Development-only owner reset support removes
+  active-household test financial data after typed confirmation.
 
 ### Verification
 
@@ -83,6 +89,9 @@ registration or real financial data.
   are scoped to that currency; UYU and USD are never combined.
 - Added type, currency, recurring/one-off, date, account, and category list
   filters plus bounded offset pagination.
+- Added an **Ingreso único** control to paid-income creation and correction.
+  It records the `is_one_off` flag used by the dashboard's separate one-off
+  income total; the control is not available for expenses.
 - Added a household-scoped transaction-detail API and Spanish detail screen,
   including its available audit events.
 - Added unit coverage for USD account validation, currency-aware write input,
@@ -104,7 +113,7 @@ financial items remain Step 4 obligation behavior.
 - Added the audit metadata migration `0004_futuristic_zarda.sql` and correction
   and void controls to the transaction detail screen.
 
-## Step 4 — Obligations and monthly forecast — implemented, pending local acceptance
+## Step 4 — Obligations and monthly forecast — completed
 
 - Added household-scoped obligations with amount remaining, due date, expense
   category, fixed/variable/discretionary classification, planned/pending/paid/
@@ -123,3 +132,57 @@ financial items remain Step 4 obligation behavior.
 - Added migration `0005_condemned_deathbird.sql` for obligations and payment
   links, and unit coverage for category, payment, deferral, and lifecycle
   validation.
+
+### Verification and local acceptance
+
+- Reviewed the Step 4 acceptance flow with synthetic data: pending obligations
+  affect the monthly forecast without changing paid cash; payments create the
+  linked paid expense and reduce the remaining amount; and deferrals require a
+  strictly later due date and move the obligation into its new period.
+- Confirmed that UYU and USD forecast totals are returned separately.
+- `pnpm test` — passed (21 tests).
+- `pnpm exec tsc --noEmit` — passed.
+- `pnpm lint` — passed.
+- `pnpm db:check` — passed.
+- `pnpm build` — passed.
+
+## Step 5 — First usable dashboard — completed
+
+### Slice 5.1 — Traceable cash and monthly projection
+
+- Added a protected monthly dashboard at `/dashboard` and `GET /api/v1/dashboard`.
+- The dashboard shows, separately for UYU and USD, current spendable cash,
+  paid income for the selected month, one-off income, pending obligations, and
+  projected cash. Its inputs remain traceable through links to the transaction
+  and obligation registers.
+- Tax reserves are intentionally presented as unavailable: their data model,
+  protection rules, and dashboard integration belong to Step 7, so displaying
+  a zero would be misleading.
+- Added a unit test that verifies dashboard rollups never combine currencies.
+
+### Slice 5.2 — Expected income
+
+- Added planned and pending income records with an active, currency-matched
+  destination account and active income category.
+- Added an editor/owner dashboard form to register expected income. Expected
+  income changes the projection only; it does not affect current cash until it
+  is recorded as paid.
+
+### Slice 5.4 — Local reconciliation acceptance
+
+- Added a repeatable synthetic-data checklist for reconciling each dashboard
+  figure, low-buffer alerts, source links, and currency isolation before Step
+  5 is accepted.
+
+### Verification and local acceptance
+
+- Local migration `0006_pretty_emma_frost.sql` applied successfully.
+- `pnpm test` — passed (23 tests).
+- `pnpm exec tsc --noEmit` — passed.
+- `pnpm lint` — passed.
+- `pnpm db:check` — passed.
+- `pnpm build` — passed.
+- The approved synthetic reconciliation procedure is retained in
+  `docs/dashboard-acceptance.md` for repeatable local review.
+- On 2026-09-05, the household completed the dashboard acceptance scenario
+  locally with synthetic data and confirmed the dashboard flow and figures.

@@ -92,6 +92,7 @@ export const authRepository = {
       name: string;
       locale: string;
       defaultCurrency: "UYU" | "USD";
+      lowBufferMinor: number;
       timeZone: string;
     },
   ) {

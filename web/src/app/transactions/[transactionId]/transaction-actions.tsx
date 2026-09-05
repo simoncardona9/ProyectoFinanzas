@@ -38,6 +38,7 @@ export function TransactionActions({
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [isOneOff, setIsOneOff] = useState(transaction.isOneOff);
   const available =
     canEdit && transaction.status === "paid" && !transaction.voidedAt;
 
@@ -60,8 +61,8 @@ export function TransactionActions({
         accountId: transaction.accountId,
         categoryId: transaction.categoryId,
         description: form.get("description"),
-        isRecurring: transaction.isRecurring,
-        isOneOff: transaction.isOneOff,
+        isRecurring: transaction.isRecurring && !isOneOff,
+        isOneOff,
         changeReason: form.get("changeReason"),
       });
       setMessage("Movimiento actualizado y auditado.");
@@ -122,6 +123,16 @@ export function TransactionActions({
           required
           className="rounded border p-2"
         />
+        {transaction.type === "income" && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={isOneOff}
+              onChange={(event) => setIsOneOff(event.target.checked)}
+            />
+            Ingreso único
+          </label>
+        )}
         <input
           name="changeReason"
           placeholder="Razón de la corrección"

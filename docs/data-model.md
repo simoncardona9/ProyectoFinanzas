@@ -21,6 +21,8 @@ Transactions and other dated records keep their actual date; their reporting mon
 Represents where money is held or owed: cash, bank account, card, loan, tax reserve, or virtual envelope.
 
 Required fields: `name`, `type`, `currency`, `opening_balance`, `active`.
+`active` and `archived_at` support non-destructive archival; reactivation clears
+the archive marker without changing historical transactions.
 
 ### Category
 

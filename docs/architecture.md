@@ -42,6 +42,13 @@ The application language and database direction are defined in [technology-stack
 - Users authenticate with an email and password stored in the application database; no external authentication provider is used in version 1.
 - Passwords are hashed with Argon2id. Plain-text passwords are never stored or logged.
 - The initial owner account and subsequent users are created through a controlled administrative database process; public self-registration is not available.
+- User-facing monetary inputs use Spanish Uruguay notation (`1.234,56`) and are
+  converted at the UI boundary to integer minor units before reaching domain
+  services or the database.
+- Local development includes an owner-confirmed test-data reset that is disabled
+  in production and scoped to the active household's financial structure,
+  transactions, obligations, payment links, and audit records. It preserves
+  users, memberships, sessions, and household settings.
 - A successful login creates a random, opaque, revocable session token. Only its hash is stored in the database.
 - The raw token is issued only in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie. It is not exposed to browser JavaScript or stored in local storage.
 - Every request resolves the session server-side, then applies household membership and role authorization.

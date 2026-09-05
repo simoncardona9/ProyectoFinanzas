@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, auditLogs, categories, transactions } from "@/db/schema";
 import type {
+  CreateExpectedIncome,
   CreatePaidTransaction,
   ListPaidTransactions,
   UpdatePaidTransaction,
@@ -11,7 +12,7 @@ export const transactionRepository = {
   async createPaid(
     householdId: string,
     actorUserId: string,
-    values: CreatePaidTransaction,
+    values: CreatePaidTransaction | CreateExpectedIncome,
   ) {
     return db.transaction(async (tx) => {
       const [transaction] = await tx

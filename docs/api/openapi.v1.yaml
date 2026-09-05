@@ -12,30 +12,60 @@ paths:
       parameters:
         - { name: dueFrom, in: query, schema: { type: string, format: date } }
         - { name: dueTo, in: query, schema: { type: string, format: date } }
-        - { name: status, in: query, schema: { type: string, enum: [planned, pending, paid, deferred, cancelled] } }
+        - {
+            name: status,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum: [planned, pending, paid, deferred, cancelled],
+              },
+          }
       responses: { "200": { description: Obligations } }
     post:
       operationId: createObligation
       summary: Create a planned or pending household obligation.
       security: [{ sessionCookie: [] }]
       responses:
-        { "201": { description: Obligation created }, "400": { $ref: "#/components/responses/ValidationError" }, "403": { description: Editor or owner role required } }
+        {
+          "201": { description: Obligation created },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Editor or owner role required },
+        }
   /api/v1/obligations/{obligationId}/payments:
     post:
       operationId: payObligation
       summary: Record a full or partial obligation payment as a paid expense transaction.
       security: [{ sessionCookie: [] }]
       parameters:
-        - { name: obligationId, in: path, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: obligationId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
       responses:
-        { "201": { description: Payment and linked transaction created }, "422": { description: Invalid account, closed obligation, or payment exceeding balance } }
+        {
+          "201": { description: Payment and linked transaction created },
+          "422":
+            {
+              description: Invalid account,
+              closed obligation,
+              or payment exceeding balance,
+            },
+        }
   /api/v1/obligations/{obligationId}/defer:
     post:
       operationId: deferObligation
       summary: Move an open obligation to a later due date with an audit reason.
       security: [{ sessionCookie: [] }]
       parameters:
-        - { name: obligationId, in: path, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: obligationId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
       responses: { "200": { description: Obligation deferred } }
   /api/v1/forecast:
     get:
@@ -43,8 +73,44 @@ paths:
       summary: Return current cash and pending-obligation projection by currency for a calendar month.
       security: [{ sessionCookie: [] }]
       parameters:
-        - { name: period, in: query, required: true, schema: { type: string, pattern: '^\\d{4}-(0[1-9]|1[0-2])$' } }
-      responses: { "200": { description: Forecast with separate currency totals } }
+        - {
+            name: period,
+            in: query,
+            required: true,
+            schema: { type: string, pattern: '^\\d{4}-(0[1-9]|1[0-2])$' },
+          }
+      responses:
+        { "200": { description: Forecast with separate currency totals } }
+  /api/v1/dashboard:
+    get:
+      operationId: getDashboard
+      summary: Return the active household's traceable monthly dashboard.
+      description: >
+        Read-only, household-scoped summary. It returns separate UYU and USD
+        totals; currencies are never converted or combined. Expected income is
+        included only in projected cash, never current cash. Current cash comes
+        from cash and bank accounts and paid movements, while the projection
+        subtracts open obligations due during the requested month.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: period,
+            in: query,
+            required: true,
+            schema: { type: string, pattern: '^\\d{4}-(0[1-9]|1[0-2])$' },
+            example: "2026-09",
+          }
+      responses:
+        "200":
+          {
+            description: Dashboard currencies with cash,
+            paid income,
+            one-off income,
+            pending obligations,
+            and projected cash.,
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/auth/login:
     post:
       operationId: login
@@ -239,6 +305,44 @@ paths:
         summary: Archive an account while retaining prior history,
         security: [{ sessionCookie: [] }],
         responses: { "200": { description: Account archived } },
+      }
+  /api/v1/accounts/{accountId}/activate:
+    parameters:
+      [
+        {
+          name: accountId,
+          in: path,
+          required: true,
+          schema: { type: string, format: uuid },
+        },
+      ]
+    post:
+      {
+        operationId: activateAccount,
+        summary: Reactivate an archived account while retaining prior history,
+        description: Active-household owner/editor operation; the account is made available for new entries and its archived timestamp is cleared.
+        security: [{ sessionCookie: [] }],
+        responses:
+          {
+            "200": { description: Account reactivated },
+            "403": { description: Editor or owner role required },
+            "404": { description: Account not found },
+          },
+      }
+  /api/v1/household/reset-test-data:
+    post:
+      {
+        operationId: resetHouseholdTestData,
+        summary: Reset active-household financial test data in local development,
+        description: Development-only, owner-only destructive operation. It requires the exact confirmation `RESET TEST DATA`, removes financial structure, records, links, and audit logs for the active household, and preserves users, memberships, sessions, and household settings. It returns 404 in production.
+        security: [{ sessionCookie: [] }],
+        responses:
+          {
+            "200": { description: Active-household financial test data reset },
+            "400": { description: Missing or incorrect confirmation },
+            "403": { description: Owner role required },
+            "404": { description: Reset unavailable outside local development },
+          },
       }
   /api/v1/categories:
     get:

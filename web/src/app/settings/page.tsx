@@ -3,6 +3,8 @@ import { authRepository } from "@/modules/auth/auth.repository";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { FeatureNavigationCard } from "@/shared/ui/navigation";
 import { LogoutButton } from "./logout-button";
+import { LowBufferSettings } from "./low-buffer-settings";
+import { ResetTestData } from "./reset-test-data";
 export default async function SettingsPage() {
   let context;
   try {
@@ -28,6 +30,11 @@ export default async function SettingsPage() {
           <LogoutButton />
         </div>
         <nav aria-label="Secciones principales" className="mt-6 grid gap-3">
+          <FeatureNavigationCard
+            href="/dashboard"
+            title="Panel mensual"
+            description="Revisar efectivo, ingresos cobrados y proyección por moneda."
+          />
           <FeatureNavigationCard
             href="/structure"
             title="Cuentas y categorías"
@@ -62,6 +69,12 @@ export default async function SettingsPage() {
             <dd>{household?.defaultCurrency}</dd>
           </div>
         </dl>
+        {household && context.membership.role === "owner" && (
+          <>
+            <LowBufferSettings household={household} />
+            <ResetTestData />
+          </>
+        )}
       </section>
     </main>
   );

@@ -3,6 +3,8 @@
 ## Money and currency
 
 1. Store monetary values in integer minor units plus currency code.
+   User interfaces accept localized display amounts (for example `1.234,56`)
+   and convert them to minor units before persistence.
 2. Do not mix UYU and USD totals without an explicit exchange rate and date.
 3. Preserve the original currency and the UYU planning equivalent for foreign-currency transactions.
 

@@ -90,6 +90,12 @@ export async function updateAccount(
 export async function archiveAccount(context: AuthContext, id: string) {
   return updateAccount(context, id, { active: false, archivedAt: new Date() });
 }
+export async function activateAccount(context: AuthContext, id: string) {
+  return updateAccount(context, id, { active: true, archivedAt: null });
+}
+export async function resetFinancialData(context: AuthContext) {
+  await structureRepository.resetFinancialData(context.membership.householdId);
+}
 export async function createCategory(
   context: AuthContext,
   values: Parameters<typeof structureRepository.createCategory>[1],

@@ -1,11 +1,29 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { accounts, auditLogs, categories } from "@/db/schema";
+import { accounts, auditLogs, categories, obligationPayments, obligations, transactions } from "@/db/schema";
 
 type NewAccount = Omit<typeof accounts.$inferInsert, "householdId">;
 type NewCategory = Omit<typeof categories.$inferInsert, "householdId">;
 
 export const structureRepository = {
+  async resetFinancialData(householdId: string) {
+    return db.transaction(async (tx) => {
+      await tx.delete(obligationPayments).where(
+        inArray(
+          obligationPayments.obligationId,
+          tx
+            .select({ id: obligations.id })
+            .from(obligations)
+            .where(eq(obligations.householdId, householdId)),
+        ),
+      );
+      await tx.delete(obligations).where(eq(obligations.householdId, householdId));
+      await tx.delete(transactions).where(eq(transactions.householdId, householdId));
+      await tx.delete(auditLogs).where(eq(auditLogs.householdId, householdId));
+      await tx.delete(categories).where(eq(categories.householdId, householdId));
+      await tx.delete(accounts).where(eq(accounts.householdId, householdId));
+    });
+  },
   listAccounts(householdId: string, active?: boolean) {
     return db.query.accounts.findMany({
       where: and(

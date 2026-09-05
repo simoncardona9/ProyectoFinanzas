@@ -137,7 +137,7 @@ financial items remain Step 4 obligation behavior.
 - `pnpm db:check` — passed.
 - `pnpm build` — passed.
 
-## Step 5 — First usable dashboard — in progress
+## Step 5 — First usable dashboard — completed
 
 ### Slice 5.1 — Traceable cash and monthly projection
 
@@ -158,3 +158,20 @@ financial items remain Step 4 obligation behavior.
 - Added an editor/owner dashboard form to register expected income. Expected
   income changes the projection only; it does not affect current cash until it
   is recorded as paid.
+
+### Slice 5.4 — Local reconciliation acceptance
+
+- Added a repeatable synthetic-data checklist for reconciling each dashboard
+  figure, low-buffer alerts, source links, and currency isolation before Step
+  5 is accepted.
+
+### Verification and local acceptance
+
+- Local migration `0006_pretty_emma_frost.sql` applied successfully.
+- `pnpm test` — passed (23 tests).
+- `pnpm exec tsc --noEmit` — passed.
+- `pnpm lint` — passed.
+- `pnpm db:check` — passed.
+- `pnpm build` — passed.
+- The approved synthetic reconciliation procedure is retained in
+  `docs/dashboard-acceptance.md` for repeatable local review.

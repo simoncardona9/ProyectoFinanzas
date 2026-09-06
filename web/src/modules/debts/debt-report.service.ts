@@ -15,12 +15,15 @@ export async function getDebtReport(
   ]);
   if (
     exchangeRateId &&
-    (!rate || rate.baseCurrency !== "USD" || rate.quoteCurrency !== "UYU")
+    (!rate ||
+      rate.baseCurrency !== "USD" ||
+      rate.quoteCurrency !== "UYU" ||
+      rate.movement !== "buy_usd")
   )
     throw new ApiError(
       422,
       "INVALID_EXCHANGE_RATE",
-      "Select a household USD to UYU exchange rate for this report.",
+      "Select a household USD-buying rate (UYU to USD) for this report.",
     );
   return buildDebtReport(
     rows as Parameters<typeof buildDebtReport>[0],
@@ -31,6 +34,7 @@ export async function getDebtReport(
           effectiveDate: rate.effectiveDate,
           source: rate.source,
           kind: rate.kind,
+          movement: rate.movement,
         }
       : undefined,
   );

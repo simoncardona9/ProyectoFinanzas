@@ -25,7 +25,7 @@ export async function createExchangeRate(
       throw new ApiError(
         409,
         "DUPLICATE_EXCHANGE_RATE",
-        "An exchange rate already exists for this pair, date, and kind.",
+        "An exchange rate already exists for this pair, date, kind, and movement.",
       );
     throw error;
   }

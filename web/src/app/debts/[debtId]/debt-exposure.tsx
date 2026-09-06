@@ -4,6 +4,7 @@ type Rate = {
   effectiveDate: string;
   source: string;
   kind: "confirmed" | "planning";
+  movement: "buy_usd" | "sell_usd" | "reference";
 };
 
 type Exposure = {
@@ -13,6 +14,7 @@ type Exposure = {
     effectiveDate: string;
     source: string;
     kind: "confirmed" | "planning";
+    movement: "buy_usd" | "sell_usd" | "reference";
   } | null;
 } | null;
 
@@ -55,7 +57,8 @@ export function DebtExposure({
       </h2>
       <p className="mt-1 text-sm text-zinc-700">
         El saldo en USD sigue siendo el autoritativo. Selecciona una cotización
-        USD → UYU del hogar para ver únicamente esta equivalencia.
+        para comprar USD (entregas UYU y recibes USD) del hogar para ver esta
+        equivalencia.
       </p>
       <form action={`/debts/${debtId}`} className="mt-3 flex flex-wrap gap-2">
         <select
@@ -63,10 +66,11 @@ export function DebtExposure({
           defaultValue={selectedRateId ?? ""}
           className="min-w-0 flex-1 rounded border p-2"
         >
-          <option value="">Seleccionar cotización</option>
+          <option value="">Seleccionar compra de USD (UYU → USD)</option>
           {rates.map((rate) => (
             <option key={rate.id} value={rate.id}>
-              {rate.effectiveDate} · 1 USD = {rate.rate} UYU · {rate.source} ·{" "}
+              {rate.effectiveDate} · Compra USD (UYU → USD) · 1 USD ={" "}
+              {rate.rate} UYU · {rate.source} ·{" "}
               {rate.kind === "confirmed" ? "confirmada" : "planificación"}
             </option>
           ))}
@@ -77,7 +81,8 @@ export function DebtExposure({
       </form>
       {!rates.length && (
         <p className="mt-3 text-sm text-zinc-700">
-          Aún no hay cotizaciones USD → UYU disponibles para este hogar.
+          Aún no hay cotizaciones de compra de USD (UYU → USD) disponibles para
+          este hogar.
         </p>
       )}
       {exposure && exposure.selectedRate && (
@@ -86,7 +91,7 @@ export function DebtExposure({
             {money(exposure.uyuEquivalentAmountMinor)}
           </strong>
           <p className="mt-1 text-sm text-zinc-700">
-            1 USD = {exposure.selectedRate.rate} UYU ·{" "}
+            Compra USD (UYU → USD): 1 USD = {exposure.selectedRate.rate} UYU ·{" "}
             {exposure.selectedRate.effectiveDate} ·{" "}
             {exposure.selectedRate.source} ·{" "}
             {exposure.selectedRate.kind === "confirmed"

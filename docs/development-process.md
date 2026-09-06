@@ -113,13 +113,18 @@ There is no preview, staging, or cloud-production environment during the current
 3. **6.3 — Explicit exchange-rate register:** owner/editor management and
    household-scoped read access for dated UYU/USD rates, including base and
    quote currencies, rate, effective date, source, and confirmed/planning
-   kind. Validate positive rates and prevent ambiguous duplicate rates for the
-   same pair, date, and kind. Rates never alter balances by themselves.
+   kind, plus an explicit currency movement: USD purchase (`UYU` → `USD`), USD
+   sale (`USD` → `UYU`), or non-transactional reference. Store all rates as
+   `1 USD = X UYU`; validate positive rates and prevent ambiguous duplicates
+   for the same pair, date, kind, and movement. Rates never alter balances by
+   themselves.
 4. **6.4 — Rate selection and UYU-equivalent debt exposure:** let a report or
    debt view select an explicit eligible rate (rather than silently combining
    currencies), calculate UYU equivalents from original-currency remaining
    balances with defined rounding, and expose the selected rate/date/source.
-   Preserve the original-currency amounts beside every converted figure.
+   Preserve the original-currency amounts beside every converted figure. USD
+   debt exposure may use only a USD-purchase (`UYU` → `USD`) rate because it
+   represents the UYU needed to obtain USD for settlement.
 5. **6.5 — Debt report and local acceptance:** provide a household-scoped
    report of original balances, same-currency payments, and UYU-equivalent
    exposure without combining currencies outside the selected-rate result;

@@ -235,6 +235,20 @@ financial items remain Step 4 obligation behavior.
   change balances or calculate UYU equivalents; explicit rate selection and
   exposure remain deferred to Slice 6.4.
 
+#### Follow-up — Explicit USD purchase/sale movement — implemented, pending local acceptance
+
+- Corrected the rate register to state the movement explicitly: `buy_usd`
+  (`UYU` → `USD`), `sell_usd` (`USD` → `UYU`), or `reference`. All rates use
+  the unambiguous `1 USD = X UYU` convention, and duplicate protection now
+  includes movement.
+- USD debt detail and report exposure accept and display only the USD-purchase
+  movement because it is the UYU cost of obtaining USD for settlement. Sale and
+  reference rates remain visible in the register but cannot be selected for
+  that purpose.
+- Added migration `0010_real_marten_broadcloak.sql`. Existing rates are
+  preserved as `reference` and must be re-recorded with an explicit movement
+  before being selected for debt exposure.
+
 ### Slice 6.4 — Rate selection and UYU-equivalent debt exposure — implemented, pending local acceptance
 
 - Added explicit `exchangeRateId` selection on debt detail reads and the debt

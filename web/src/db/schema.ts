@@ -68,6 +68,12 @@ export const exchangeRateKind = pgEnum("exchange_rate_kind", [
   "planning",
 ]);
 
+export const exchangeRateMovement = pgEnum("exchange_rate_movement", [
+  "buy_usd",
+  "sell_usd",
+  "reference",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
@@ -370,6 +376,7 @@ export const exchangeRates = pgTable(
     effectiveDate: date("effective_date").notNull(),
     source: text("source").notNull(),
     kind: exchangeRateKind("kind").notNull(),
+    movement: exchangeRateMovement("movement").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -381,6 +388,7 @@ export const exchangeRates = pgTable(
       table.quoteCurrency,
       table.effectiveDate,
       table.kind,
+      table.movement,
     ),
     index("exchange_rates_household_date_idx").on(
       table.householdId,

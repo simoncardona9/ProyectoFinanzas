@@ -18,6 +18,7 @@ function selectedRate(rate: ExchangeRate) {
     effectiveDate: rate.effectiveDate,
     source: rate.source,
     kind: rate.kind,
+    movement: rate.movement,
   };
 }
 
@@ -35,11 +36,16 @@ export async function getDebtExposure(
     };
   if (!exchangeRateId) return null;
   const rate = await exchangeRateRepository.find(householdId, exchangeRateId);
-  if (!rate || rate.baseCurrency !== "USD" || rate.quoteCurrency !== "UYU")
+  if (
+    !rate ||
+    rate.baseCurrency !== "USD" ||
+    rate.quoteCurrency !== "UYU" ||
+    rate.movement !== "buy_usd"
+  )
     throw new ApiError(
       422,
       "INVALID_EXCHANGE_RATE",
-      "Select a household USD to UYU exchange rate for this debt.",
+      "Select a household USD-buying rate (UYU to USD) for this debt.",
     );
   return {
     originalRemainingAmountMinor: debt.remainingAmountMinor,

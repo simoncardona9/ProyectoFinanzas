@@ -23,8 +23,9 @@ export default async function ExchangeRatesPage() {
           <BackLink href="/settings">Volver a configuración</BackLink>
         </div>
         <p className="mt-2 text-zinc-600">
-          Registra cotizaciones UYU/USD con fecha y fuente. Estas referencias no
-          cambian saldos ni calculan equivalencias todavía.
+          Registra compra, venta o referencia de USD con fecha y fuente. Cada
+          tasa indica explícitamente el movimiento de monedas y no cambia
+          saldos.
         </p>
         <ExchangeRateManager
           canEdit={["owner", "editor"].includes(context.membership.role)}

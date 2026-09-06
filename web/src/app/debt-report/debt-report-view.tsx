@@ -24,6 +24,7 @@ type Report = {
     effectiveDate: string;
     source: string;
     kind: "confirmed" | "planning";
+    movement: "buy_usd" | "sell_usd" | "reference";
   } | null;
   uyuEquivalentExposureMinor: number | null;
 };
@@ -34,6 +35,7 @@ type Rate = {
   effectiveDate: string;
   source: string;
   kind: "confirmed" | "planning";
+  movement: "buy_usd" | "sell_usd" | "reference";
 };
 
 function money(amount: number, currency: string) {
@@ -66,10 +68,11 @@ export function DebtReportView({
             defaultValue={selectedRateId ?? ""}
             className="min-w-0 flex-1 rounded border p-2"
           >
-            <option value="">Seleccionar cotización USD → UYU</option>
+            <option value="">Seleccionar compra de USD (UYU → USD)</option>
             {rates.map((rate) => (
               <option key={rate.id} value={rate.id}>
-                {rate.effectiveDate} · 1 USD = {rate.rate} UYU · {rate.source} ·{" "}
+                {rate.effectiveDate} · Compra USD (UYU → USD) · 1 USD ={" "}
+                {rate.rate} UYU · {rate.source} ·{" "}
                 {rate.kind === "confirmed" ? "confirmada" : "planificación"}
               </option>
             ))}
@@ -84,7 +87,7 @@ export function DebtReportView({
               {money(report.uyuEquivalentExposureMinor ?? 0, "UYU")}
             </strong>
             <p className="mt-1 text-sm text-zinc-700">
-              1 USD = {report.selectedRate.rate} UYU ·{" "}
+              Compra USD (UYU → USD): 1 USD = {report.selectedRate.rate} UYU ·{" "}
               {report.selectedRate.effectiveDate} · {report.selectedRate.source}{" "}
               ·{" "}
               {report.selectedRate.kind === "confirmed"

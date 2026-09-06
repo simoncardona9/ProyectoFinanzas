@@ -251,17 +251,20 @@ no exchange-rate, UYU-equivalent exposure, or term-edit endpoint.
 
 | Method and path              | Parameters                                                                       | Purpose                                  |
 | ---------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
-| `GET /exchange-rates`        | `baseCurrency`, `quoteCurrency`, `from`, `to`                                    | List rates.                              |
-| `POST /exchange-rates`       | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind` | Add confirmed or planning exchange rate. |
+| `GET /exchange-rates`        | `baseCurrency`, `quoteCurrency`, `from`, `to`, `movement`                        | List rates.                              |
+| `POST /exchange-rates`       | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind`, `movement` | Add a movement-specific exchange rate. |
 
 Slice 6.3 implements the list and create endpoints only. Each rate belongs to
 the server-selected active household and has a UYU/USD base/quote pair, a
-positive decimal rate, effective date, source, and `confirmed` or `planning`
-kind. Owners and editors create; every household role reads. A household may
-not have two records for the same pair, date, and kind. Creating a rate writes
-an audit event and never changes a debt, account, transaction, or report.
+positive decimal rate, effective date, source, `confirmed` or `planning` kind,
+and movement. All rates use `1 USD = X UYU`; movement is `buy_usd` (`UYU` →
+`USD`), `sell_usd` (`USD` → `UYU`), or `reference` (no movement). Owners and
+editors create; every household role reads. A household may not have two
+records for the same pair, date, kind, and movement. Creating a rate writes an
+audit event and never changes a debt, account, transaction, or report.
 Slice 6.4 lets a debt detail request provide an `exchangeRateId`. For a USD
-debt it must identify an active-household `USD` → `UYU` rate; the response
+debt it must identify an active-household USD-purchase (`UYU` → `USD`) rate;
+the response
 includes an informational UYU equivalent, the chosen rate/date/source/kind,
 and the original USD amount. UYU debts retain their original UYU amount without
 a rate. USD minor units are multiplied by the selected decimal rate and rounded

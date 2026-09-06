@@ -43,6 +43,7 @@ describe("buildDebtReport", () => {
       effectiveDate: "2026-09-06",
       source: "Banco Central",
       kind: "confirmed",
+      movement: "buy_usd",
     });
     expect(report.debts[1].uyuEquivalentAmountMinor).toBe(641_250);
     expect(report.uyuEquivalentExposureMinor).toBe(648_750);

@@ -24,6 +24,7 @@ export default async function DebtReportPage({
     exchangeRateRepository.list(context.membership.householdId, {
       baseCurrency: "USD",
       quoteCurrency: "UYU",
+      movement: "buy_usd",
     }),
   ]);
   return (

@@ -10,6 +10,7 @@ const validRate = {
   effectiveDate: "2026-09-06",
   source: "Banco Central",
   kind: "confirmed",
+  movement: "buy_usd",
 } as const;
 
 describe("exchange-rate validation", () => {
@@ -29,6 +30,16 @@ describe("exchange-rate validation", () => {
   it("rejects a currency pair with identical currencies", () => {
     expect(() =>
       validateExchangeRate({ ...validRate, quoteCurrency: "USD" }),
+    ).toThrow(ApiError);
+  });
+
+  it("requires the explicit USD to UYU quote convention", () => {
+    expect(() =>
+      validateExchangeRate({
+        ...validRate,
+        baseCurrency: "UYU",
+        quoteCurrency: "USD",
+      }),
     ).toThrow(ApiError);
   });
 });

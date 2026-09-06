@@ -30,6 +30,7 @@ export const exchangeRateRepository = {
           effectiveDate: values.effectiveDate,
           source: values.source,
           kind: values.kind,
+          movement: values.movement,
         },
       });
       return exchangeRate;
@@ -52,6 +53,9 @@ export const exchangeRateRepository = {
             ? gte(exchangeRates.effectiveDate, filters.from)
             : undefined,
           filters.to ? lte(exchangeRates.effectiveDate, filters.to) : undefined,
+          filters.movement
+            ? eq(exchangeRates.movement, filters.movement)
+            : undefined,
         ),
       )
       .orderBy(desc(exchangeRates.effectiveDate), asc(exchangeRates.createdAt));

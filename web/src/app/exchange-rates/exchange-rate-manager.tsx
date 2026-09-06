@@ -10,6 +10,13 @@ type ExchangeRate = {
   effectiveDate: string;
   source: string;
   kind: "confirmed" | "planning";
+  movement: "buy_usd" | "sell_usd" | "reference";
+};
+
+const movementLabel = {
+  buy_usd: "Compra de USD: entregas UYU y recibes USD",
+  sell_usd: "Venta de USD: entregas USD y recibes UYU",
+  reference: "Referencia: no representa un movimiento",
 };
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -51,12 +58,13 @@ export function ExchangeRateManager({ canEdit }: { canEdit: boolean }) {
       await api("/api/v1/exchange-rates", {
         method: "POST",
         body: JSON.stringify({
-          baseCurrency: form.get("baseCurrency"),
-          quoteCurrency: form.get("quoteCurrency"),
+          baseCurrency: "USD",
+          quoteCurrency: "UYU",
           rate: form.get("rate"),
           effectiveDate: form.get("effectiveDate"),
           source: form.get("source"),
           kind: form.get("kind"),
+          movement: form.get("movement"),
         }),
       });
       setFormKey((key) => key + 1);
@@ -83,21 +91,17 @@ export function ExchangeRateManager({ canEdit }: { canEdit: boolean }) {
           onSubmit={submit}
           className="grid gap-2 rounded-xl border p-5 md:grid-cols-2"
         >
+          <p className="rounded border bg-zinc-50 p-2 text-sm text-zinc-700">
+            Convención fija: 1 USD = importe en UYU
+          </p>
           <select
-            name="baseCurrency"
+            name="movement"
             className="rounded border p-2"
-            defaultValue="USD"
+            defaultValue="buy_usd"
           >
-            <option value="USD">USD (base)</option>
-            <option value="UYU">UYU (base)</option>
-          </select>
-          <select
-            name="quoteCurrency"
-            className="rounded border p-2"
-            defaultValue="UYU"
-          >
-            <option value="UYU">UYU (cotización)</option>
-            <option value="USD">USD (cotización)</option>
+            <option value="buy_usd">Compra de USD (UYU → USD)</option>
+            <option value="sell_usd">Venta de USD (USD → UYU)</option>
+            <option value="reference">Referencia (sin movimiento)</option>
           </select>
           <input
             name="rate"
@@ -146,6 +150,7 @@ export function ExchangeRateManager({ canEdit }: { canEdit: boolean }) {
                 </b>
                 <small className="block text-zinc-500">
                   {item.effectiveDate} · {item.source}
+                  <span className="block">{movementLabel[item.movement]}</span>
                 </small>
               </span>
               <span className="rounded bg-zinc-100 px-2 py-1 text-sm">

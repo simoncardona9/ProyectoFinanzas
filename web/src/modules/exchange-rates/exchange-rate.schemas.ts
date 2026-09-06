@@ -18,6 +18,7 @@ export const createExchangeRateSchema = z.object({
   effectiveDate: z.iso.date(),
   source: z.string().trim().min(1).max(200),
   kind: z.enum(["confirmed", "planning"]),
+  movement: z.enum(["buy_usd", "sell_usd", "reference"]),
 });
 
 export type CreateExchangeRate = z.infer<typeof createExchangeRateSchema>;
@@ -27,6 +28,7 @@ export const listExchangeRatesSchema = z.object({
   quoteCurrency: currency.optional(),
   from: z.iso.date().optional(),
   to: z.iso.date().optional(),
+  movement: z.enum(["buy_usd", "sell_usd", "reference"]).optional(),
 });
 
 export type ListExchangeRates = z.infer<typeof listExchangeRatesSchema>;

@@ -17,6 +17,7 @@ type Rate = {
   effectiveDate: string;
   source: string;
   kind: "confirmed" | "planning";
+  movement: "buy_usd" | "sell_usd" | "reference";
 };
 
 export function buildDebtReport(rows: DebtRow[], selectedRate?: Rate) {

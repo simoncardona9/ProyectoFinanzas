@@ -45,7 +45,7 @@ export const transactionRepository = {
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.accountId, accounts.id))
-      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
       .where(
         and(
           eq(transactions.householdId, householdId),
@@ -95,7 +95,7 @@ export const transactionRepository = {
       })
       .from(transactions)
       .innerJoin(accounts, eq(transactions.accountId, accounts.id))
-      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
       .where(
         and(eq(transactions.id, id), eq(transactions.householdId, householdId)),
       );
@@ -182,7 +182,7 @@ export const transactionRepository = {
       .select({
         openingBalanceMinor: accounts.openingBalanceMinor,
         incomeMinor: sql<string>`coalesce(sum(case when ${transactions.type} = 'income' then ${transactions.amountMinor} else 0 end), 0)`,
-        expenseMinor: sql<string>`coalesce(sum(case when ${transactions.type} = 'expense' then ${transactions.amountMinor} else 0 end), 0)`,
+        expenseMinor: sql<string>`coalesce(sum(case when ${transactions.type} in ('expense', 'debt_payment') then ${transactions.amountMinor} else 0 end), 0)`,
       })
       .from(accounts)
       .leftJoin(

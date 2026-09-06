@@ -101,6 +101,38 @@ There is no preview, staging, or cloud-production environment during the current
 
 **Acceptance:** A USD payment updates the original balance and the selected UYU-equivalent report using an explicit rate.
 
+**Planned slices:**
+
+1. **6.1 — Debt foundation (completed):** household-scoped UYU/USD debt
+   records, original and remaining balances, lifecycle state, audit creation,
+   register, and detail view. No cash movement or conversion occurs here.
+2. **6.2 — Same-currency debt payments (completed, pending local
+   acceptance):** full and partial payments from an active account in the
+   debt's original currency; atomic debt-payment transaction/link, balance and
+   status update, audit event, overpayment protection, and payment history.
+3. **6.3 — Explicit exchange-rate register:** owner/editor management and
+   household-scoped read access for dated UYU/USD rates, including base and
+   quote currencies, rate, effective date, source, and confirmed/planning
+   kind. Validate positive rates and prevent ambiguous duplicate rates for the
+   same pair, date, and kind. Rates never alter balances by themselves.
+4. **6.4 — Rate selection and UYU-equivalent debt exposure:** let a report or
+   debt view select an explicit eligible rate (rather than silently combining
+   currencies), calculate UYU equivalents from original-currency remaining
+   balances with defined rounding, and expose the selected rate/date/source.
+   Preserve the original-currency amounts beside every converted figure.
+5. **6.5 — Debt report and local acceptance:** provide a household-scoped
+   report of original balances, same-currency payments, and UYU-equivalent
+   exposure without combining currencies outside the selected-rate result;
+   add synthetic-data tests and a repeatable review that demonstrates a USD
+   payment updating both the USD balance and selected UYU-equivalent report.
+
+Scope boundary: interest, due-date, payment-plan, cancellation, debt-term
+editing, and automatic/live exchange-rate imports are not required for Step 6.
+They require separately approved future slices. Every remaining slice must
+keep original currency authoritative, use an explicit dated rate for any UYU
+conversion, enforce active-household scope and owner/editor write roles, and
+write audit events for financial mutations.
+
 ### Step 7 — Invoices, IVA, and tax reserves
 
 **Goal:** Reconcile teaching income and protect tax money, including its separate dashboard treatment.

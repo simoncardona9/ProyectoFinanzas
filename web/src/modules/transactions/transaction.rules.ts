@@ -36,10 +36,17 @@ export function applyPaidTransactionToBalance(
 }
 
 export function ensurePaidTransactionCanChange(transaction: {
+  type?: string;
   status: string;
   voidedAt: Date | null;
 }) {
-  if (transaction.status !== "paid" || transaction.voidedAt)
+  if (
+    (transaction.type !== undefined &&
+      transaction.type !== "income" &&
+      transaction.type !== "expense") ||
+    transaction.status !== "paid" ||
+    transaction.voidedAt
+  )
     throw new ApiError(
       422,
       "INVALID_STATUS_TRANSITION",

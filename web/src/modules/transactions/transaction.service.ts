@@ -85,7 +85,7 @@ function auditSnapshot(transaction: {
   amountMinor: number;
   currency: string;
   accountId: string;
-  categoryId: string;
+  categoryId: string | null;
   description: string;
   isRecurring: boolean;
   isOneOff: boolean;

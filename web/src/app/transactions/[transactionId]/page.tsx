@@ -45,7 +45,7 @@ export default async function TransactionDetailPage({
         <div className="mt-2 flex flex-wrap items-baseline justify-between gap-3">
           <h1 className="text-2xl font-semibold">{transaction.description}</h1>
           <strong className="text-xl">
-            {transaction.type === "expense" ? "−" : "+"}
+            {transaction.type === "income" ? "+" : "−"}
             {formatMoney(transaction.amountMinor, transaction.currency)}
           </strong>
         </div>
@@ -64,7 +64,7 @@ export default async function TransactionDetailPage({
           </div>
           <div>
             <dt className="text-sm text-zinc-500">Categoría</dt>
-            <dd>{transaction.categoryName}</dd>
+            <dd>{transaction.categoryName ?? "Pago de deuda"}</dd>
           </div>
           <div>
             <dt className="text-sm text-zinc-500">Recurrente</dt>

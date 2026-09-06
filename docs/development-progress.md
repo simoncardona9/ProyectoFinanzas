@@ -186,3 +186,43 @@ financial items remain Step 4 obligation behavior.
   `docs/dashboard-acceptance.md` for repeatable local review.
 - On 2026-09-05, the household completed the dashboard acceptance scenario
   locally with synthetic data and confirmed the dashboard flow and figures.
+
+## Step 6 — Debts, currencies, and exchange rates — in progress
+
+### Slice 6.1 — Debt foundation — implemented, pending local acceptance
+
+- Added household-scoped debt records with creditor, description, incurred date,
+  original balance, remaining balance, original currency, active/paid/cancelled
+  status, and an audited creation event.
+- Added protected `GET`/`POST /api/v1/debts`, protected
+  `GET /api/v1/debts/:debtId`, and Spanish `/debts` register/detail screens.
+  All reads are scoped to the server-selected active household; owners and
+  editors may create records while viewer/accountant roles are read-only.
+- The slice intentionally does not introduce payments, account links, exchange
+  rates, UYU-equivalent exposure, or debt reporting. A debt is displayed only
+  in its original UYU or USD currency.
+- Added migration `0007_heavy_giant_girl.sql` and unit validation coverage for
+  a positive initial balance.
+
+### Slice 6.2 — Same-currency debt payments — implemented, pending local acceptance
+
+- Added full and partial debt payments from an active account in the debt's
+  original currency. The payment amount cannot exceed the remaining balance;
+  the final payment changes the debt from `active` to `paid`.
+- Each payment atomically creates a `debt_payment` transaction, its debt-payment
+  link, the updated debt balance/status, and a debt audit event. Concurrent
+  attempts are rejected rather than risking an overpayment.
+- Added the protected owner/editor `POST /api/v1/debts/:debtId/payments`
+  endpoint and a localized payment form/history on the debt detail screen.
+  Viewer and accountant roles remain read-only.
+- Added migration `0008_real_killraven.sql`, OpenAPI/API-design documentation,
+  and unit coverage for partial payment, overpayment, wrong-currency accounts,
+  and closed debts.
+- UYU-equivalent exposure and exchange rates remain intentionally out of scope
+  for the next Step 6 slice.
+
+### Verification
+
+- `pnpm db:migrate` — passed against the configured local PostgreSQL database.
+- `pnpm exec tsc --noEmit`, `pnpm test` (30 tests), `pnpm lint`, `pnpm db:check`,
+  and `pnpm build` — passed.

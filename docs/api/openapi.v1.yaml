@@ -4,6 +4,42 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/reports/debts:
+    get:
+      operationId: getDebtReport
+      summary: Return current household debt balances, payments, and optional selected-rate UYU exposure.
+      description: All active-household roles may read this report. It always returns original amount, paid amount, and remaining amount separately by UYU and USD. exchangeRateId explicitly selects an active-household USD-to-UYU rate; only then are USD balances converted and combined with UYU balances in uyuEquivalentExposureMinor. This read never changes financial records or audit logs.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: exchangeRateId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+            description: Explicit active-household USD-to-UYU rate. No conversion or combined exposure is returned when omitted.
+          }
+      responses:
+        "200":
+          description: Household-scoped debt report.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [debts, totalsByOriginalCurrency, selectedRate, uyuEquivalentExposureMinor]
+                    properties:
+                      debts: { type: array, items: { $ref: "#/components/schemas/DebtReportRow" } }
+                      totalsByOriginalCurrency: { type: object }
+                      selectedRate: { type: [object, "null"] }
+                      uyuEquivalentExposureMinor: { type: [integer, "null"] }
+              example:
+                { data: { debts: [{ id: "00000000-0000-4000-8000-000000000001", currency: USD, originalAmountMinor: 20000, paidAmountMinor: 5000, remainingAmountMinor: 15000, uyuEquivalentAmountMinor: 641250 }], totalsByOriginalCurrency: { UYU: { originalAmountMinor: 0, paidAmountMinor: 0, remainingAmountMinor: 0 }, USD: { originalAmountMinor: 20000, paidAmountMinor: 5000, remainingAmountMinor: 15000 } }, selectedRate: { rate: "42.75", effectiveDate: "2026-09-06", source: "Banco Central", kind: confirmed }, uyuEquivalentExposureMinor: 641250 } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { description: The selected rate is missing, belongs to another household, or is not USD to UYU }
   /api/v1/exchange-rates:
     get:
       operationId: listExchangeRates
@@ -130,8 +166,8 @@ paths:
   /api/v1/debts/{debtId}:
     get:
       operationId: getDebt
-      summary: Get a debt and its audit history.
-      description: All roles with an active household may read the requested debt only when it belongs to that household.
+      summary: Get a debt, audit history, and optionally a UYU equivalent.
+      description: All roles with an active household may read the requested debt only when it belongs to that household. Supplying exchangeRateId for a USD debt selects that household's USD-to-UYU rate explicitly; the response preserves the original USD balance and includes the selected rate metadata and rounded informational UYU equivalent. No rate is selected implicitly and this read never changes balances.
       security: [{ sessionCookie: [] }]
       parameters:
         - {
@@ -140,6 +176,13 @@ paths:
             required: true,
             schema: { type: string, format: uuid },
           }
+        - {
+            name: exchangeRateId,
+            in: query,
+            required: false,
+            schema: { type: string, format: uuid },
+            description: Explicit active-household USD-to-UYU rate for a USD debt.
+          }
       responses:
         "200": { description: Household-scoped debt detail and audit events }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -147,6 +190,7 @@ paths:
           {
             description: Debt does not belong to the active household or does not exist,
           }
+        "422": { description: The selected rate is missing, belongs to another household, or is not USD to UYU }
   /api/v1/debts/{debtId}/payments:
     post:
       operationId: payDebt
@@ -1067,6 +1111,23 @@ components:
             accountId: { type: string, format: uuid },
             paidDate: { type: string, format: date },
             description: { type: string, minLength: 1, maxLength: 500 },
+          },
+      }
+    DebtReportRow:
+      {
+        type: object,
+        required: [id, creditorName, description, currency, originalAmountMinor, paidAmountMinor, remainingAmountMinor, status, uyuEquivalentAmountMinor],
+        properties:
+          {
+            id: { type: string, format: uuid },
+            creditorName: { type: string },
+            description: { type: string },
+            currency: { type: string, enum: [UYU, USD] },
+            originalAmountMinor: { type: integer },
+            paidAmountMinor: { type: integer },
+            remainingAmountMinor: { type: integer },
+            status: { type: string, enum: [active, paid, cancelled] },
+            uyuEquivalentAmountMinor: { type: [integer, "null"] },
           },
       }
     ExchangeRateWrite:

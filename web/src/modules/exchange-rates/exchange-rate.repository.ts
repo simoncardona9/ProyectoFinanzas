@@ -56,4 +56,12 @@ export const exchangeRateRepository = {
       )
       .orderBy(desc(exchangeRates.effectiveDate), asc(exchangeRates.createdAt));
   },
+  find(householdId: string, id: string) {
+    return db.query.exchangeRates.findFirst({
+      where: and(
+        eq(exchangeRates.id, id),
+        eq(exchangeRates.householdId, householdId),
+      ),
+    });
+  },
 };

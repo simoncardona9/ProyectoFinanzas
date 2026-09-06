@@ -30,3 +30,15 @@ export const createDebtPaymentSchema = z.object({
 });
 
 export type CreateDebtPayment = z.infer<typeof createDebtPaymentSchema>;
+
+export const debtExposureQuerySchema = z.object({
+  exchangeRateId: z.uuid().optional(),
+});
+
+export type DebtExposureQuery = z.infer<typeof debtExposureQuerySchema>;
+
+export const debtReportQuerySchema = z.object({
+  exchangeRateId: z.uuid().optional(),
+});
+
+export type DebtReportQuery = z.infer<typeof debtReportQuerySchema>;

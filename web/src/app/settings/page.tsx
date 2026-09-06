@@ -60,6 +60,11 @@ export default async function SettingsPage() {
             title="Cotizaciones"
             description="Registrar referencias UYU/USD fechadas sin alterar saldos."
           />
+          <FeatureNavigationCard
+            href="/debt-report"
+            title="Reporte de deudas"
+            description="Revisar pagos, saldos originales y exposición con cotización explícita."
+          />
         </nav>
         <dl className="mt-8 divide-y divide-zinc-200">
           <div className="py-3">

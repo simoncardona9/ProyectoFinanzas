@@ -230,9 +230,9 @@ export const transactions = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "restrict" }),
-    categoryId: uuid("category_id")
-      .notNull()
-      .references(() => categories.id, { onDelete: "restrict" }),
+    categoryId: uuid("category_id").references(() => categories.id, {
+      onDelete: "restrict",
+    }),
     description: text("description").notNull(),
     isRecurring: boolean("is_recurring").notNull().default(false),
     isOneOff: boolean("is_one_off").notNull().default(false),
@@ -327,5 +327,26 @@ export const debts = pgTable(
   (table) => [
     index("debts_household_status_idx").on(table.householdId, table.status),
     index("debts_household_currency_idx").on(table.householdId, table.currency),
+  ],
+);
+
+export const debtPayments = pgTable(
+  "debt_payments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    debtId: uuid("debt_id")
+      .notNull()
+      .references(() => debts.id, { onDelete: "restrict" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("debt_payments_transaction_unique").on(table.transactionId),
+    index("debt_payments_debt_idx").on(table.debtId),
   ],
 );

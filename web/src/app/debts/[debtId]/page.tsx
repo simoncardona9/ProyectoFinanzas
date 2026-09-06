@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { debtRepository } from "@/modules/debts/debt.repository";
+import { structureRepository } from "@/modules/structure/structure.repository";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { BackLink } from "@/shared/ui/navigation";
+import { DebtPaymentForm } from "./debt-payment-form";
 
 function money(amount: number, currency: string) {
   return new Intl.NumberFormat("es-UY", { style: "currency", currency }).format(
@@ -21,10 +23,10 @@ export default async function DebtDetailPage({
     redirect("/login");
   }
   const { debtId } = await params;
-  const detail = await debtRepository.findDetail(
-    context.membership.householdId,
-    debtId,
-  );
+  const [detail, accountList] = await Promise.all([
+    debtRepository.findDetail(context.membership.householdId, debtId),
+    structureRepository.listAccounts(context.membership.householdId),
+  ]);
   if (!detail) notFound();
   const { debt, audit } = detail;
   return (
@@ -58,10 +60,43 @@ export default async function DebtDetailPage({
             <dd>{debt.incurredDate}</dd>
           </div>
         </dl>
+        {debt.status === "active" &&
+          ["owner", "editor"].includes(context.membership.role) && (
+            <DebtPaymentForm
+              debtId={debt.id}
+              currency={debt.currency}
+              remainingAmountMinor={debt.remainingAmountMinor}
+              accounts={accountList}
+            />
+          )}
         <p className="mt-6 rounded bg-zinc-50 p-3 text-sm text-zinc-600">
-          Aún no hay pagos ni equivalencia en UYU: ambos se añadirán en los
-          próximos cortes del Paso 6.
+          Los pagos se registran en la misma moneda de la deuda. La equivalencia
+          en UYU se incorporará en un próximo corte del Paso 6.
         </p>
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">Pagos</h2>
+          <ul className="mt-3 divide-y rounded-xl border">
+            {detail.payments.map((payment) => (
+              <li
+                key={payment.id}
+                className="flex flex-wrap justify-between gap-2 p-3 text-sm"
+              >
+                <span>
+                  {payment.paidDate} · {payment.accountName}
+                  <small className="block text-zinc-500">
+                    {payment.description}
+                  </small>
+                </span>
+                <strong>{money(payment.amountMinor, debt.currency)}</strong>
+              </li>
+            ))}
+            {!detail.payments.length && (
+              <li className="p-3 text-sm text-zinc-500">
+                Aún no hay pagos registrados.
+              </li>
+            )}
+          </ul>
+        </section>
         <section className="mt-8">
           <h2 className="text-lg font-semibold">Historial de auditoría</h2>
           <ul className="mt-3 divide-y">

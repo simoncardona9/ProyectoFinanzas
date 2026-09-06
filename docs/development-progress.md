@@ -203,3 +203,26 @@ financial items remain Step 4 obligation behavior.
   in its original UYU or USD currency.
 - Added migration `0007_heavy_giant_girl.sql` and unit validation coverage for
   a positive initial balance.
+
+### Slice 6.2 — Same-currency debt payments — implemented, pending local acceptance
+
+- Added full and partial debt payments from an active account in the debt's
+  original currency. The payment amount cannot exceed the remaining balance;
+  the final payment changes the debt from `active` to `paid`.
+- Each payment atomically creates a `debt_payment` transaction, its debt-payment
+  link, the updated debt balance/status, and a debt audit event. Concurrent
+  attempts are rejected rather than risking an overpayment.
+- Added the protected owner/editor `POST /api/v1/debts/:debtId/payments`
+  endpoint and a localized payment form/history on the debt detail screen.
+  Viewer and accountant roles remain read-only.
+- Added migration `0008_real_killraven.sql`, OpenAPI/API-design documentation,
+  and unit coverage for partial payment, overpayment, wrong-currency accounts,
+  and closed debts.
+- UYU-equivalent exposure and exchange rates remain intentionally out of scope
+  for the next Step 6 slice.
+
+### Verification
+
+- `pnpm db:migrate` — passed against the configured local PostgreSQL database.
+- `pnpm exec tsc --noEmit`, `pnpm test` (30 tests), `pnpm lint`, `pnpm db:check`,
+  and `pnpm build` — passed.

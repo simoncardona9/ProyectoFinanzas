@@ -23,8 +23,9 @@ export default async function DebtsPage() {
           <BackLink href="/settings">Volver a configuración</BackLink>
         </div>
         <p className="mt-2 text-zinc-600">
-          Los saldos se muestran siempre en su moneda original. Las cotizaciones
-          y pagos se incorporarán en los siguientes cortes.
+          Los saldos se muestran siempre en su moneda original. Puedes registrar
+          pagos parciales desde el detalle de cada deuda; las cotizaciones se
+          incorporarán en un próximo corte.
         </p>
         <DebtManager
           canEdit={["owner", "editor"].includes(context.membership.role)}

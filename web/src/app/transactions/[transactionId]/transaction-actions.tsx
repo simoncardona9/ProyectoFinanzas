@@ -10,7 +10,7 @@ type Transaction = {
   amountMinor: number;
   currency: string;
   accountId: string;
-  categoryId: string;
+  categoryId: string | null;
   description: string;
   isRecurring: boolean;
   isOneOff: boolean;
@@ -40,7 +40,10 @@ export function TransactionActions({
   const [message, setMessage] = useState("");
   const [isOneOff, setIsOneOff] = useState(transaction.isOneOff);
   const available =
-    canEdit && transaction.status === "paid" && !transaction.voidedAt;
+    canEdit &&
+    (transaction.type === "income" || transaction.type === "expense") &&
+    transaction.status === "paid" &&
+    !transaction.voidedAt;
 
   if (!available)
     return canEdit ? (

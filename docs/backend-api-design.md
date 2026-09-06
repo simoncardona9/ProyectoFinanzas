@@ -228,15 +228,15 @@ This controller manages household membership and roles, not passwords or session
 
 ### 7. `debts.controller`
 
-| Method and path      | Parameters                                                                  | Purpose                                                    |
-| -------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `GET /debts`         | optional `status`, `currency`, `limit` (1–100, default 50), `offset`       | List debts belonging to the active household.              |
-| `POST /debts`        | `creditorName`, `description`, `amountMinor`, `currency`, `incurredDate`   | Create an active debt with equal original/current balances. |
-| `GET /debts/:debtId` | path                                                                        | Get a household-scoped debt and its audit history.          |
+| Method and path                | Parameters                                                                 | Purpose                                                     |
+| ------------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `GET /debts`                   | optional `status`, `currency`, `limit` (1–100, default 50), `offset`       | List debts belonging to the active household.               |
+| `POST /debts`                  | `creditorName`, `description`, `amountMinor`, `currency`, `incurredDate`   | Create an active debt with equal original/current balances. |
+| `GET /debts/:debtId`           | path                                                                       | Get a household-scoped debt and its audit history.          |
+| `POST /debts/:debtId/payments` | path; body: `amountMinor`, `accountId`, `paidDate`, optional `description` | Apply a same-currency full or partial payment.              |
 
-Slice 6.1 deliberately has no payment, account-link, exchange-rate, exposure,
-or term-edit endpoint. Those operations are introduced only after the debt
-foundation has been accepted.
+Slice 6.2 adds a same-currency payment and account link. It deliberately has
+no exchange-rate, UYU-equivalent exposure, or term-edit endpoint.
 
 ### 8. `tax-reserves.controller`
 

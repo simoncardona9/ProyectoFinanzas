@@ -21,3 +21,12 @@ export const listDebtsSchema = z.object({
 });
 
 export type ListDebts = z.infer<typeof listDebtsSchema>;
+
+export const createDebtPaymentSchema = z.object({
+  amountMinor: z.number().int().positive().max(2_000_000_000),
+  accountId: z.uuid(),
+  paidDate: calendarDate,
+  description: z.string().trim().min(1).max(500).optional(),
+});
+
+export type CreateDebtPayment = z.infer<typeof createDebtPaymentSchema>;

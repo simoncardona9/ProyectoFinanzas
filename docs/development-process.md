@@ -115,10 +115,16 @@ There is no preview, staging, or cloud-production environment during the current
 
 **Goal:** Import approved historical information without propagating spreadsheet mistakes.
 
-- Build staged CSV/Excel import preview, mapping, validation, and explicit commit.
+- Build a transparent upload flow: dedicated CSV and Excel/XLSX/XLSM parser
+  services convert original files to one versioned canonical staged-JSON model.
+- Build shared staged-JSON mapping, preview, validation, reconciliation, and
+  explicit commit services; retain original-file and source-row provenance.
 - Reconcile August 2026 figures before importing them.
 
-**Acceptance:** An import can be reviewed, rejected, and re-run safely; imported totals reconcile to the approved source report.
+**Acceptance:** A user can upload a supported file without preparing JSON; its
+file-type parser is selected transparently; the resulting staged import can be
+reviewed, rejected, and re-run safely; and imported totals reconcile to the
+approved source report.
 
 ### Step 9 — Monthly close, reports, and backup recovery
 

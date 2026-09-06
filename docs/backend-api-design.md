@@ -70,6 +70,12 @@ src/
     tax-reserves/
     reports/
     imports/
+      parsers/                   # One service per supported file type
+        csv-import-parser.service.ts
+        excel-import-parser.service.ts
+      import-normalization.service.ts
+      import-validation.service.ts
+      import-commit.service.ts
   shared/
     auth/
     database/
@@ -90,6 +96,18 @@ src/
   The Spanish Uruguay UI accepts formatted values such as `1.234,56` and
   converts them to minor units before making a request.
 - Pagination query parameters: `page`, `pageSize` (maximum 100), `sort`, `order`.
+
+### Import processing boundary
+
+`POST /imports` accepts the original CSV or Excel upload. The server selects a
+dedicated parser service for its file type, which transparently produces the
+versioned canonical staged JSON model. The browser never needs to create or
+upload JSON. The shared import services then apply template mappings,
+validation, preview generation, and explicit transactional commit.
+
+Each staged record retains its source provenance (`importId`, original file,
+sheet when applicable, and row number). File-type parsers must not write live
+financial records or evaluate spreadsheet formulas as financial truth.
 - List filters use explicit query parameters, never free-form SQL-like expressions.
 - Mutating endpoints require an authenticated `owner` or `editor`, unless a stricter rule is listed.
 - Every resource is automatically scoped to the authenticated user's household. Clients must not choose arbitrary household IDs in normal endpoints.

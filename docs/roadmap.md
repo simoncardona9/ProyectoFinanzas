@@ -21,7 +21,8 @@
 - Invoices, IVA reserves, and payment reconciliation.
 - Debt plans and partial payments.
 - Recurring rules, due dates, and monthly close.
-- Excel/CSV import workflow.
+- Excel/CSV import workflow: transparent file-type parser services convert
+  uploads to canonical staged JSON before shared validation and commit.
 - Grocery plans, private market/product price lists, and planned-versus-actual grocery comparison.
 
 ## Phase 3 — Quality and convenience

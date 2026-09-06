@@ -27,6 +27,17 @@ Object storage for receipts and imports
 - Unit tests are mandatory for every new or changed business rule, service, helper, utility, and calculation.
 - No calculation should depend on a hidden spreadsheet cell or a fixed row range.
 - Import files are staged, validated, and reviewed before affecting live balances.
+- A user uploads the original file; the application transparently parses it into
+  a canonical, versioned staged-JSON representation before validation. JSON is
+  an internal boundary, not a user-facing upload requirement.
+- Keep one parser service per supported file type (for example CSV and
+  Excel/XLSX/XLSM). Parser services only read their file format; a shared
+  normalization, validation, preview, and commit pipeline consumes their
+  canonical staged JSON output. Template-specific sheet and column mappings are
+  configuration/adapters, rather than financial-domain logic in a parser.
+- Preserve the immutable original upload and provenance for every staged row
+  (import ID, file name, sheet when applicable, and source row) for audit and
+  reconciliation. Do not treat spreadsheet formulas as financial truth.
 
 ## Technology selection criteria
 

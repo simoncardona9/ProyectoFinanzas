@@ -5,6 +5,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -60,6 +61,11 @@ export const debtStatus = pgEnum("debt_status", [
   "active",
   "paid",
   "cancelled",
+]);
+
+export const exchangeRateKind = pgEnum("exchange_rate_kind", [
+  "confirmed",
+  "planning",
 ]);
 
 export const users = pgTable("users", {
@@ -348,5 +354,37 @@ export const debtPayments = pgTable(
   (table) => [
     unique("debt_payments_transaction_unique").on(table.transactionId),
     index("debt_payments_debt_idx").on(table.debtId),
+  ],
+);
+
+export const exchangeRates = pgTable(
+  "exchange_rates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    baseCurrency: text("base_currency").notNull(),
+    quoteCurrency: text("quote_currency").notNull(),
+    rate: numeric("rate", { precision: 18, scale: 8 }).notNull(),
+    effectiveDate: date("effective_date").notNull(),
+    source: text("source").notNull(),
+    kind: exchangeRateKind("kind").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("exchange_rates_household_pair_date_kind_unique").on(
+      table.householdId,
+      table.baseCurrency,
+      table.quoteCurrency,
+      table.effectiveDate,
+      table.kind,
+    ),
+    index("exchange_rates_household_date_idx").on(
+      table.householdId,
+      table.effectiveDate,
+    ),
   ],
 );

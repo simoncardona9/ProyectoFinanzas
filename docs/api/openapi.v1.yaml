@@ -4,6 +4,40 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/exchange-rates:
+    get:
+      operationId: listExchangeRates
+      summary: List dated UYU/USD exchange-rate references for the active household.
+      description: All active-household roles can read only their household's rates. Rates are returned as explicit references and never alter balances or calculate exposure by themselves.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: baseCurrency, in: query, schema: { type: string, enum: [UYU, USD] } }
+        - { name: quoteCurrency, in: query, schema: { type: string, enum: [UYU, USD] } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200": { description: Household-scoped exchange-rate list, newest effective date first }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createExchangeRate
+      summary: Add a dated confirmed or planning UYU/USD exchange-rate reference.
+      description: Requires owner or editor. A positive rate, its source, date, and kind are recorded atomically with an audit event. The pair, date, and kind may occur only once per household. This operation never changes balances and is not idempotent.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExchangeRateWrite" }
+            example:
+              { baseCurrency: USD, quoteCurrency: UYU, rate: "42.75000000", effectiveDate: "2026-09-06", source: "Banco Central", kind: confirmed }
+      responses:
+        "201": { description: Exchange-rate reference and audit event created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "409": { description: A rate already exists for this household, pair, date, and kind }
+        "422": { description: The base and quote currencies are identical }
   /api/v1/debts:
     get:
       operationId: listDebts
@@ -1033,6 +1067,20 @@ components:
             accountId: { type: string, format: uuid },
             paidDate: { type: string, format: date },
             description: { type: string, minLength: 1, maxLength: 500 },
+          },
+      }
+    ExchangeRateWrite:
+      {
+        type: object,
+        required: [baseCurrency, quoteCurrency, rate, effectiveDate, source, kind],
+        properties:
+          {
+            baseCurrency: { type: string, enum: [UYU, USD] },
+            quoteCurrency: { type: string, enum: [UYU, USD] },
+            rate: { type: string, pattern: '^(?:0|[1-9]\\d*)(?:\\.\\d{1,8})?$', description: Positive decimal; zero is rejected. },
+            effectiveDate: { type: string, format: date },
+            source: { type: string, minLength: 1, maxLength: 200 },
+            kind: { type: string, enum: [confirmed, planning] },
           },
       }
     PaidTransactionUpdate:

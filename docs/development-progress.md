@@ -221,6 +221,20 @@ financial items remain Step 4 obligation behavior.
 - UYU-equivalent exposure and exchange rates remain intentionally out of scope
   for the next Step 6 slice.
 
+### Slice 6.3 — Explicit exchange-rate register — implemented, pending local acceptance
+
+- Added household-scoped UYU/USD exchange-rate records with base/quote
+  currencies, positive decimal rate, effective date, source, and confirmed or
+  planning kind. The database prohibits ambiguous duplicates for one
+  household, pair, date, and kind.
+- Added protected `GET`/`POST /api/v1/exchange-rates`, owner/editor writes,
+  household-scoped reads for every active-household role, audited creation,
+  OpenAPI/API-design documentation, and a Spanish cotizaciones register.
+- Added migration `0009_oval_arclight.sql` and validation coverage for
+  positive precision-limited rates and distinct currency pairs. Rates do not
+  change balances or calculate UYU equivalents; explicit rate selection and
+  exposure remain deferred to Slice 6.4.
+
 ### Verification
 
 - `pnpm db:migrate` — passed against the configured local PostgreSQL database.

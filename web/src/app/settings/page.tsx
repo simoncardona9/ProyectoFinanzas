@@ -55,6 +55,11 @@ export default async function SettingsPage() {
             title="Deudas"
             description="Registrar y consultar saldos pendientes en su moneda original."
           />
+          <FeatureNavigationCard
+            href="/exchange-rates"
+            title="Cotizaciones"
+            description="Registrar referencias UYU/USD fechadas sin alterar saldos."
+          />
         </nav>
         <dl className="mt-8 divide-y divide-zinc-200">
           <div className="py-3">

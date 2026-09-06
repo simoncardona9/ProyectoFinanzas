@@ -253,7 +253,15 @@ no exchange-rate, UYU-equivalent exposure, or term-edit endpoint.
 | ---------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
 | `GET /exchange-rates`        | `baseCurrency`, `quoteCurrency`, `from`, `to`                                    | List rates.                              |
 | `POST /exchange-rates`       | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind` | Add confirmed or planning exchange rate. |
-| `GET /exchange-rates/latest` | `baseCurrency`, `quoteCurrency`, `kind`                                          | Get current applicable rate.             |
+
+Slice 6.3 implements the list and create endpoints only. Each rate belongs to
+the server-selected active household and has a UYU/USD base/quote pair, a
+positive decimal rate, effective date, source, and `confirmed` or `planning`
+kind. Owners and editors create; every household role reads. A household may
+not have two records for the same pair, date, and kind. Creating a rate writes
+an audit event and never changes a debt, account, transaction, or report.
+`GET /exchange-rates/latest` is deferred until explicit rate selection in
+Slice 6.4.
 
 ### 10. `dashboard.controller`
 

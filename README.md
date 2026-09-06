@@ -105,15 +105,42 @@ instalar Node.js, pnpm ni PostgreSQL: los contenedores los incluyen.
    notepad .env
    ```
 
-3. Construye e inicia el sistema:
+3. En `.env`, establece `APP_DOMAIN` al nombre DNS o a la dirección IP LAN del
+   equipo Windows que ejecuta Docker. Para usarlo solo desde ese equipo, deja
+   `APP_DOMAIN=localhost`.
+
+4. Construye e inicia el sistema:
 
    ```powershell
    docker compose up --build
    ```
 
-4. Abre `http://localhost:3000` e inicia sesión con `TEST_USER_EMAIL` y
+5. Abre `https://<APP_DOMAIN>` e inicia sesión con `TEST_USER_EMAIL` y
    `TEST_USER_PASSWORD` de `.env`. La verificación de disponibilidad está en
-   `http://localhost:3000/api/health`.
+   `https://<APP_DOMAIN>/api/health`.
+
+### Acceso HTTPS desde la red local
+
+El proxy Caddy publicado por Docker atiende en los puertos 80 y 443 y reenvía
+el tráfico cifrado al contenedor web. No abras el puerto 3000 hacia la red.
+
+- Con un nombre DNS público que resuelva al equipo y puertos 80/443 accesibles,
+  Caddy obtiene y renueva automáticamente un certificado de confianza pública.
+- Con una IP privada o un nombre local, Caddy emite un certificado desde su CA
+  local. Exporta su certificado y confía en él en cada cliente Windows antes de
+  abrir la aplicación:
+
+  ```powershell
+  docker compose cp proxy:/data/caddy/pki/authorities/local/root.crt .\caddy-root.crt
+  Import-Certificate -FilePath .\caddy-root.crt -CertStoreLocation Cert:\LocalMachine\Root
+  ```
+
+  Ejecuta el segundo comando desde una consola de PowerShell como administrador.
+  Repite la importación en cada equipo cliente. Después accede mediante
+  `https://<IP-LAN-DEL-EQUIPO>`.
+
+Permite conexiones TCP entrantes a los puertos 80 y 443 en el Firewall de
+Windows para el perfil de red privado.
 
 ### Cuenta de prueba de Docker
 

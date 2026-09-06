@@ -11,7 +11,8 @@ runtime, not a cloud deployment.
 
 | Service   | Responsibility                                                                                                                   |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `web`     | Production Next.js server built from `web/`; publishes port 3000 by default.                                                     |
+| `web`     | Production Next.js server built from `web/`; reachable only by other Compose services.                                          |
+| `proxy`   | Caddy HTTPS reverse proxy. It is the only service that publishes host ports (80 and 443 by default).                            |
 | `migrate` | One-shot Drizzle migration runner. It must complete successfully before `web` starts.                                            |
 | `seed`    | One-shot local-only seed runner. It creates or updates the configured test user and gives it owner access to its test household. |
 | `db`      | PostgreSQL 17 with persistent data in the `postgres_data` Docker volume. It is available only to Compose services.               |
@@ -27,12 +28,20 @@ migration files.
 1. Install Docker Desktop and use its WSL 2 engine.
 2. Clone `https://github.com/simoncardona9/ProyectoFinanzas.git`.
 3. Copy `.env.docker.example` to `.env`, choose a local `POSTGRES_PASSWORD`,
-   and set `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, and optionally
-   `TEST_HOUSEHOLD_NAME`. Use synthetic, local-only credentials. The `.env`
-   file must never be committed.
+   set `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, and optionally
+   `TEST_HOUSEHOLD_NAME`, and set `APP_DOMAIN` to the Windows machine's LAN IP
+   address or DNS name. Use synthetic, local-only credentials. The `.env` file
+   must never be committed.
 4. Run `docker compose up --build` from the repository root.
-5. Visit `http://localhost:3000` and confirm `/api/health` returns status 200.
+5. Visit `https://<APP_DOMAIN>` and confirm `/api/health` returns status 200.
    Sign in with `TEST_USER_EMAIL` and `TEST_USER_PASSWORD` from `.env`.
+
+For a LAN IP or local hostname, Caddy uses its local certificate authority.
+Export `root.crt` from `/data/caddy/pki/authorities/local/` in the `proxy`
+container and install it in the trusted root store of every client. For a
+public DNS name with ports 80 and 443 reachable, Caddy obtains a public
+certificate automatically. Allow inbound TCP ports 80 and 443 through the
+Windows private-network firewall profile.
 
 Docker Desktop is the only runtime dependency for this workflow. Node.js,
 pnpm, and PostgreSQL on the host are optional and are needed only for direct

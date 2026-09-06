@@ -46,8 +46,6 @@ services:
       target: runner
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-finanzas_app}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-finanzas_dev}
-    ports:
-      - "${APP_PORT:-3000}:3000"
     depends_on:
       seed:
         condition: service_completed_successfully
@@ -64,5 +62,26 @@ services:
       retries: 6
       start_period: 10s
 
+  # Terminates TLS and is the only service exposed outside Docker. Caddy uses a
+  # publicly trusted certificate for a public DNS name, or its local CA for a
+  # LAN IP address / local hostname.
+  proxy:
+    image: caddy:2.10-alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:

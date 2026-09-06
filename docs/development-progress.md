@@ -221,6 +221,62 @@ financial items remain Step 4 obligation behavior.
 - UYU-equivalent exposure and exchange rates remain intentionally out of scope
   for the next Step 6 slice.
 
+### Slice 6.3 — Explicit exchange-rate register — implemented, pending local acceptance
+
+- Added household-scoped UYU/USD exchange-rate records with base/quote
+  currencies, positive decimal rate, effective date, source, and confirmed or
+  planning kind. The database prohibits ambiguous duplicates for one
+  household, pair, date, and kind.
+- Added protected `GET`/`POST /api/v1/exchange-rates`, owner/editor writes,
+  household-scoped reads for every active-household role, audited creation,
+  OpenAPI/API-design documentation, and a Spanish cotizaciones register.
+- Added migration `0009_oval_arclight.sql` and validation coverage for
+  positive precision-limited rates and distinct currency pairs. Rates do not
+  change balances or calculate UYU equivalents; explicit rate selection and
+  exposure remain deferred to Slice 6.4.
+
+#### Follow-up — Explicit USD purchase/sale movement — implemented, pending local acceptance
+
+- Corrected the rate register to state the movement explicitly: `buy_usd`
+  (`UYU` → `USD`), `sell_usd` (`USD` → `UYU`), or `reference`. All rates use
+  the unambiguous `1 USD = X UYU` convention, and duplicate protection now
+  includes movement.
+- USD debt detail and report exposure accept and display only the USD-purchase
+  movement because it is the UYU cost of obtaining USD for settlement. Sale and
+  reference rates remain visible in the register but cannot be selected for
+  that purpose.
+- Added migration `0010_real_marten_broadcloak.sql`. Existing rates are
+  preserved as `reference` and must be re-recorded with an explicit movement
+  before being selected for debt exposure.
+
+### Slice 6.4 — Rate selection and UYU-equivalent debt exposure — implemented, pending local acceptance
+
+- Added explicit `exchangeRateId` selection on debt detail reads and the debt
+  detail screen. USD debts accept only an active-household `USD` → `UYU` rate;
+  the response and screen retain the original USD balance beside the
+  informational UYU equivalent.
+- The converted amount uses exact decimal arithmetic and rounds half up to the
+  nearest UYU minor unit. The selected rate, effective date, source, and kind
+  remain visible. UYU debts are identified as already UYU and do not receive a
+  synthetic conversion.
+- Rate selection and conversion are read-only: neither changes debt balances,
+  transactions, accounts, nor rate records. Added conversion rounding tests;
+  the household debt report and local acceptance procedure remain deferred to
+  Slice 6.5.
+
+### Slice 6.5 — Debt report and local acceptance — implemented, pending local acceptance
+
+- Added the protected household-scoped `GET /api/v1/reports/debts` endpoint and
+  the Spanish `/debt-report` screen. Both display debt original amount,
+  same-currency paid amount, remaining balance, and separate UYU/USD totals.
+- An optional explicit household `USD` → `UYU` rate produces individual and
+  combined UYU-equivalent exposure while preserving every original-currency
+  amount. Without a selected rate, USD and UYU are not combined.
+- Added synthetic report tests covering the partial USD payment case and
+  `docs/debt-acceptance.md`, a repeatable local review proving that a USD
+  payment updates the original and selected-rate UYU figures. The report is
+  read-only and does not modify financial records.
+
 ### Verification
 
 - `pnpm db:migrate` — passed against the configured local PostgreSQL database.

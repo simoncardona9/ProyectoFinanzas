@@ -6,6 +6,7 @@ import {
   categories,
   debtPayments,
   debts,
+  exchangeRates,
   obligationPayments,
   obligations,
   transactions,
@@ -17,6 +18,9 @@ type NewCategory = Omit<typeof categories.$inferInsert, "householdId">;
 export const structureRepository = {
   async resetFinancialData(householdId: string) {
     return db.transaction(async (tx) => {
+      await tx
+        .delete(exchangeRates)
+        .where(eq(exchangeRates.householdId, householdId));
       await tx
         .delete(debtPayments)
         .where(

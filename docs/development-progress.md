@@ -186,3 +186,20 @@ financial items remain Step 4 obligation behavior.
   `docs/dashboard-acceptance.md` for repeatable local review.
 - On 2026-09-05, the household completed the dashboard acceptance scenario
   locally with synthetic data and confirmed the dashboard flow and figures.
+
+## Step 6 — Debts, currencies, and exchange rates — in progress
+
+### Slice 6.1 — Debt foundation — implemented, pending local acceptance
+
+- Added household-scoped debt records with creditor, description, incurred date,
+  original balance, remaining balance, original currency, active/paid/cancelled
+  status, and an audited creation event.
+- Added protected `GET`/`POST /api/v1/debts`, protected
+  `GET /api/v1/debts/:debtId`, and Spanish `/debts` register/detail screens.
+  All reads are scoped to the server-selected active household; owners and
+  editors may create records while viewer/accountant roles are read-only.
+- The slice intentionally does not introduce payments, account links, exchange
+  rates, UYU-equivalent exposure, or debt reporting. A debt is displayed only
+  in its original UYU or USD currency.
+- Added migration `0007_heavy_giant_girl.sql` and unit validation coverage for
+  a positive initial balance.

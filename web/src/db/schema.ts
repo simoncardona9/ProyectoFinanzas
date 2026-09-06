@@ -56,6 +56,12 @@ export const transactionStatus = pgEnum("transaction_status", [
   "cancelled",
 ]);
 
+export const debtStatus = pgEnum("debt_status", [
+  "active",
+  "paid",
+  "cancelled",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
@@ -294,5 +300,32 @@ export const obligationPayments = pgTable(
   (table) => [
     unique("obligation_payments_transaction_unique").on(table.transactionId),
     index("obligation_payments_obligation_idx").on(table.obligationId),
+  ],
+);
+
+export const debts = pgTable(
+  "debts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    creditorName: text("creditor_name").notNull(),
+    description: text("description").notNull(),
+    originalAmountMinor: integer("original_amount_minor").notNull(),
+    remainingAmountMinor: integer("remaining_amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    incurredDate: date("incurred_date").notNull(),
+    status: debtStatus("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("debts_household_status_idx").on(table.householdId, table.status),
+    index("debts_household_currency_idx").on(table.householdId, table.currency),
   ],
 );

@@ -228,14 +228,15 @@ This controller manages household membership and roles, not passwords or session
 
 ### 7. `debts.controller`
 
-| Method and path                | Parameters                                                                                                             | Purpose                                      |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `GET /debts`                   | `status`, `currency`, `creditor`, pagination                                                                           | List current and closed debts.               |
-| `POST /debts`                  | body: `creditor`, `accountId`, `originalAmountMinor`, `currency`, `openingDate`, optional interest and due-date fields | Create debt.                                 |
-| `GET /debts/:debtId`           | path                                                                                                                   | Get balance, schedule, and payments.         |
-| `PATCH /debts/:debtId`         | path; body: mutable debt terms                                                                                         | Update terms with audit reason.              |
-| `POST /debts/:debtId/payments` | path; body: `amountMinor`, `currency`, `accountId`, `paidDate`, `exchangeRateId` if needed                             | Record a debt payment.                       |
-| `GET /debts/exposure`          | `baseCurrency`, `exchangeRateDate`                                                                                     | Return UYU/USD exposure and scenario totals. |
+| Method and path      | Parameters                                                                  | Purpose                                                    |
+| -------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `GET /debts`         | optional `status`, `currency`, `limit` (1–100, default 50), `offset`       | List debts belonging to the active household.              |
+| `POST /debts`        | `creditorName`, `description`, `amountMinor`, `currency`, `incurredDate`   | Create an active debt with equal original/current balances. |
+| `GET /debts/:debtId` | path                                                                        | Get a household-scoped debt and its audit history.          |
+
+Slice 6.1 deliberately has no payment, account-link, exchange-rate, exposure,
+or term-edit endpoint. Those operations are introduced only after the debt
+foundation has been accepted.
 
 ### 8. `tax-reserves.controller`
 

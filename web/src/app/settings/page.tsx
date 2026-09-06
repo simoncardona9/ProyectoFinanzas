@@ -50,6 +50,11 @@ export default async function SettingsPage() {
             title="Obligaciones y proyección"
             description="Planificar vencimientos y revisar el efectivo proyectado."
           />
+          <FeatureNavigationCard
+            href="/debts"
+            title="Deudas"
+            description="Registrar y consultar saldos pendientes en su moneda original."
+          />
         </nav>
         <dl className="mt-8 divide-y divide-zinc-200">
           <div className="py-3">

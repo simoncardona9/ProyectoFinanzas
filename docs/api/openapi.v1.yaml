@@ -4,6 +4,51 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/debts:
+    get:
+      operationId: listDebts
+      summary: List active-household debts in their original currencies.
+      description: All roles with an active household may read only that household's debt records. UYU and USD are returned separately and are never converted or combined.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [active, paid, cancelled] } }
+        - { name: currency, in: query, schema: { type: string, enum: [UYU, USD] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Household-scoped debt list, sorted by incurred date then creation time.
+          content: { application/json: { schema: { type: object, required: [data], properties: { data: { type: array, items: { $ref: "#/components/schemas/Debt" } } } } } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createDebt
+      summary: Create an active debt in its original currency.
+      description: Requires owner or editor. The record and its create audit event are persisted atomically. The original and remaining balance are initialized to amountMinor; this operation does not affect cash, accounts, or currency exposure and is not idempotent.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DebtWrite" }
+            example: { creditorName: "Banco de prueba", description: "Tarjeta de crédito", amountMinor: 125000, currency: USD, incurredDate: "2026-09-01" }
+      responses:
+        "201": { description: Debt and audit event created, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Debt" } } } } } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+  /api/v1/debts/{debtId}:
+    get:
+      operationId: getDebt
+      summary: Get a debt and its audit history.
+      description: All roles with an active household may read the requested debt only when it belongs to that household.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: debtId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Household-scoped debt detail and audit events }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Debt does not belong to the active household or does not exist }
   /api/v1/obligations:
     get:
       operationId: listObligations
@@ -829,6 +874,35 @@ components:
             description: { type: string, minLength: 1, maxLength: 500 },
             isRecurring: { type: boolean, default: false },
             isOneOff: { type: boolean, default: false },
+          },
+      }
+    DebtWrite:
+      {
+        type: object,
+        required: [creditorName, description, amountMinor, currency, incurredDate],
+        properties:
+          {
+            creditorName: { type: string, minLength: 1, maxLength: 200 },
+            description: { type: string, minLength: 1, maxLength: 500 },
+            amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+            currency: { type: string, enum: [UYU, USD] },
+            incurredDate: { type: string, format: date },
+          },
+      }
+    Debt:
+      {
+        type: object,
+        required: [id, creditorName, description, originalAmountMinor, remainingAmountMinor, currency, incurredDate, status],
+        properties:
+          {
+            id: { type: string, format: uuid },
+            creditorName: { type: string },
+            description: { type: string },
+            originalAmountMinor: { type: integer },
+            remainingAmountMinor: { type: integer },
+            currency: { type: string, enum: [UYU, USD] },
+            incurredDate: { type: string, format: date },
+            status: { type: string, enum: [active, paid, cancelled] },
           },
       }
     PaidTransactionUpdate:

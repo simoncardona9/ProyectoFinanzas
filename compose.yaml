@@ -25,6 +25,21 @@ services:
         condition: service_healthy
     restart: "no"
 
+  seed:
+    build:
+      context: ./web
+      target: migrator
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-finanzas_app}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-finanzas_dev}
+      TEST_USER_EMAIL: ${TEST_USER_EMAIL:?Set TEST_USER_EMAIL in .env}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:?Set TEST_USER_PASSWORD in .env}
+      TEST_HOUSEHOLD_NAME: ${TEST_HOUSEHOLD_NAME:-Test household}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["pnpm", "db:seed:test-user"]
+    restart: "no"
+
   web:
     build:
       context: ./web
@@ -34,10 +49,16 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
     depends_on:
-      migrate:
+      seed:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 6

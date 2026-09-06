@@ -13,6 +13,7 @@
     "format:check": "prettier --check .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed:test-user": "node scripts/seed-test-user.mjs",
     "db:studio": "drizzle-kit studio",
     "db:check": "drizzle-kit check"
   },

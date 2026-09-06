@@ -95,20 +95,43 @@ instalar Node.js, pnpm ni PostgreSQL: los contenedores los incluyen.
    ```
 
    Si el repositorio es privado, inicia sesión en GitHub cuando Git lo solicite.
-2. Copia `.env.docker.example` a `.env` y sustituye `POSTGRES_PASSWORD` por
-   una contraseña local segura. En PowerShell:
+
+2. Copia `.env.docker.example` a `.env`, sustituye `POSTGRES_PASSWORD` por
+   una contraseña local segura y elige las credenciales de la cuenta de prueba.
+   En PowerShell:
 
    ```powershell
    Copy-Item .env.docker.example .env
    notepad .env
    ```
+
 3. Construye e inicia el sistema:
 
    ```powershell
    docker compose up --build
    ```
-4. Abre `http://localhost:3000`. La verificación de disponibilidad está en
+
+4. Abre `http://localhost:3000` e inicia sesión con `TEST_USER_EMAIL` y
+   `TEST_USER_PASSWORD` de `.env`. La verificación de disponibilidad está en
    `http://localhost:3000/api/health`.
+
+### Cuenta de prueba de Docker
+
+El servicio `seed` se ejecuta después de las migraciones y antes de iniciar la
+web. Crea (o actualiza) una cuenta local de prueba y le concede el rol de
+propietario de su hogar. Configúrala en el archivo `.env` que copiaste de la
+plantilla:
+
+| Variable              | Obligatoria | Descripción                                                              |
+| --------------------- | ----------- | ------------------------------------------------------------------------ |
+| `TEST_USER_EMAIL`     | Sí          | Email para iniciar sesión. Usa un email sintético.                       |
+| `TEST_USER_PASSWORD`  | Sí          | Contraseña local de la cuenta de prueba. Nunca uses una contraseña real. |
+| `TEST_HOUSEHOLD_NAME` | No          | Nombre del hogar de prueba; por defecto `Test household`.                |
+
+El proceso es idempotente: cada `docker compose up` activa nuevamente la
+cuenta configurada y aplica la contraseña indicada. No crea transacciones ni
+otros datos financieros. Si cambias estas variables, vuelve a ejecutar
+`docker compose up` para aplicar el cambio.
 
 Los datos de PostgreSQL se conservan en el volumen `postgres_data`. Para
 detener los servicios usa `docker compose down`. Para eliminar también los

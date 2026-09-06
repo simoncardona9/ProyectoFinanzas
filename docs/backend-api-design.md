@@ -99,15 +99,23 @@ src/
 
 ### Import processing boundary
 
-`POST /imports` accepts the original CSV or Excel upload. The server selects a
-dedicated parser service for its file type, which transparently produces the
-versioned canonical staged JSON model. The browser never needs to create or
-upload JSON. The shared import services then apply template mappings,
-validation, preview generation, and explicit transactional commit.
+`POST /imports/json/preview` accepts a versioned JSON import bundle from a
+paste or `.json` upload and stages it without changing live financial data.
+The bundle uses household-local, human-readable references (for example,
+account and category names), rather than database UUIDs. The server resolves
+and validates those references before returning a preview.
 
-Each staged record retains its source provenance (`importId`, original file,
-sheet when applicable, and row number). File-type parsers must not write live
-financial records or evaluate spreadsheet formulas as financial truth.
+`POST /imports` accepts an original CSV or Excel upload. The server selects a
+dedicated parser service for its file type, which transparently produces the
+same versioned canonical staged JSON model. Both paths use the shared mapping,
+validation, preview-generation, idempotency, and explicit transactional-commit
+services.
+
+Each staged record retains its source provenance (`importId`, source name,
+sheet when applicable, and row number/JSON path). File-type parsers must not
+write live financial records or evaluate spreadsheet formulas as financial
+truth.
+
 - List filters use explicit query parameters, never free-form SQL-like expressions.
 - Mutating endpoints require an authenticated `owner` or `editor`, unless a stricter rule is listed.
 - Every resource is automatically scoped to the authenticated user's household. Clients must not choose arbitrary household IDs in normal endpoints.
@@ -151,29 +159,29 @@ Authentication is first-party and database-backed. There is no public registrati
 
 ### 1. `households.controller`
 
-| Method and path                       | Parameters                                            | Purpose                           |
-| ------------------------------------- | ----------------------------------------------------- | --------------------------------- |
-| `GET /household`                      | none                                                  | Return current household profile. |
-| `PATCH /household`                    | body: `name`, `locale`, `defaultCurrency`, `timeZone` | Update household settings.        |
-| `GET /household/members`              | `page`, `pageSize`, `role`                            | List household members.           |
-| `POST /household/members`             | body: `email`, `role`                                 | Invite a member. Owner only.      |
-| `PATCH /household/members/:memberId`  | path: `memberId`; body: `role`                        | Change a member role. Owner only. |
-| `DELETE /household/members/:memberId` | path: `memberId`                                      | Remove a member. Owner only.      |
+| Method and path                       | Parameters                                            | Purpose                                                                                                |
+| ------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `GET /household`                      | none                                                  | Return current household profile.                                                                      |
+| `PATCH /household`                    | body: `name`, `locale`, `defaultCurrency`, `timeZone` | Update household settings.                                                                             |
+| `GET /household/members`              | `page`, `pageSize`, `role`                            | List household members.                                                                                |
+| `POST /household/members`             | body: `email`, `role`                                 | Invite a member. Owner only.                                                                           |
+| `PATCH /household/members/:memberId`  | path: `memberId`; body: `role`                        | Change a member role. Owner only.                                                                      |
+| `DELETE /household/members/:memberId` | path: `memberId`                                      | Remove a member. Owner only.                                                                           |
 | `POST /household/reset-test-data`     | body: exact development confirmation                  | Development-only owner reset of the active household's financial test data; unavailable in production. |
 
 This controller manages household membership and roles, not passwords or session tokens.
 
 ### 2. `accounts.controller`
 
-| Method and path                         | Parameters                                                                    | Purpose                                                    |
-| --------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `GET /accounts`                         | `type`, `currency`, `active`, pagination                                      | List accounts.                                             |
-| `POST /accounts`                        | body: `name`, `type`, `currency`, `openingBalanceMinor`, `openingBalanceDate` | Create cash, bank, card, loan, or virtual-reserve account. |
-| `GET /accounts/:accountId`              | path: `accountId`                                                             | Return account details and computed balance.               |
-| `PATCH /accounts/:accountId`            | path; body: mutable account fields                                            | Update account metadata.                                   |
-| `POST /accounts/:accountId/archive`     | path                                                                          | Archive without deleting financial history.                |
+| Method and path                         | Parameters                                                                    | Purpose                                                      |
+| --------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `GET /accounts`                         | `type`, `currency`, `active`, pagination                                      | List accounts.                                               |
+| `POST /accounts`                        | body: `name`, `type`, `currency`, `openingBalanceMinor`, `openingBalanceDate` | Create cash, bank, card, loan, or virtual-reserve account.   |
+| `GET /accounts/:accountId`              | path: `accountId`                                                             | Return account details and computed balance.                 |
+| `PATCH /accounts/:accountId`            | path; body: mutable account fields                                            | Update account metadata.                                     |
+| `POST /accounts/:accountId/archive`     | path                                                                          | Archive without deleting financial history.                  |
 | `POST /accounts/:accountId/activate`    | path                                                                          | Reactivate an archived account without changing its history. |
-| `GET /accounts/:accountId/transactions` | path; date/status/category filters and pagination                             | List account activity.                                     |
+| `GET /accounts/:accountId/transactions` | path; date/status/category filters and pagination                             | List account activity.                                       |
 
 ### 3. `categories.controller`
 
@@ -186,14 +194,14 @@ This controller manages household membership and roles, not passwords or session
 
 ### 4. `transactions.controller`
 
-| Method and path                               | Parameters                                                                                                                    | Purpose                                                        |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `GET /transactions`                           | `from`, `to`, `type`, `status`, `accountId`, `categoryId`, `currency`, `isRecurring`, `isOneOff`, pagination                  | Filter and list transactions.                                  |
+| Method and path                               | Parameters                                                                                                                    | Purpose                                                                                                            |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `GET /transactions`                           | `from`, `to`, `type`, `status`, `accountId`, `categoryId`, `currency`, `isRecurring`, `isOneOff`, pagination                  | Filter and list transactions.                                                                                      |
 | `POST /transactions`                          | body: `date`, `type`, `status`, `amountMinor`, `currency`, `accountId`, `categoryId`, `description`, optional links and flags | Create paid income/expense or planned/pending expected income; expected income does not change an account balance. |
-| `GET /transactions/:transactionId`            | path                                                                                                                          | Get one transaction with links and audit history.              |
-| `PATCH /transactions/:transactionId`          | path; body: allowed mutable fields, `changeReason`                                                                            | Amend an unclosed transaction.                                 |
-| `POST /transactions/:transactionId/void`      | path; body: `reason`                                                                                                          | Void rather than delete a posted transaction.                  |
-| `POST /transactions/:transactionId/mark-paid` | path; body: `paidDate`, optional `accountId`                                                                                  | Change planned or pending item to paid.                        |
+| `GET /transactions/:transactionId`            | path                                                                                                                          | Get one transaction with links and audit history.                                                                  |
+| `PATCH /transactions/:transactionId`          | path; body: allowed mutable fields, `changeReason`                                                                            | Amend an unclosed transaction.                                                                                     |
+| `POST /transactions/:transactionId/void`      | path; body: `reason`                                                                                                          | Void rather than delete a posted transaction.                                                                      |
+| `POST /transactions/:transactionId/mark-paid` | path; body: `paidDate`, optional `accountId`                                                                                  | Change planned or pending item to paid.                                                                            |
 
 ### 5. `obligations.controller`
 
@@ -248,11 +256,11 @@ This controller manages household membership and roles, not passwords or session
 
 ### 10. `dashboard.controller`
 
-| Method and path            | Parameters                   | Purpose                                                                                                                                                                                                                              |
-| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Method and path            | Parameters                   | Purpose                                                                                                                                                                                                                        |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `GET /dashboard`           | `period` (`YYYY-MM`)         | Return separate-currency current cash, paid, one-off, and expected income for the period, pending obligations, and projected cash. Tax reserves, debt, and currency conversion are added only when their source modules exist. |
-| `GET /dashboard/cash-flow` | `from`, `to`, `baseCurrency` | Return grouped cash-flow timeline.                                                                                                                                                                                                   |
-| `GET /dashboard/alerts`    | `period`                     | Return overdue, low-buffer, due-soon, and USD-exposure alerts.                                                                                                                                                                       |
+| `GET /dashboard/cash-flow` | `from`, `to`, `baseCurrency` | Return grouped cash-flow timeline.                                                                                                                                                                                             |
+| `GET /dashboard/alerts`    | `period`                     | Return overdue, low-buffer, due-soon, and USD-exposure alerts.                                                                                                                                                                 |
 
 This controller is read-only. It delegates all calculations to reporting/forecast services.
 
@@ -291,13 +299,14 @@ This controller is read-only. It delegates all calculations to reporting/forecas
 
 ### 14. `imports.controller`
 
-| Method and path                    | Parameters                         | Purpose                                                          |
-| ---------------------------------- | ---------------------------------- | ---------------------------------------------------------------- |
-| `POST /imports`                    | multipart file; `sourceType`       | Upload Excel/CSV to a non-production staging area.               |
-| `GET /imports/:importId`           | path                               | Return validation and mapping status.                            |
-| `POST /imports/:importId/map`      | path; body: column/entity mappings | Save reviewed mappings.                                          |
-| `POST /imports/:importId/validate` | path                               | Validate dates, amounts, currencies, duplicates, and references. |
-| `POST /imports/:importId/commit`   | path; body: `confirmation`         | Import approved staged records in a database transaction.        |
+| Method and path                    | Parameters                            | Purpose                                                                                                          |
+| ---------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `POST /imports/json/preview`       | JSON bundle; `Idempotency-Key`        | Stage and validate pasted/uploaded JSON; return resolved rows, errors, warnings, and totals without live writes. |
+| `POST /imports`                    | multipart file; `sourceType`          | Upload Excel/CSV to a non-production staging area.                                                               |
+| `GET /imports/:importId`           | path                                  | Return validation and mapping status.                                                                            |
+| `POST /imports/:importId/map`      | path; body: column/entity mappings    | Save reviewed mappings.                                                                                          |
+| `POST /imports/:importId/validate` | path                                  | Validate dates, amounts, currencies, duplicates, and references.                                                 |
+| `POST /imports/:importId/commit`   | path; confirmation; `Idempotency-Key` | Atomically import approved staged records; retrying the same key returns the original result.                    |
 
 ## Cross-cutting helpers
 

@@ -9,9 +9,11 @@ The initial source is `_Finanzas Familiares_Agosto_2026_dashboard_actualizado.xl
 1. Preserve an unchanged source copy outside the application database.
 2. Upload the original workbook through the import assistant. The Excel parser
    service reads it and transparently converts it to versioned canonical staged
-   JSON; the user is never asked to prepare JSON.
-3. Preserve the original workbook and source provenance for each staged record
-   (file, sheet, and row number), then present a reviewable preview.
+   JSON. The same assistant also accepts a documented JSON bundle for direct
+   batch entry when there is no source workbook.
+3. Preserve the original workbook or JSON content hash and source provenance
+   for each staged record (source, sheet when applicable, and row number/path),
+   then present a reviewable preview.
 4. Map sheets to entities:
    - `Caja` → income transactions.
    - `Responsabilidades` → obligations and expense transactions.
@@ -21,7 +23,8 @@ The initial source is `_Finanzas Familiares_Agosto_2026_dashboard_actualizado.xl
    - `Histórico` → monthly summary snapshots after reconciliation.
 5. Validate dates, currencies, source accounts, duplicate payments, and invoice/payment links.
 6. Reconcile totals with approved corrected figures.
-7. Import only after a human review approves the staging report.
+7. Import only after a human review approves the staging report. The commit is
+   all-or-nothing and idempotent, so retrying cannot duplicate approved data.
 
 ## File-type parser responsibilities
 

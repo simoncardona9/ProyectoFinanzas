@@ -6,9 +6,9 @@ The application must not be built all at once. Development proceeds through smal
 
 ## Current environments
 
-| Environment | Purpose | Data rule |
-|---|---|---|
-| Local | Agent/developer implementation, unit tests, and functional review. | Synthetic test data only. |
+| Environment | Purpose                                                            | Data rule                 |
+| ----------- | ------------------------------------------------------------------ | ------------------------- |
+| Local       | Agent/developer implementation, unit tests, and functional review. | Synthetic test data only. |
 
 There is no preview, staging, or cloud-production environment during the current phase. The project may be stored in GitHub for source control, but it is not deployed.
 
@@ -111,20 +111,37 @@ There is no preview, staging, or cloud-production environment during the current
 
 **Acceptance:** An invoice collection can be reconciled to an income transaction; IVA is traceable; settling a reserve records a tax payment.
 
-### Step 8 — Excel migration and reconciliation
+### Step 8 — Batch entry, migration, and reconciliation
 
-**Goal:** Import approved historical information without propagating spreadsheet mistakes.
+**Goal:** Let editors add many financial records safely, including approved
+historical information, without propagating input or spreadsheet mistakes.
 
-- Build a transparent upload flow: dedicated CSV and Excel/XLSX/XLSM parser
-  services convert original files to one versioned canonical staged-JSON model.
+- Build a shared import assistant, reachable from Accounts, Categories,
+  Transactions, Obligations, and Expected Income. Each entry point opens the
+  same assistant with the relevant entity type preselected; it must not create
+  separate batch-writing implementations in each form.
+- Accept a versioned JSON import bundle as a first-class power-user input
+  method (paste or `.json` upload). JSON examples and downloadable templates
+  use human-readable account/category references, never database UUIDs.
+- Add dedicated CSV and Excel/XLSX/XLSM parser services that convert original
+  files to that same versioned canonical staged-JSON model.
 - Build shared staged-JSON mapping, preview, validation, reconciliation, and
-  explicit commit services; retain original-file and source-row provenance.
+  explicit commit services. Validate every row before a commit, show row-level
+  errors and currency-separated totals, and retain source provenance.
+- Resolve references only inside the active household; reject missing or
+  ambiguous account/category names. Apply account/category prerequisites before
+  dependent records, including parent categories.
+- Give every import an idempotency key and content hash. A retry must return
+  the existing result rather than duplicate financial records.
+- Commit a reviewed import atomically: all accepted records and their audit
+  events are persisted, or no live record changes.
 - Reconcile August 2026 figures before importing them.
 
-**Acceptance:** A user can upload a supported file without preparing JSON; its
-file-type parser is selected transparently; the resulting staged import can be
-reviewed, rejected, and re-run safely; and imported totals reconcile to the
-approved source report.
+**Acceptance:** An editor can paste or upload a valid JSON bundle, preview its
+resolved records and totals, correct reported row errors, and explicitly commit
+it once without duplicates. CSV/Excel uploads use the same preview and commit
+path. No live record changes before confirmation; a failed commit leaves no
+partial records. Imported totals reconcile to the approved source report.
 
 ### Step 9 — Monthly close, reports, and backup recovery
 

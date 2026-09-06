@@ -73,6 +73,21 @@ Stores a currency pair, rate, date, source, and whether it is a planning or conf
 
 Links an amount to a tax type, period, due date, and protected status. It must not be included in spendable cash.
 
+### ImportBatch and ImportRecord
+
+`ImportBatch` is a household-scoped, staged batch-entry operation. Required
+fields include `format_version`, `source_type` (`json`, `csv`, or `excel`),
+`status` (`staged`, `validated`, `committed`, `rejected`, or `failed`),
+`idempotency_key`, `content_hash`, actor, timestamps, and a safe summary of
+row counts and currency-separated totals. The `(household_id, idempotency_key)`
+and content-hash handling prevent duplicate commits.
+
+`ImportRecord` belongs to an import batch and stores the canonical normalized
+record, its entity type, source provenance (JSON path or file/sheet/row),
+validation errors/warnings, and resolved target identifiers after validation.
+Raw input is access-controlled and never copied into operational logs. Staged
+records are not live financial records and cannot affect balances.
+
 ### AuditLog
 
 Records create, update, delete, import, and status-change actions with actor and timestamp.
@@ -84,6 +99,7 @@ Household ──< Accounts, Categories, Transactions, Obligations, Invoices, Deb
 User ──< Membership >── Household
 User ──< Sessions
 Household ──< FinancialPeriods
+Household ──< ImportBatches ──< ImportRecords
 FinancialPeriod ──< dated Transactions, Obligations, Invoices, TaxReserves (derived by date)
 Transaction ──< TransactionLineItems >── Product
 Household ──< GroceryPlans ──< GroceryPlanItems

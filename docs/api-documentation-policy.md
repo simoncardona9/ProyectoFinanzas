@@ -60,9 +60,15 @@ The following endpoints require special completeness because they alter financia
 - `POST /invoices/:invoiceId/payments`
 - `POST /debts/:debtId/payments`
 - `POST /tax-reserves/:reserveId/settle`
+- `POST /imports/json/preview`
 - `POST /imports/:importId/commit`
 
 For these operations, the documentation must explicitly state transaction boundaries, idempotency behavior, audit entries, impacted balances, and rollback behavior if a persistence step fails.
+
+For a preview endpoint, explicitly state that no live records, balances, or
+audit events for financial records are created. Document row-level validation
+output, reference-resolution semantics, import-size limits, and how reuse of
+an `Idempotency-Key` behaves.
 
 ## Review checklist
 

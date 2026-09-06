@@ -320,7 +320,7 @@ paths:
       {
         operationId: activateAccount,
         summary: Reactivate an archived account while retaining prior history,
-        description: Active-household owner/editor operation; the account is made available for new entries and its archived timestamp is cleared.
+        description: Active-household owner/editor operation; the account is made available for new entries and its archived timestamp is cleared.,
         security: [{ sessionCookie: [] }],
         responses:
           {
@@ -334,8 +334,18 @@ paths:
       {
         operationId: resetHouseholdTestData,
         summary: Reset active-household financial test data in local development,
-        description: Development-only, owner-only destructive operation. It requires the exact confirmation `RESET TEST DATA`, removes financial structure, records, links, and audit logs for the active household, and preserves users, memberships, sessions, and household settings. It returns 404 in production.
-        security: [{ sessionCookie: [] }],
+        description: Development-only,
+        owner-only destructive operation. It requires the exact confirmation `RESET TEST DATA`,
+        removes financial structure,
+        records,
+        links,
+        and audit logs for the active household,
+        and preserves users,
+        memberships,
+        sessions,
+        ? and household settings. It returns 404 in production.
+          security
+        : [{ sessionCookie: [] }],
         responses:
           {
             "200": { description: Active-household financial test data reset },
@@ -610,6 +620,118 @@ paths:
           "409": { description: Concurrent modification },
           "422": { description: Invalid status transition },
         }
+  /api/v1/imports/json/preview:
+    post:
+      operationId: previewJsonImport
+      summary: Stage and validate a JSON batch-entry bundle.
+      description: >
+        Owner/editor only. The server scopes reference resolution to the active
+        household and returns a preview without creating live financial records
+        or changing balances. The Idempotency-Key identifies a retry of the
+        same bundle; reusing it with different content is rejected.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema: { $ref: "#/components/schemas/JsonImportBundle" },
+                  example:
+                    {
+                      version: "finance-import/v1",
+                      transactions:
+                        [
+                          {
+                            date: "2026-08-05",
+                            type: expense,
+                            amountMinor: 125050,
+                            currency: UYU,
+                            account: "Banco República",
+                            category: "Hogar y supermercado",
+                            description: "Compra semanal",
+                          },
+                        ],
+                    },
+                },
+            },
+        }
+      responses:
+        {
+          "200":
+            {
+              description: Staged import preview with row-level results and currency-separated totals,
+            },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Editor or owner role required },
+          "409":
+            { description: Idempotency key was used with different content },
+          "422":
+            {
+              description: Import has validation errors; no live records were created,
+            },
+        }
+  /api/v1/imports/{importId}/commit:
+    post:
+      operationId: commitImport
+      summary: Atomically commit a reviewed staged import.
+      description: >
+        Owner/editor only. The import must belong to the active household and
+        have no unresolved validation errors. The server creates all approved
+        records and audit events in one transaction or rolls back all changes.
+        Retrying with the original idempotency key returns the prior result.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: importId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        {
+          required: true,
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      required: [confirmation],
+                      properties:
+                        { confirmation: { type: string, enum: [IMPORT] } },
+                    },
+                  example: { confirmation: IMPORT },
+                },
+            },
+        }
+      responses:
+        {
+          "201":
+            {
+              description: Import committed; response includes created-record counts and import audit ID,
+            },
+          "400": { $ref: "#/components/responses/ValidationError" },
+          "403": { description: Editor or owner role required },
+          "404": { description: Import not found in active household },
+          "409":
+            {
+              description: Import is already committed or idempotency key conflicts,
+            },
+          "422":
+            {
+              description: Import has unresolved validation errors; no live records were created,
+            },
+        }
 components:
   securitySchemes:
     { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }
@@ -742,6 +864,52 @@ components:
         type: object,
         required: [reason],
         properties: { reason: { type: string, minLength: 3, maxLength: 500 } },
+      }
+    JsonImportBundle:
+      {
+        type: object,
+        required: [version],
+        properties:
+          {
+            version: { type: string, enum: ["finance-import/v1"] },
+            accounts: { type: array, items: { type: object } },
+            categories: { type: array, items: { type: object } },
+            transactions:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [
+                        date,
+                        type,
+                        amountMinor,
+                        currency,
+                        account,
+                        category,
+                        description,
+                      ],
+                    properties:
+                      {
+                        date: { type: string, format: date },
+                        type: { type: string, enum: [income, expense] },
+                        amountMinor:
+                          { type: integer, minimum: 1, maximum: 2000000000 },
+                        currency: { type: string, enum: [UYU, USD] },
+                        account: { type: string, minLength: 1, maxLength: 120 },
+                        category:
+                          { type: string, minLength: 1, maxLength: 120 },
+                        description:
+                          { type: string, minLength: 1, maxLength: 500 },
+                        isRecurring: { type: boolean, default: false },
+                        isOneOff: { type: boolean, default: false },
+                      },
+                  },
+              },
+            obligations: { type: array, items: { type: object } },
+            expectedIncome: { type: array, items: { type: object } },
+          },
       }
     Error:
       {

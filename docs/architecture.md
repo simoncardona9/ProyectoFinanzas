@@ -26,18 +26,27 @@ Object storage for receipts and imports
 - Immutable audit trail for posted financial records.
 - Unit tests are mandatory for every new or changed business rule, service, helper, utility, and calculation.
 - No calculation should depend on a hidden spreadsheet cell or a fixed row range.
-- Import files are staged, validated, and reviewed before affecting live balances.
-- A user uploads the original file; the application transparently parses it into
-  a canonical, versioned staged-JSON representation before validation. JSON is
-  an internal boundary, not a user-facing upload requirement.
+- Batch imports are staged, validated, previewed, and explicitly reviewed
+  before affecting live balances.
+- A versioned JSON bundle is a supported first-class input for power users
+  (pasted or uploaded). Its public schema uses human-readable references for
+  accounts and categories, while the server resolves them to household-scoped
+  identifiers. JSON is never trusted simply because it parsed successfully.
+- A user may also upload an original CSV or Excel/XLSX/XLSM file. The application
+  transparently parses it into the same canonical, versioned staged-JSON
+  representation before validation.
 - Keep one parser service per supported file type (for example CSV and
   Excel/XLSX/XLSM). Parser services only read their file format; a shared
   normalization, validation, preview, and commit pipeline consumes their
   canonical staged JSON output. Template-specific sheet and column mappings are
   configuration/adapters, rather than financial-domain logic in a parser.
-- Preserve the immutable original upload and provenance for every staged row
-  (import ID, file name, sheet when applicable, and source row) for audit and
-  reconciliation. Do not treat spreadsheet formulas as financial truth.
+- Preserve the immutable original upload or JSON bundle hash and provenance for
+  every staged row (import ID, source name, sheet when applicable, and source
+  row/path) for audit and reconciliation. Do not treat spreadsheet formulas as
+  financial truth.
+- A staged import has an idempotency key and content hash. Its reviewed commit
+  runs in one database transaction and creates one import audit event plus the
+  normal audits for records created; it either completes fully or rolls back.
 
 ## Technology selection criteria
 

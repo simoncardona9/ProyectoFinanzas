@@ -8,26 +8,26 @@ The backend must make failures diagnosable without exposing financial or authent
 
 Use structured JSON logs from the Node.js backend. Every log record must include:
 
-| Field | Purpose |
-|---|---|
-| `timestamp` | UTC ISO 8601 time. |
-| `level` | `debug`, `info`, `warn`, or `error`. |
-| `event` | Stable machine-readable event name, for example `transaction.created`. |
-| `requestId` | Correlation ID for an HTTP request, when applicable. |
-| `module` | Owning controller/service/repository module. |
-| `userId` | Internal actor identifier when authenticated; never email unless explicitly required for a security event. |
-| `householdId` | Internal household identifier when authorized. |
-| `resourceType` / `resourceId` | Affected resource, where safe and applicable. |
-| `errorCode` | Stable domain or technical code for failures. |
+| Field                         | Purpose                                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `timestamp`                   | UTC ISO 8601 time.                                                                                         |
+| `level`                       | `debug`, `info`, `warn`, or `error`.                                                                       |
+| `event`                       | Stable machine-readable event name, for example `transaction.created`.                                     |
+| `requestId`                   | Correlation ID for an HTTP request, when applicable.                                                       |
+| `module`                      | Owning controller/service/repository module.                                                               |
+| `userId`                      | Internal actor identifier when authenticated; never email unless explicitly required for a security event. |
+| `householdId`                 | Internal household identifier when authorized.                                                             |
+| `resourceType` / `resourceId` | Affected resource, where safe and applicable.                                                              |
+| `errorCode`                   | Stable domain or technical code for failures.                                                              |
 
 ### Log levels
 
-| Level | Use | Examples |
-|---|---|---|
-| `debug` | Local-development diagnostic details only. | Query timing, parsed filters. |
-| `info` | Successful meaningful system event. | Sign-in succeeded, transaction created, import validated. |
-| `warn` | Expected but noteworthy condition. | Forbidden request, validation failure, duplicate import rejected, rate missing. |
-| `error` | Unexpected failure or failed dependency. | Database outage, unhandled exception, failed transaction commit. |
+| Level   | Use                                        | Examples                                                                        |
+| ------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
+| `debug` | Local-development diagnostic details only. | Query timing, parsed filters.                                                   |
+| `info`  | Successful meaningful system event.        | Sign-in succeeded, transaction created, import validated.                       |
+| `warn`  | Expected but noteworthy condition.         | Forbidden request, validation failure, duplicate import rejected, rate missing. |
+| `error` | Unexpected failure or failed dependency.   | Database outage, unhandled exception, failed transaction commit.                |
 
 ### Information that must never be logged
 
@@ -40,14 +40,17 @@ Use structured JSON logs from the Node.js backend. Every log record must include
 
 Technical logs are for diagnosing system behavior and may expire. Audit records are financial-history records and are persistent.
 
-| Technical log | Audit record |
-|---|---|
-| May be rotated/retained for a configured operational period. | Retained with the household financial history. |
-| Records request and error metadata. | Records who changed what, when, why, and before/after safe values. |
-| Must not expose sensitive payloads. | Is access-controlled and only contains necessary business data. |
-| May include stack traces for unexpected server failures. | Never includes stack traces or secrets. |
+| Technical log                                                | Audit record                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| May be rotated/retained for a configured operational period. | Retained with the household financial history.                     |
+| Records request and error metadata.                          | Records who changed what, when, why, and before/after safe values. |
+| Must not expose sensitive payloads.                          | Is access-controlled and only contains necessary business data.    |
+| May include stack traces for unexpected server failures.     | Never includes stack traces or secrets.                            |
 
-Every successful create, update, void, payment, settlement, defer, import commit, period close/reopen, and permission change must create an audit record.
+Every successful create, update, void, payment, settlement, defer, import
+commit, period close/reopen, and permission change must create an audit record.
+An import commit records its import ID, source type, content hash, row counts,
+and result summary; it does not copy raw rows into the audit event.
 
 ## Error-handling flow
 
@@ -82,21 +85,21 @@ AppError
 
 Expected exceptions extend `AppError`; use them only for known application states, not for normal control flow.
 
-| Exception / code | HTTP | When it is used |
-|---|---:|---|
-| `ValidationError` / `VALIDATION_ERROR` | 400 | Input fails schema or business-format validation. |
-| `AuthenticationError` / `UNAUTHENTICATED` | 401 | No valid signed-in user. |
-| `AuthorizationError` / `FORBIDDEN` | 403 | User lacks role or household access. |
-| `NotFoundError` / `NOT_FOUND` | 404 | Authorized resource does not exist in household. |
-| `ConflictError` / `CONFLICT` | 409 | Duplicate or conflicting state, such as duplicate import. |
-| `BusinessRuleError` / `BUSINESS_RULE_VIOLATION` | 422 | Generic known financial rule violation. |
-| `ClosedPeriodError` / `CLOSED_PERIOD` | 422 | Change attempted in a closed month. |
-| `CurrencyMismatchError` / `CURRENCY_MISMATCH` | 422 | Incompatible currency without authorized conversion. |
-| `InvalidStatusTransitionError` / `INVALID_STATUS_TRANSITION` | 422 | Invalid move, such as voiding a cancelled item. |
-| `PaymentExceedsBalanceError` / `PAYMENT_EXCEEDS_BALANCE` | 422 | Payment exceeds remaining obligation/debt balance. |
-| `ExchangeRateNotFoundError` / `EXCHANGE_RATE_NOT_FOUND` | 422 | Required rate is absent for requested conversion. |
-| `ProtectedReserveError` / `PROTECTED_RESERVE` | 422 | Attempt to treat tax reserve as spendable cash. |
-| `ImportValidationError` / `IMPORT_VALIDATION_FAILED` | 422 | Staged import has unresolved validation issues. |
+| Exception / code                                             | HTTP | When it is used                                           |
+| ------------------------------------------------------------ | ---: | --------------------------------------------------------- |
+| `ValidationError` / `VALIDATION_ERROR`                       |  400 | Input fails schema or business-format validation.         |
+| `AuthenticationError` / `UNAUTHENTICATED`                    |  401 | No valid signed-in user.                                  |
+| `AuthorizationError` / `FORBIDDEN`                           |  403 | User lacks role or household access.                      |
+| `NotFoundError` / `NOT_FOUND`                                |  404 | Authorized resource does not exist in household.          |
+| `ConflictError` / `CONFLICT`                                 |  409 | Duplicate or conflicting state, such as duplicate import. |
+| `BusinessRuleError` / `BUSINESS_RULE_VIOLATION`              |  422 | Generic known financial rule violation.                   |
+| `ClosedPeriodError` / `CLOSED_PERIOD`                        |  422 | Change attempted in a closed month.                       |
+| `CurrencyMismatchError` / `CURRENCY_MISMATCH`                |  422 | Incompatible currency without authorized conversion.      |
+| `InvalidStatusTransitionError` / `INVALID_STATUS_TRANSITION` |  422 | Invalid move, such as voiding a cancelled item.           |
+| `PaymentExceedsBalanceError` / `PAYMENT_EXCEEDS_BALANCE`     |  422 | Payment exceeds remaining obligation/debt balance.        |
+| `ExchangeRateNotFoundError` / `EXCHANGE_RATE_NOT_FOUND`      |  422 | Required rate is absent for requested conversion.         |
+| `ProtectedReserveError` / `PROTECTED_RESERVE`                |  422 | Attempt to treat tax reserve as spendable cash.           |
+| `ImportValidationError` / `IMPORT_VALIDATION_FAILED`         |  422 | Staged import has unresolved validation issues.           |
 
 Add a new custom exception only when it represents a stable domain condition that the UI or API client must handle differently. Otherwise use an existing exception type with a specific code or allow the centralized handler to treat it as an unexpected failure.
 

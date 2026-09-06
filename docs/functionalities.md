@@ -15,7 +15,9 @@
 2. Debt schedules, partial payments, and payment plans.
 3. Exchange-rate history and USD exposure scenario.
 4. Due-date calendar and reminders.
-5. Import assistant for Excel/CSV.
+5. Batch-entry import assistant: JSON paste/upload first, plus Excel/CSV;
+   staged preview, row errors, explicit all-or-nothing commit, and duplicate
+   protection.
 6. Monthly-close workflow with locked historical periods.
 7. Grocery plans with optional item-level estimates, planned-versus-actual comparison, and household-private markets, products, and prices.
 

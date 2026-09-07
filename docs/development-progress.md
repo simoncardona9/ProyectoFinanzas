@@ -335,7 +335,7 @@ financial items remain Step 4 obligation behavior.
   linked paid income, zero balance on collection, cancellation protection after
   collection, and read-only account selection filtered to the invoice currency.
 
-### Slice 7.3 — Protected IVA reserve — implemented, pending verification
+### Slice 7.3 — Protected IVA reserve — completed
 
 - Every successful invoice collection now atomically creates one protected,
   same-currency IVA reserve linked to its invoice and source collection. The
@@ -355,9 +355,10 @@ financial items remain Step 4 obligation behavior.
   PostgreSQL database.
 - `pnpm exec tsc --noEmit`, `pnpm test` (47 tests), `pnpm lint`,
   `pnpm db:check`, and `pnpm build` — passed.
-- Pending local review: collect an IVA-bearing invoice in two payments, verify
-  each protected amount in invoice detail, confirm their total equals the
-  captured invoice IVA, and confirm no dashboard behavior changed.
+- On 2026-09-07, the household completed the local protected-reserve review.
+  It confirmed same-currency account filtering, linked partial and final
+  collections, one protected IVA amount per collection, reserve portions that
+  total the captured invoice IVA, and unchanged dashboard behavior.
 
 ## Local container runtime — documented
 

@@ -1,0 +1,10 @@
+{
+  # Windows clients do not send TLS SNI when connecting to an IP address.
+  # Docker can hide the original destination IP from Caddy, so use the
+  # configured certificate when no SNI is present.
+  default_sni {$APP_DOMAIN}
+}
+
+{$APP_DOMAIN} {
+  reverse_proxy web:3000
+}

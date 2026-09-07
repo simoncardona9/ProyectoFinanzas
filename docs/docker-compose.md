@@ -38,7 +38,9 @@ migration files.
 
 For a LAN IP or local hostname, Caddy uses its local certificate authority.
 Export `root.crt` from `/data/caddy/pki/authorities/local/` in the `proxy`
-container and install it in the trusted root store of every client. For a
+container and install it in the trusted root store of every client. Caddy sets
+`default_sni` to `APP_DOMAIN` because Windows clients omit SNI when connecting
+to an IP address and Docker's TCP proxy can hide the destination IP. For a
 public DNS name with ports 80 and 443 reachable, Caddy obtains a public
 certificate automatically. Allow inbound TCP ports 80 and 443 through the
 Windows private-network firewall profile.
@@ -46,6 +48,15 @@ Windows private-network firewall profile.
 Docker Desktop is the only runtime dependency for this workflow. Node.js,
 pnpm, and PostgreSQL on the host are optional and are needed only for direct
 source development outside containers.
+
+## Kubernetes boundary
+
+Docker Compose is the supported local runtime only. Kubernetes is not
+configured for this project: no Kubernetes manifests, Helm charts, cluster
+resources, image registry workflow, or deployment process are included.
+Kubernetes must not be treated as an alternative runtime until a separate
+deployment decision defines its security, secret handling, persistent storage,
+ingress/TLS, backup, and operating procedures.
 
 ## Operations and data handling
 

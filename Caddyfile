@@ -1,3 +1,15 @@
-{$APP_DOMAIN} {
+{
+  # Windows clients do not send TLS SNI when connecting to an IP address.
+  # Docker can hide the original destination IP from Caddy, so use the
+  # configured certificate when no SNI is present.
+  default_sni {$APP_DOMAIN}
+  fallback_sni {$APP_DOMAIN}
+}
+
+https://{$APP_DOMAIN} {
+  # LAN IP addresses cannot use a public ACME certificate. Explicitly issue
+  # the Caddy local-CA certificate at startup so non-SNI Windows clients can
+  # complete their TLS handshake.
+  tls internal
   reverse_proxy web:3000
 }

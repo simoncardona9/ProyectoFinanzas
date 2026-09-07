@@ -9,8 +9,14 @@ The application must not be built all at once. Development proceeds through smal
 | Environment | Purpose                                                            | Data rule                 |
 | ----------- | ------------------------------------------------------------------ | ------------------------- |
 | Local       | Agent/developer implementation, unit tests, and functional review. | Synthetic test data only. |
+| Local Docker Compose | Reproducible local application, migration, seed, PostgreSQL, and HTTPS-proxy runtime. | Synthetic test data only. |
 
 There is no preview, staging, or cloud-production environment during the current phase. The project may be stored in GitHub for source control, but it is not deployed.
+
+Kubernetes is not an environment or delivery target for the current phase:
+there are no manifests, Helm charts, clusters, or Kubernetes deployment
+procedures in this repository. Introducing it requires a separately approved
+deployment decision, architecture review, and operational documentation.
 
 ## Delivery cycle for every slice
 
@@ -106,21 +112,26 @@ There is no preview, staging, or cloud-production environment during the current
 1. **6.1 — Debt foundation (completed):** household-scoped UYU/USD debt
    records, original and remaining balances, lifecycle state, audit creation,
    register, and detail view. No cash movement or conversion occurs here.
-2. **6.2 — Same-currency debt payments (completed, pending local
-   acceptance):** full and partial payments from an active account in the
+2. **6.2 — Same-currency debt payments (completed):** full and partial
+   payments from an active account in the
    debt's original currency; atomic debt-payment transaction/link, balance and
    status update, audit event, overpayment protection, and payment history.
-3. **6.3 — Explicit exchange-rate register:** owner/editor management and
+3. **6.3 — Explicit exchange-rate register (completed):** owner/editor management and
    household-scoped read access for dated UYU/USD rates, including base and
    quote currencies, rate, effective date, source, and confirmed/planning
-   kind. Validate positive rates and prevent ambiguous duplicate rates for the
-   same pair, date, and kind. Rates never alter balances by themselves.
-4. **6.4 — Rate selection and UYU-equivalent debt exposure:** let a report or
+   kind, plus an explicit currency movement: USD purchase (`UYU` → `USD`), USD
+   sale (`USD` → `UYU`), or non-transactional reference. Store all rates as
+   `1 USD = X UYU`; validate positive rates and prevent ambiguous duplicates
+   for the same pair, date, kind, and movement. Rates never alter balances by
+   themselves.
+4. **6.4 — Rate selection and UYU-equivalent debt exposure (completed):** let a report or
    debt view select an explicit eligible rate (rather than silently combining
    currencies), calculate UYU equivalents from original-currency remaining
    balances with defined rounding, and expose the selected rate/date/source.
-   Preserve the original-currency amounts beside every converted figure.
-5. **6.5 — Debt report and local acceptance:** provide a household-scoped
+   Preserve the original-currency amounts beside every converted figure. USD
+   debt exposure may use only a USD-purchase (`UYU` → `USD`) rate because it
+   represents the UYU needed to obtain USD for settlement.
+5. **6.5 — Debt report and local acceptance (completed):** provide a household-scoped
    report of original balances, same-currency payments, and UYU-equivalent
    exposure without combining currencies outside the selected-rate result;
    add synthetic-data tests and a repeatable review that demonstrates a USD

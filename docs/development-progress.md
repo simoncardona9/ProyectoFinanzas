@@ -187,9 +187,9 @@ financial items remain Step 4 obligation behavior.
 - On 2026-09-05, the household completed the dashboard acceptance scenario
   locally with synthetic data and confirmed the dashboard flow and figures.
 
-## Step 6 — Debts, currencies, and exchange rates — in progress
+## Step 6 — Debts, currencies, and exchange rates — completed
 
-### Slice 6.1 — Debt foundation — implemented, pending local acceptance
+### Slice 6.1 — Debt foundation — completed
 
 - Added household-scoped debt records with creditor, description, incurred date,
   original balance, remaining balance, original currency, active/paid/cancelled
@@ -204,7 +204,7 @@ financial items remain Step 4 obligation behavior.
 - Added migration `0007_heavy_giant_girl.sql` and unit validation coverage for
   a positive initial balance.
 
-### Slice 6.2 — Same-currency debt payments — implemented, pending local acceptance
+### Slice 6.2 — Same-currency debt payments — completed
 
 - Added full and partial debt payments from an active account in the debt's
   original currency. The payment amount cannot exceed the remaining balance;
@@ -221,8 +221,83 @@ financial items remain Step 4 obligation behavior.
 - UYU-equivalent exposure and exchange rates remain intentionally out of scope
   for the next Step 6 slice.
 
+### Slice 6.3 — Explicit exchange-rate register — completed
+
+- Added household-scoped UYU/USD exchange-rate records with base/quote
+  currencies, positive decimal rate, effective date, source, and confirmed or
+  planning kind. The database prohibits ambiguous duplicates for one
+  household, pair, date, and kind.
+- Added protected `GET`/`POST /api/v1/exchange-rates`, owner/editor writes,
+  household-scoped reads for every active-household role, audited creation,
+  OpenAPI/API-design documentation, and a Spanish cotizaciones register.
+- Added migration `0009_oval_arclight.sql` and validation coverage for
+  positive precision-limited rates and distinct currency pairs. Rates do not
+  change balances or calculate UYU equivalents; explicit rate selection and
+  exposure remain deferred to Slice 6.4.
+
+#### Follow-up — Explicit USD purchase/sale movement — completed
+
+- Corrected the rate register to state the movement explicitly: `buy_usd`
+  (`UYU` → `USD`), `sell_usd` (`USD` → `UYU`), or `reference`. All rates use
+  the unambiguous `1 USD = X UYU` convention, and duplicate protection now
+  includes movement.
+- USD debt detail and report exposure accept and display only the USD-purchase
+  movement because it is the UYU cost of obtaining USD for settlement. Sale and
+  reference rates remain visible in the register but cannot be selected for
+  that purpose.
+- Added migration `0010_real_marten_broadcloak.sql`. Existing rates are
+  preserved as `reference` and must be re-recorded with an explicit movement
+  before being selected for debt exposure.
+
+### Slice 6.4 — Rate selection and UYU-equivalent debt exposure — completed
+
+- Added explicit `exchangeRateId` selection on debt detail reads and the debt
+  detail screen. USD debts accept only an active-household `USD` → `UYU` rate;
+  the response and screen retain the original USD balance beside the
+  informational UYU equivalent.
+- The converted amount uses exact decimal arithmetic and rounds half up to the
+  nearest UYU minor unit. The selected rate, effective date, source, and kind
+  remain visible. UYU debts are identified as already UYU and do not receive a
+  synthetic conversion.
+- Rate selection and conversion are read-only: neither changes debt balances,
+  transactions, accounts, nor rate records. Added conversion rounding tests;
+  the household debt report and local acceptance procedure remain deferred to
+  Slice 6.5.
+
+### Slice 6.5 — Debt report and local acceptance — completed
+
+- Added the protected household-scoped `GET /api/v1/reports/debts` endpoint and
+  the Spanish `/debt-report` screen. Both display debt original amount,
+  same-currency paid amount, remaining balance, and separate UYU/USD totals.
+- An optional explicit household `USD` → `UYU` rate produces individual and
+  combined UYU-equivalent exposure while preserving every original-currency
+  amount. Without a selected rate, USD and UYU are not combined.
+- Added synthetic report tests covering the partial USD payment case and
+  `docs/debt-acceptance.md`, a repeatable local review proving that a USD
+  payment updates the original and selected-rate UYU figures. The report is
+  read-only and does not modify financial records.
+
 ### Verification
 
 - `pnpm db:migrate` — passed against the configured local PostgreSQL database.
 - `pnpm exec tsc --noEmit`, `pnpm test` (30 tests), `pnpm lint`, `pnpm db:check`,
   and `pnpm build` — passed.
+- On 2026-09-07, the household completed the debt acceptance scenario locally
+  with synthetic data. It confirmed the USD original, paid, and remaining
+  figures (`20000`, `5000`, and `15000` minor units), the selected-rate UYU
+  equivalent (`641250` minor units), currency isolation, eligible-rate
+  filtering, and read-only behavior. The disposable household was reset.
+
+## Local container runtime — documented
+
+- Docker Compose runs the local stack: PostgreSQL, one-shot migrations,
+  idempotent synthetic test-user seeding, the Next.js application, and a Caddy
+  HTTPS reverse proxy. Only Caddy publishes host ports 80 and 443; PostgreSQL
+  and the application remain internal to the Compose network.
+- The Caddy configuration supports a configured public DNS name or a local CA
+  certificate for a LAN IP/local hostname, including Windows clients that omit
+  TLS SNI when connecting by IP. The operational procedure is in
+  `docs/docker-compose.md`.
+- Kubernetes is not configured: this repository contains no Kubernetes
+  manifests, Helm chart, cluster, or deployment workflow. It remains outside
+  the local-only scope and requires separate approval and implementation.

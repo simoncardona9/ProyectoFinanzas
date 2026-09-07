@@ -67,7 +67,11 @@ Tracks a liability: creditor, account, original amount, outstanding amount, curr
 
 ### ExchangeRate
 
-Stores a currency pair, rate, date, source, and whether it is a planning or confirmed rate.
+Stores the `USD` → `UYU` quote convention (`1 USD = X UYU`), rate, date,
+source, planning/confirmed kind, and explicit movement: buying USD (`UYU` →
+`USD`), selling USD (`USD` → `UYU`), or non-transactional reference. A USD
+debt's UYU exposure may select only a USD-purchase rate because that is the
+cost to obtain USD for settlement.
 
 ### TaxReserve
 

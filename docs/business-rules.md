@@ -31,6 +31,10 @@
 4. A spending summary accepts an inclusive `from` and `to` date. It can cover any range, including two months, a calendar year, or a custom interval, and can group results by month, year, or category.
 5. Spending totals include paid `expense` transactions in the requested range. Transfers are excluded; debt payments and tax payments are reported separately unless a report explicitly includes them.
 6. UYU and USD are never added as if they were the same currency. Reports return separate currency totals unless the caller supplies an explicit base currency and exchange rate.
+7. A USD/UYU rate records the movement it represents. All stored rates use `1
+   USD = X UYU`: buying USD means `UYU` → `USD`; selling USD means `USD` →
+   `UYU`; a reference has no movement. A USD liability's UYU exposure uses an
+   explicitly selected USD-purchase rate, never a sale or reference rate.
 
 ## Grocery planning and market prices
 

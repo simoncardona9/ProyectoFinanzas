@@ -29,6 +29,10 @@ machine. It builds the source checked out from GitHub and runs the application,
 Drizzle migrations, and PostgreSQL in separate containers. See
 [docker-compose.md](docker-compose.md) for the operating procedure.
 
+Kubernetes is intentionally not part of the current stack. No manifests, Helm
+charts, or cluster deployment workflow exist while the application remains
+local-only; adopting it requires separate approval and design.
+
 TypeScript adds static type checking to JavaScript, which is valuable for financial workflows where a typo in an amount, status, or field name should be caught before execution. [TypeScript documentation](https://www.typescriptlang.org/glossary/) explains its static type system.
 
 Next.js supports a TypeScript UI and server-side route handlers within the same application, so the first version can use one deployable codebase instead of a separate frontend and API service. [Next.js Route Handlers documentation](https://nextjs.org/docs/app/getting-started/route-handlers) describes this capability.

@@ -251,9 +251,25 @@ no exchange-rate, UYU-equivalent exposure, or term-edit endpoint.
 
 | Method and path              | Parameters                                                                       | Purpose                                  |
 | ---------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
-| `GET /exchange-rates`        | `baseCurrency`, `quoteCurrency`, `from`, `to`                                    | List rates.                              |
-| `POST /exchange-rates`       | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind` | Add confirmed or planning exchange rate. |
-| `GET /exchange-rates/latest` | `baseCurrency`, `quoteCurrency`, `kind`                                          | Get current applicable rate.             |
+| `GET /exchange-rates`        | `baseCurrency`, `quoteCurrency`, `from`, `to`, `movement`                        | List rates.                              |
+| `POST /exchange-rates`       | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind`, `movement` | Add a movement-specific exchange rate. |
+
+Slice 6.3 implements the list and create endpoints only. Each rate belongs to
+the server-selected active household and has a UYU/USD base/quote pair, a
+positive decimal rate, effective date, source, `confirmed` or `planning` kind,
+and movement. All rates use `1 USD = X UYU`; movement is `buy_usd` (`UYU` →
+`USD`), `sell_usd` (`USD` → `UYU`), or `reference` (no movement). Owners and
+editors create; every household role reads. A household may not have two
+records for the same pair, date, kind, and movement. Creating a rate writes an
+audit event and never changes a debt, account, transaction, or report.
+Slice 6.4 lets a debt detail request provide an `exchangeRateId`. For a USD
+debt it must identify an active-household USD-purchase (`UYU` → `USD`) rate;
+the response
+includes an informational UYU equivalent, the chosen rate/date/source/kind,
+and the original USD amount. UYU debts retain their original UYU amount without
+a rate. USD minor units are multiplied by the selected decimal rate and rounded
+half up to the nearest UYU minor unit. No rate is selected implicitly and
+neither selection nor calculation writes financial data.
 
 ### 10. `dashboard.controller`
 
@@ -272,8 +288,16 @@ This controller is read-only. It delegates all calculations to reporting/forecas
 | `GET /reports/monthly-close`    | `period`, `baseCurrency`                                                                                  | Return period income, expenses, taxes, debt, and closing balance.                                         |
 | `GET /reports/categories`       | `from`, `to`, `kind`, `groupBy`                                                                           | Return category totals.                                                                                   |
 | `GET /reports/spending-summary` | `from`, `to`, `groupBy` (`month`, `year`, `category`), `currency` or `baseCurrency` with `exchangeRateId` | Return paid-expense totals for any inclusive date range, including two months, a year, or a custom range. |
-| `GET /reports/debts`            | `asOfDate`, `baseCurrency`, `exchangeRateId`                                                              | Return liability and payment report.                                                                      |
+| `GET /reports/debts`            | optional `exchangeRateId`                                                                                 | Return current liability and payment report.                                                              |
 | `GET /reports/export`           | `from`, `to`, `format` (`csv` initially)                                                                  | Create household-scoped export.                                                                           |
+
+Slice 6.5 implements `GET /reports/debts`. It returns every household debt
+with original amount, paid amount, and remaining amount in its original
+currency, plus separate UYU and USD totals. When the caller explicitly selects
+an active-household `USD` → `UYU` rate, it also returns each UYU equivalent and
+the combined UYU exposure with the selected rate's metadata. Without that
+selection, no UYU/USD total is combined. The report is read-only and does not
+infer a latest rate or create audit events.
 
 ### 12. `grocery-plans.controller`
 

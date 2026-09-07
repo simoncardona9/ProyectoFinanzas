@@ -122,7 +122,10 @@ instalar Node.js, pnpm ni PostgreSQL: los contenedores los incluyen.
 ### Acceso HTTPS desde la red local
 
 El proxy Caddy publicado por Docker atiende en los puertos 80 y 443 y reenvía
-el tráfico cifrado al contenedor web. No abras el puerto 3000 hacia la red.
+el tráfico cifrado al contenedor web. Al acceder mediante una IP, los clientes
+Windows no envían SNI; la configuración selecciona explícitamente el
+certificado de `APP_DOMAIN` para que el handshake TLS funcione a través del
+proxy TCP de Docker. No abras el puerto 3000 hacia la red.
 
 - Con un nombre DNS público que resuelva al equipo y puertos 80/443 accesibles,
   Caddy obtiene y renueva automáticamente un certificado de confianza pública.

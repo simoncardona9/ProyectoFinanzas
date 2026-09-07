@@ -56,6 +56,7 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [message, setMessage] = useState("");
   const [grossAmount, setGrossAmount] = useState("0,00");
+  const [collectionAmount, setCollectionAmount] = useState("0,00");
   const [formKey, setFormKey] = useState(0);
   const load = useCallback(async () => {
     try {
@@ -82,6 +83,7 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify(body),
       });
       setMessage("Factura actualizada.");
+      if (suffix === "payments") setCollectionAmount("0,00");
       await load();
       setDetail(await api<InvoiceDetail>(`/api/v1/invoices/${id}`));
     } catch (error) {
@@ -310,9 +312,7 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
                 onSubmit={(event) => {
                   event.preventDefault();
                   const form = new FormData(event.currentTarget);
-                  const amountMinor = parseMoneyToMinor(
-                    String(form.get("amount")),
-                  );
+                  const amountMinor = parseMoneyToMinor(collectionAmount);
                   if (!amountMinor || amountMinor <= 0)
                     return setMessage("Ingresa una cobranza válida.");
                   void action(detail.invoice.id, "payments", {
@@ -324,8 +324,14 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
               >
                 <input
                   name="amount"
+                  type="text"
                   required
                   inputMode="decimal"
+                  value={collectionAmount}
+                  onChange={(event) =>
+                    setCollectionAmount(formatMoneyInput(event.target.value))
+                  }
+                  onFocus={(event) => event.currentTarget.select()}
                   placeholder="Importe cobrado"
                   className="rounded border p-2"
                 />

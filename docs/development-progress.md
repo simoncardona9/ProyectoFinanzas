@@ -315,7 +315,7 @@ financial items remain Step 4 obligation behavior.
   draft invoice creation, the displayed gross/net/IVA breakdown, unchanged
   cash and dashboard figures, and viewer read-only access.
 
-### Slice 7.2 — Invoice lifecycle and collection reconciliation — implemented, pending verification
+### Slice 7.2 — Invoice lifecycle and collection reconciliation — completed
 
 - Added invoice detail, send and unpaid-cancellation transitions, plus immutable
   collection records linked atomically to newly created paid income transactions.
@@ -325,6 +325,15 @@ financial items remain Step 4 obligation behavior.
 - The Spanish invoice register now exposes remaining balance, invoice detail,
   lifecycle actions, and partial/full collection entry. IVA reserves and
   dashboard changes remain deferred to Slice 7.3.
+
+### Verification
+
+- `pnpm db:migrate`, `pnpm exec tsc --noEmit`, `pnpm test` (45 tests),
+  `pnpm lint`, `pnpm db:check`, and `pnpm build` — passed.
+- On 2026-09-07, the household completed the local lifecycle review. It
+  confirmed sending an invoice, partial and final same-currency collections,
+  linked paid income, zero balance on collection, cancellation protection after
+  collection, and read-only account selection filtered to the invoice currency.
 
 ## Local container runtime — documented
 

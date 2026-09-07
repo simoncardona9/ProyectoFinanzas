@@ -12,6 +12,35 @@ export function calculateInvoiceIva(
   return { ivaAmountMinor, netAmountMinor: grossAmountMinor - ivaAmountMinor };
 }
 
+export function calculateCollectionIvaReserve(
+  invoice: {
+    grossAmountMinor: number;
+    ivaAmountMinor: number;
+    remainingAmountMinor: number;
+  },
+  collectionAmountMinor: number,
+) {
+  // Allocate the immutable invoice IVA cumulatively. This makes partial
+  // collection rounding deterministic and guarantees a fully collected
+  // invoice's reserves add up to its captured IVA exactly.
+  const collectedBefore =
+    invoice.grossAmountMinor - invoice.remainingAmountMinor;
+  const allocatedBefore = divideRoundHalfUp(
+    BigInt(collectedBefore) * BigInt(invoice.ivaAmountMinor),
+    BigInt(invoice.grossAmountMinor),
+  );
+  const allocatedAfter = divideRoundHalfUp(
+    BigInt(collectedBefore + collectionAmountMinor) *
+      BigInt(invoice.ivaAmountMinor),
+    BigInt(invoice.grossAmountMinor),
+  );
+  return Number(allocatedAfter - allocatedBefore);
+}
+
+function divideRoundHalfUp(numerator: bigint, divisor: bigint) {
+  return (numerator + divisor / BigInt(2)) / divisor;
+}
+
 export function validateInvoice(values: CreateInvoice) {
   if (values.dueDate < values.serviceDate)
     throw new ApiError(

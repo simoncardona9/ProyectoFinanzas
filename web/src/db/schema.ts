@@ -71,6 +71,12 @@ export const invoiceStatus = pgEnum("invoice_status", [
   "cancelled",
 ]);
 
+export const taxReserveStatus = pgEnum("tax_reserve_status", [
+  "protected",
+  "partially_settled",
+  "settled",
+]);
+
 export const exchangeRateKind = pgEnum("exchange_rate_kind", [
   "confirmed",
   "planning",
@@ -352,6 +358,42 @@ export const invoiceCollections = pgTable(
   (table) => [
     unique("invoice_collections_transaction_unique").on(table.transactionId),
     index("invoice_collections_invoice_idx").on(table.invoiceId),
+  ],
+);
+
+export const taxReserves = pgTable(
+  "tax_reserves",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    invoiceCollectionId: uuid("invoice_collection_id")
+      .notNull()
+      .references(() => invoiceCollections.id, { onDelete: "restrict" }),
+    originalAmountMinor: integer("original_amount_minor").notNull(),
+    remainingAmountMinor: integer("remaining_amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    status: taxReserveStatus("status").notNull().default("protected"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("tax_reserves_invoice_collection_unique").on(
+      table.invoiceCollectionId,
+    ),
+    index("tax_reserves_household_status_idx").on(
+      table.householdId,
+      table.status,
+    ),
+    index("tax_reserves_invoice_idx").on(table.invoiceId),
   ],
 );
 

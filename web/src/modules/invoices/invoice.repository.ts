@@ -5,6 +5,7 @@ import {
   auditLogs,
   invoiceCollections,
   invoices,
+  taxReserves,
   transactions,
 } from "@/db/schema";
 import type {
@@ -91,6 +92,10 @@ export const invoiceRepository = {
           description: transactions.description,
           accountId: accounts.id,
           accountName: accounts.name,
+          reserveId: taxReserves.id,
+          reserveAmountMinor: taxReserves.originalAmountMinor,
+          reserveRemainingAmountMinor: taxReserves.remainingAmountMinor,
+          reserveStatus: taxReserves.status,
         })
         .from(invoiceCollections)
         .innerJoin(
@@ -98,6 +103,10 @@ export const invoiceRepository = {
           eq(invoiceCollections.transactionId, transactions.id),
         )
         .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+        .leftJoin(
+          taxReserves,
+          eq(taxReserves.invoiceCollectionId, invoiceCollections.id),
+        )
         .where(eq(invoiceCollections.invoiceId, id))
         .orderBy(asc(transactions.date), asc(invoiceCollections.createdAt)),
     ]);
@@ -138,6 +147,7 @@ export const invoiceRepository = {
     actorUserId: string,
     invoice: typeof invoices.$inferSelect,
     values: CreateInvoiceCollection,
+    reserveAmountMinor: number,
   ) {
     return db.transaction(async (tx) => {
       const [transaction] = await tx
@@ -156,11 +166,25 @@ export const invoiceRepository = {
           isOneOff: false,
         })
         .returning();
-      await tx.insert(invoiceCollections).values({
-        invoiceId: invoice.id,
-        transactionId: transaction.id,
-        amountMinor: values.amountMinor,
-      });
+      const [collection] = await tx
+        .insert(invoiceCollections)
+        .values({
+          invoiceId: invoice.id,
+          transactionId: transaction.id,
+          amountMinor: values.amountMinor,
+        })
+        .returning();
+      const [reserve] = await tx
+        .insert(taxReserves)
+        .values({
+          householdId,
+          invoiceId: invoice.id,
+          invoiceCollectionId: collection.id,
+          originalAmountMinor: reserveAmountMinor,
+          remainingAmountMinor: reserveAmountMinor,
+          currency: invoice.currency,
+        })
+        .returning();
       const remainingAmountMinor =
         invoice.remainingAmountMinor - values.amountMinor;
       const [updated] = await tx
@@ -191,9 +215,11 @@ export const invoiceRepository = {
           amountMinor: values.amountMinor,
           transactionId: transaction.id,
           accountId: values.accountId,
+          reserveId: reserve.id,
+          reserveAmountMinor,
         },
       });
-      return { invoice: updated, transaction };
+      return { invoice: updated, transaction, collection, reserve };
     });
   },
   async cancel(

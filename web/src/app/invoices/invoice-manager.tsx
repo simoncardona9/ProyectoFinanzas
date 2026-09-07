@@ -29,6 +29,10 @@ type InvoiceDetail = {
     amountMinor: number;
     paidDate: string;
     accountName: string;
+    reserveId: string | null;
+    reserveAmountMinor: number | null;
+    reserveRemainingAmountMinor: number | null;
+    reserveStatus: string | null;
   }[];
 };
 
@@ -301,6 +305,15 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
                 {collection.paidDate}:{" "}
                 {money(collection.amountMinor, detail.invoice.currency)} en{" "}
                 {collection.accountName}
+                {collection.reserveAmountMinor !== null && (
+                  <>
+                    {" · IVA protegido: "}
+                    {money(
+                      collection.reserveAmountMinor,
+                      detail.invoice.currency,
+                    )}
+                  </>
+                )}
               </li>
             ))}
             {!detail.collections.length && <li>Aún no hay cobranzas.</li>}

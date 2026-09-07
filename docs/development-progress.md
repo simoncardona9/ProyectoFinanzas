@@ -335,6 +335,30 @@ financial items remain Step 4 obligation behavior.
   linked paid income, zero balance on collection, cancellation protection after
   collection, and read-only account selection filtered to the invoice currency.
 
+### Slice 7.3 — Protected IVA reserve — implemented, pending verification
+
+- Every successful invoice collection now atomically creates one protected,
+  same-currency IVA reserve linked to its invoice and source collection. The
+  reserve keeps original and remaining minor-unit amounts for later settlement.
+- Partial-collection reserve allocation uses exact-integer cumulative half-up
+  rounding. Consequently, the reserve portions equal the invoice's immutable
+  IVA exactly when its gross amount is fully collected.
+- Invoice detail shows the protected IVA for each collection. The dashboard
+  remains intentionally unchanged until Slice 7.5 and no reserve-settlement
+  action exists until Slice 7.4.
+- Added migration `0013_elite_emma_frost.sql`, reserve-allocation tests, and
+  documentation for the traceable invoice-collection-reserve relationship.
+
+### Verification
+
+- `pnpm db:migrate` applied the new reserve schema to the configured local
+  PostgreSQL database.
+- `pnpm exec tsc --noEmit`, `pnpm test` (47 tests), `pnpm lint`,
+  `pnpm db:check`, and `pnpm build` — passed.
+- Pending local review: collect an IVA-bearing invoice in two payments, verify
+  each protected amount in invoice detail, confirm their total equals the
+  captured invoice IVA, and confirm no dashboard behavior changed.
+
 ## Local container runtime — documented
 
 - Docker Compose runs the local stack: PostgreSQL, one-shot migrations,

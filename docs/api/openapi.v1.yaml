@@ -8,7 +8,7 @@ paths:
     get:
       operationId: listInvoices
       summary: List invoices in the active household.
-      description: All active-household roles may read invoices. Each result includes its remaining receivable balance; tax reserves and dashboard effects remain out of scope.
+      description: All active-household roles may read invoices. Each result includes its remaining receivable balance. Invoice detail exposes traceable protected IVA reserves; dashboard effects remain out of scope.
       security: [{ sessionCookie: [] }]
       parameters:
         - {
@@ -93,7 +93,7 @@ paths:
     post:
       operationId: collectInvoice
       summary: Atomically record a same-currency collection and paid income transaction.
-      description: A collection cannot exceed the remaining balance; it creates a linked paid income transaction and audit event atomically. IVA reserve creation is out of scope.
+      description: A collection cannot exceed the remaining balance; it atomically creates a linked paid income transaction, a same-currency protected IVA reserve, and an audit event. The IVA reserve is allocated cumulatively from the invoice's immutable IVA, so partial reserves sum exactly to it when fully collected. Dashboard effects remain out of scope.
       security: [{ sessionCookie: [] }]
       parameters:
         - {

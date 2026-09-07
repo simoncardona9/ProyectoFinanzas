@@ -55,6 +55,11 @@
    calculated amounts are immutable invoice evidence.
 2. IVA and other tax reserves are protected funds, not spendable cash.
 3. A tax reserve becomes settled only when a linked payment transaction is recorded.
+4. Each invoice collection creates one protected IVA reserve in the invoice's
+   currency. Partial-collection reserves use cumulative half-up allocation of
+   the immutable invoice IVA; their total therefore equals that invoice IVA on
+   full collection. A reserve does not create an account movement or currency
+   conversion.
 
 ## Data integrity
 

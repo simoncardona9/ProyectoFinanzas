@@ -6,6 +6,7 @@ import {
   validateInvoiceCancellation,
   validateInvoiceCollection,
   validateInvoiceSend,
+  calculateCollectionIvaReserve,
 } from "./invoice.rules";
 import { ApiError } from "@/shared/errors/api-error";
 import { structureRepository } from "@/modules/structure/structure.repository";
@@ -62,12 +63,17 @@ export async function collectInvoice(
   ]);
   if (!invoice) throw new ApiError(404, "NOT_FOUND", "Invoice not found.");
   validateInvoiceCollection(invoice, account, values);
+  const reserveAmountMinor = calculateCollectionIvaReserve(
+    invoice,
+    values.amountMinor,
+  );
   try {
     return await invoiceRepository.collect(
       context.membership.householdId,
       context.user.id,
       invoice,
       values,
+      reserveAmountMinor,
     );
   } catch (error) {
     if (

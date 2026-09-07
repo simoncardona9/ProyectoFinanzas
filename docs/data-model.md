@@ -61,6 +61,12 @@ Represents an amount expected to be paid, such as a loan installment, service bi
 
 Tracks billable work: client, service month, gross amount, IVA rate, IVA amount, sent date, due date, and collection status. It can link to one or more income transactions.
 
+### TaxReserve
+
+Records protected IVA from one invoice collection. It preserves the invoice
+currency, original and remaining minor-unit amounts, settlement status, and
+links to both its invoice and source collection. It does not itself move money.
+
 ### Debt
 
 Tracks a liability: creditor, account, original amount, outstanding amount, currency, due date, interest data, and payment plan.
@@ -110,6 +116,7 @@ Household ──< GroceryPlans ──< GroceryPlanItems
 GroceryPlanItem ──> Product and optional MarketPrice
 Market ──< MarketPrices >── Product
 Invoice ──< income Transactions
+Invoice ──< InvoiceCollections ──1 TaxReserves
 Obligation ──< expense Transactions
 Debt ──< debt-payment Transactions
 Transaction ──> Account and Category

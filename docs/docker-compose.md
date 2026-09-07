@@ -49,6 +49,15 @@ Docker Desktop is the only runtime dependency for this workflow. Node.js,
 pnpm, and PostgreSQL on the host are optional and are needed only for direct
 source development outside containers.
 
+## Kubernetes boundary
+
+Docker Compose is the supported local runtime only. Kubernetes is not
+configured for this project: no Kubernetes manifests, Helm charts, cluster
+resources, image registry workflow, or deployment process are included.
+Kubernetes must not be treated as an alternative runtime until a separate
+deployment decision defines its security, secret handling, persistent storage,
+ingress/TLS, backup, and operating procedures.
+
 ## Operations and data handling
 
 - `docker compose down` stops the stack and preserves the database volume.

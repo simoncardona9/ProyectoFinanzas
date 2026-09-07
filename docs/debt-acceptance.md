@@ -31,3 +31,15 @@ same remaining USD balance and equivalence when the identical rate is selected.
 Finally, confirm that no rate selection or report read created a transaction,
 changed the debt balance, or altered the rate record. Reset the disposable test
 household when the review is complete.
+
+## Acceptance result
+
+**Passed locally on 2026-09-07 using a disposable household and synthetic
+data.** The debt flow produced an original USD balance of `20000`, a payment
+of `5000`, and a remaining USD balance of `15000`. With the confirmed
+`buy_usd` rate of `42.75` selected, both the debt detail and report showed the
+expected UYU equivalent of `641250` minor units. The rate's movement, date,
+source, and kind were visible; sale and reference rates were not offered for
+the exposure. Reading the report and selecting the rate did not change the
+debt, rate, or transaction records. The disposable test household was reset
+after review.

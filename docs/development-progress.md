@@ -187,9 +187,9 @@ financial items remain Step 4 obligation behavior.
 - On 2026-09-05, the household completed the dashboard acceptance scenario
   locally with synthetic data and confirmed the dashboard flow and figures.
 
-## Step 6 — Debts, currencies, and exchange rates — in progress
+## Step 6 — Debts, currencies, and exchange rates — completed
 
-### Slice 6.1 — Debt foundation — implemented, pending local acceptance
+### Slice 6.1 — Debt foundation — completed
 
 - Added household-scoped debt records with creditor, description, incurred date,
   original balance, remaining balance, original currency, active/paid/cancelled
@@ -204,7 +204,7 @@ financial items remain Step 4 obligation behavior.
 - Added migration `0007_heavy_giant_girl.sql` and unit validation coverage for
   a positive initial balance.
 
-### Slice 6.2 — Same-currency debt payments — implemented, pending local acceptance
+### Slice 6.2 — Same-currency debt payments — completed
 
 - Added full and partial debt payments from an active account in the debt's
   original currency. The payment amount cannot exceed the remaining balance;
@@ -221,7 +221,7 @@ financial items remain Step 4 obligation behavior.
 - UYU-equivalent exposure and exchange rates remain intentionally out of scope
   for the next Step 6 slice.
 
-### Slice 6.3 — Explicit exchange-rate register — implemented, pending local acceptance
+### Slice 6.3 — Explicit exchange-rate register — completed
 
 - Added household-scoped UYU/USD exchange-rate records with base/quote
   currencies, positive decimal rate, effective date, source, and confirmed or
@@ -235,7 +235,7 @@ financial items remain Step 4 obligation behavior.
   change balances or calculate UYU equivalents; explicit rate selection and
   exposure remain deferred to Slice 6.4.
 
-#### Follow-up — Explicit USD purchase/sale movement — implemented, pending local acceptance
+#### Follow-up — Explicit USD purchase/sale movement — completed
 
 - Corrected the rate register to state the movement explicitly: `buy_usd`
   (`UYU` → `USD`), `sell_usd` (`USD` → `UYU`), or `reference`. All rates use
@@ -249,7 +249,7 @@ financial items remain Step 4 obligation behavior.
   preserved as `reference` and must be re-recorded with an explicit movement
   before being selected for debt exposure.
 
-### Slice 6.4 — Rate selection and UYU-equivalent debt exposure — implemented, pending local acceptance
+### Slice 6.4 — Rate selection and UYU-equivalent debt exposure — completed
 
 - Added explicit `exchangeRateId` selection on debt detail reads and the debt
   detail screen. USD debts accept only an active-household `USD` → `UYU` rate;
@@ -264,7 +264,7 @@ financial items remain Step 4 obligation behavior.
   the household debt report and local acceptance procedure remain deferred to
   Slice 6.5.
 
-### Slice 6.5 — Debt report and local acceptance — implemented, pending local acceptance
+### Slice 6.5 — Debt report and local acceptance — completed
 
 - Added the protected household-scoped `GET /api/v1/reports/debts` endpoint and
   the Spanish `/debt-report` screen. Both display debt original amount,
@@ -282,3 +282,22 @@ financial items remain Step 4 obligation behavior.
 - `pnpm db:migrate` — passed against the configured local PostgreSQL database.
 - `pnpm exec tsc --noEmit`, `pnpm test` (30 tests), `pnpm lint`, `pnpm db:check`,
   and `pnpm build` — passed.
+- On 2026-09-07, the household completed the debt acceptance scenario locally
+  with synthetic data. It confirmed the USD original, paid, and remaining
+  figures (`20000`, `5000`, and `15000` minor units), the selected-rate UYU
+  equivalent (`641250` minor units), currency isolation, eligible-rate
+  filtering, and read-only behavior. The disposable household was reset.
+
+## Local container runtime — documented
+
+- Docker Compose runs the local stack: PostgreSQL, one-shot migrations,
+  idempotent synthetic test-user seeding, the Next.js application, and a Caddy
+  HTTPS reverse proxy. Only Caddy publishes host ports 80 and 443; PostgreSQL
+  and the application remain internal to the Compose network.
+- The Caddy configuration supports a configured public DNS name or a local CA
+  certificate for a LAN IP/local hostname, including Windows clients that omit
+  TLS SNI when connecting by IP. The operational procedure is in
+  `docs/docker-compose.md`.
+- Kubernetes is not configured: this repository contains no Kubernetes
+  manifests, Helm chart, cluster, or deployment workflow. It remains outside
+  the local-only scope and requires separate approval and implementation.

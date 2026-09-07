@@ -1,0 +1,3 @@
+interface:
+  display_name: "Module Boundary Change"
+  short_description: "Change layered application modules safely"

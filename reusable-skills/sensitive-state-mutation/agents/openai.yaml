@@ -1,0 +1,3 @@
+interface:
+  display_name: "Sensitive State Mutation"
+  short_description: "Protect correctness in high-impact mutations"

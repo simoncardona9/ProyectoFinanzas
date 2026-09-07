@@ -62,6 +62,10 @@ services:
       retries: 6
       start_period: 10s
 
+  # Terminates TLS and is the only service exposed outside Docker. Caddy uses a
+  # publicly trusted certificate for a public DNS name, or its local CA for a
+  # LAN IP address / local hostname. Caddy's default SNI handles Windows IP
+  # clients that omit SNI through Docker's TCP proxy.
   proxy:
     image: caddy:2.10-alpine
     environment:

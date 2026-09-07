@@ -23,8 +23,9 @@ export default async function InvoicesPage() {
           <BackLink href="/settings">Volver a configuración</BackLink>
         </div>
         <p className="mt-2 text-zinc-600">
-          Registra el importe bruto y la tasa de IVA. En este primer corte, la
-          factura no crea un ingreso, una reserva ni modifica el panel.
+          Envía facturas y reconcilia cobranzas parciales o totales con ingresos
+          pagados de la misma moneda. Las reservas de IVA aún no modifican el
+          panel.
         </p>
         <InvoiceManager
           canEdit={["owner", "editor"].includes(context.membership.role)}

@@ -18,6 +18,18 @@ type Invoice = {
   ivaAmountMinor: number;
   currency: string;
   status: string;
+  remainingAmountMinor: number;
+};
+
+type Account = { id: string; name: string; currency: string; active: boolean };
+type InvoiceDetail = {
+  invoice: Invoice;
+  collections: {
+    id: string;
+    amountMinor: number;
+    paidDate: string;
+    accountName: string;
+  }[];
 };
 
 const money = (amount: number, currency: string) =>
@@ -40,6 +52,8 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
   const [items, setItems] = useState<Invoice[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [message, setMessage] = useState("");
   const [grossAmount, setGrossAmount] = useState("0,00");
   const [formKey, setFormKey] = useState(0);
@@ -58,6 +72,26 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
     const task = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(task);
   }, [load]);
+  useEffect(() => {
+    void api<Account[]>("/api/v1/accounts?active=true").then(setAccounts);
+  }, []);
+  const action = async (id: string, suffix: string, body: unknown) => {
+    try {
+      await api(`/api/v1/invoices/${id}/${suffix}`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      setMessage("Factura actualizada.");
+      await load();
+      setDetail(await api<InvoiceDetail>(`/api/v1/invoices/${id}`));
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar la factura.",
+      );
+    }
+  };
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -199,7 +233,49 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
                   {item.ivaRateBasisPoints / 100}%:{" "}
                   {money(item.ivaAmountMinor, item.currency)}
                 </small>
+                <small className="block text-zinc-500">
+                  Pendiente: {money(item.remainingAmountMinor, item.currency)}
+                </small>
               </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded border px-2 py-1 text-sm"
+                  onClick={() =>
+                    void api<InvoiceDetail>(`/api/v1/invoices/${item.id}`).then(
+                      setDetail,
+                    )
+                  }
+                >
+                  Ver detalle
+                </button>
+                {canEdit && item.status === "draft" && (
+                  <button
+                    type="button"
+                    className="rounded bg-emerald-700 px-2 py-1 text-sm text-white"
+                    onClick={() =>
+                      void action(item.id, "send", {
+                        sentDate: new Date().toISOString().slice(0, 10),
+                      })
+                    }
+                  >
+                    Marcar enviada
+                  </button>
+                )}
+                {canEdit && ["draft", "sent"].includes(item.status) && (
+                  <button
+                    type="button"
+                    className="rounded border px-2 py-1 text-sm"
+                    onClick={() =>
+                      void action(item.id, "cancel", {
+                        reason: "Cancelada por el hogar",
+                      })
+                    }
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
             </li>
           ))}
           {!items.length && (
@@ -207,6 +283,82 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
           )}
         </ul>
       </section>
+      {detail && (
+        <section className="rounded-xl border p-5">
+          <h2 className="text-xl font-semibold">Detalle de factura</h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            {detail.invoice.clientName} · pendiente{" "}
+            {money(
+              detail.invoice.remainingAmountMinor,
+              detail.invoice.currency,
+            )}
+          </p>
+          <ul className="mt-3 list-disc pl-5 text-sm">
+            {detail.collections.map((collection) => (
+              <li key={collection.id}>
+                {collection.paidDate}:{" "}
+                {money(collection.amountMinor, detail.invoice.currency)} en{" "}
+                {collection.accountName}
+              </li>
+            ))}
+            {!detail.collections.length && <li>Aún no hay cobranzas.</li>}
+          </ul>
+          {canEdit &&
+            ["sent", "partially_collected"].includes(detail.invoice.status) && (
+              <form
+                className="mt-4 grid gap-2 md:grid-cols-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const form = new FormData(event.currentTarget);
+                  const amountMinor = parseMoneyToMinor(
+                    String(form.get("amount")),
+                  );
+                  if (!amountMinor || amountMinor <= 0)
+                    return setMessage("Ingresa una cobranza válida.");
+                  void action(detail.invoice.id, "payments", {
+                    amountMinor,
+                    accountId: form.get("accountId"),
+                    paidDate: form.get("paidDate"),
+                  });
+                }}
+              >
+                <input
+                  name="amount"
+                  required
+                  inputMode="decimal"
+                  placeholder="Importe cobrado"
+                  className="rounded border p-2"
+                />
+                <select
+                  name="accountId"
+                  required
+                  className="rounded border p-2"
+                >
+                  <option value="">Cuenta de {detail.invoice.currency}</option>
+                  {accounts
+                    .filter(
+                      (account) => account.currency === detail.invoice.currency,
+                    )
+                    .map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name}
+                      </option>
+                    ))}
+                </select>
+                <input
+                  name="paidDate"
+                  type="date"
+                  required
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                  className="rounded border p-2"
+                />
+                <button className="rounded bg-emerald-700 p-2 text-white">
+                  Registrar cobranza
+                </button>
+              </form>
+            )}
+        </section>
+      )}
     </div>
   );
 }

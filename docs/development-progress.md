@@ -290,7 +290,7 @@ financial items remain Step 4 obligation behavior.
 
 ## Step 7 — Invoices, IVA, and tax reserves — in progress
 
-### Slice 7.1 — Invoice and IVA foundation — implemented, pending local acceptance
+### Slice 7.1 — Invoice and IVA foundation — completed
 
 - Added household-scoped draft invoices with client name, description, service
   and due dates, gross amount, invoice currency, captured IVA rate, and
@@ -311,6 +311,20 @@ financial items remain Step 4 obligation behavior.
 - `pnpm db:migrate` — passed against the configured local PostgreSQL database.
 - `pnpm exec tsc --noEmit`, `pnpm test` (41 tests), `pnpm lint`, `pnpm db:check`,
   and `pnpm build` — passed.
+- On 2026-09-07, the household completed the local invoice review. It confirmed
+  draft invoice creation, the displayed gross/net/IVA breakdown, unchanged
+  cash and dashboard figures, and viewer read-only access.
+
+### Slice 7.2 — Invoice lifecycle and collection reconciliation — implemented, pending verification
+
+- Added invoice detail, send and unpaid-cancellation transitions, plus immutable
+  collection records linked atomically to newly created paid income transactions.
+- A collection requires an active same-currency account, cannot exceed the
+  remaining gross receivable, and moves the invoice to `partially_collected` or
+  `collected`. Concurrent balance changes roll back the transaction and link.
+- The Spanish invoice register now exposes remaining balance, invoice detail,
+  lifecycle actions, and partial/full collection entry. IVA reserves and
+  dashboard changes remain deferred to Slice 7.3.
 
 ## Local container runtime — documented
 

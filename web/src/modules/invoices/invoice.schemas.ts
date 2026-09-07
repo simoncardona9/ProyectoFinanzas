@@ -27,3 +27,22 @@ export const listInvoicesSchema = z.object({
 });
 
 export type ListInvoices = z.infer<typeof listInvoicesSchema>;
+
+export const sendInvoiceSchema = z.object({
+  sentDate: calendarDate,
+});
+
+export const createInvoiceCollectionSchema = z.object({
+  amountMinor: z.number().int().positive().max(2_000_000_000),
+  accountId: z.uuid(),
+  paidDate: calendarDate,
+  description: z.string().trim().min(1).max(500).optional(),
+});
+
+export type CreateInvoiceCollection = z.infer<
+  typeof createInvoiceCollectionSchema
+>;
+
+export const cancelInvoiceSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+});

@@ -319,6 +319,8 @@ export const invoices = pgTable(
     ivaAmountMinor: integer("iva_amount_minor").notNull(),
     currency: text("currency").notNull(),
     status: invoiceStatus("status").notNull().default("draft"),
+    remainingAmountMinor: integer("remaining_amount_minor").notNull(),
+    sentDate: date("sent_date"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -329,6 +331,27 @@ export const invoices = pgTable(
   (table) => [
     index("invoices_household_status_idx").on(table.householdId, table.status),
     index("invoices_household_due_idx").on(table.householdId, table.dueDate),
+  ],
+);
+
+export const invoiceCollections = pgTable(
+  "invoice_collections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("invoice_collections_transaction_unique").on(table.transactionId),
+    index("invoice_collections_invoice_idx").on(table.invoiceId),
   ],
 );
 

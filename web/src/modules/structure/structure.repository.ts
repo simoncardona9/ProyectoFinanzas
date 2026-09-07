@@ -7,6 +7,7 @@ import {
   debtPayments,
   debts,
   exchangeRates,
+  invoiceCollections,
   invoices,
   obligationPayments,
   obligations,
@@ -22,6 +23,17 @@ export const structureRepository = {
       await tx
         .delete(exchangeRates)
         .where(eq(exchangeRates.householdId, householdId));
+      await tx
+        .delete(invoiceCollections)
+        .where(
+          inArray(
+            invoiceCollections.invoiceId,
+            tx
+              .select({ id: invoices.id })
+              .from(invoices)
+              .where(eq(invoices.householdId, householdId)),
+          ),
+        );
       await tx.delete(invoices).where(eq(invoices.householdId, householdId));
       await tx
         .delete(debtPayments)

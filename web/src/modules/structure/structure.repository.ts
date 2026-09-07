@@ -7,6 +7,7 @@ import {
   debtPayments,
   debts,
   exchangeRates,
+  invoices,
   obligationPayments,
   obligations,
   transactions,
@@ -21,6 +22,7 @@ export const structureRepository = {
       await tx
         .delete(exchangeRates)
         .where(eq(exchangeRates.householdId, householdId));
+      await tx.delete(invoices).where(eq(invoices.householdId, householdId));
       await tx
         .delete(debtPayments)
         .where(

@@ -226,6 +226,13 @@ This controller manages household membership and roles, not passwords or session
 | `POST /invoices/:invoiceId/payments` | path; body: `amountMinor`, `currency`, `accountId`, `paidDate`                                       | Reconcile full or partial collection.      |
 | `POST /invoices/:invoiceId/cancel`   | path; body: `reason`                                                                                 | Cancel an unpaid invoice with audit trail. |
 
+Slice 7.1 implements only the household-scoped list and create endpoints. An
+owner or editor creates a `draft` invoice with a gross amount and an IVA rate
+in basis points; the service calculates and persists its immutable net and IVA
+minor-unit amounts together with its audit event. An invoice is receivables
+data at this stage: it does not create a transaction, collection link, reserve,
+or dashboard effect.
+
 ### 7. `debts.controller`
 
 | Method and path                | Parameters                                                                 | Purpose                                                     |

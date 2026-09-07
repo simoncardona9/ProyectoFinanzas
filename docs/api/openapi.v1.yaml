@@ -4,6 +4,39 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/invoices:
+    get:
+      operationId: listInvoices
+      summary: List invoices in the active household.
+      description: All active-household roles may read invoices. Slice 7.1 returns invoice records only; it does not create income, collections, tax reserves, or dashboard effects.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [draft, sent, partially_collected, collected, cancelled] } }
+        - { name: currency, in: query, schema: { type: string, enum: [UYU, USD] } }
+        - { name: dueFrom, in: query, schema: { type: string, format: date } }
+        - { name: dueTo, in: query, schema: { type: string, format: date } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200": { description: Household-scoped invoices }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createInvoice
+      summary: Create a draft invoice with an immutable IVA breakdown.
+      description: Requires owner or editor. The gross amount includes IVA; IVA is extracted from grossAmountMinor using ivaRateBasisPoints and half-up minor-unit rounding. The invoice and audit event are inserted atomically. This operation does not affect cash, create an income transaction, or reserve tax funds.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceWrite" }
+      responses:
+        "201": { description: Draft invoice and audit event created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "422": { description: Due date is before service date }
   /api/v1/reports/debts:
     get:
       operationId: getDebtReport
@@ -1074,6 +1107,21 @@ components:
             amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
             currency: { type: string, enum: [UYU, USD] },
             incurredDate: { type: string, format: date },
+          },
+      }
+    InvoiceWrite:
+      {
+        type: object,
+        required: [clientName, description, serviceDate, dueDate, grossAmountMinor, ivaRateBasisPoints, currency],
+        properties:
+          {
+            clientName: { type: string, minLength: 1, maxLength: 200 },
+            description: { type: string, minLength: 1, maxLength: 500 },
+            serviceDate: { type: string, format: date },
+            dueDate: { type: string, format: date },
+            grossAmountMinor: { type: integer, minimum: 1, maximum: 2000000000, description: Gross amount including IVA. },
+            ivaRateBasisPoints: { type: integer, minimum: 0, maximum: 10000, description: IVA percentage times 100; 2200 is 22%. },
+            currency: { type: string, enum: [UYU, USD] },
           },
       }
     Debt:

@@ -48,7 +48,11 @@
 
 ## Tax and IVA
 
-1. IVA is calculated from gross invoice amount and configured IVA rate.
+1. The invoice gross amount includes IVA. Store the selected IVA rate as basis
+   points (for example, `2200` for 22%) and calculate IVA as the gross amount
+   multiplied by the rate divided by `10000 + rate`, rounded half up to a minor
+   unit; net amount is the remaining gross amount. The captured rate and both
+   calculated amounts are immutable invoice evidence.
 2. IVA and other tax reserves are protected funds, not spendable cash.
 3. A tax reserve becomes settled only when a linked payment transaction is recorded.
 

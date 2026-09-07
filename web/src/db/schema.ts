@@ -63,6 +63,14 @@ export const debtStatus = pgEnum("debt_status", [
   "cancelled",
 ]);
 
+export const invoiceStatus = pgEnum("invoice_status", [
+  "draft",
+  "sent",
+  "partially_collected",
+  "collected",
+  "cancelled",
+]);
+
 export const exchangeRateKind = pgEnum("exchange_rate_kind", [
   "confirmed",
   "planning",
@@ -291,6 +299,36 @@ export const obligations = pgTable(
   (table) => [
     index("obligations_household_due_idx").on(table.householdId, table.dueDate),
     index("obligations_category_idx").on(table.categoryId),
+  ],
+);
+
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    clientName: text("client_name").notNull(),
+    description: text("description").notNull(),
+    serviceDate: date("service_date").notNull(),
+    dueDate: date("due_date").notNull(),
+    grossAmountMinor: integer("gross_amount_minor").notNull(),
+    netAmountMinor: integer("net_amount_minor").notNull(),
+    ivaRateBasisPoints: integer("iva_rate_basis_points").notNull(),
+    ivaAmountMinor: integer("iva_amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    status: invoiceStatus("status").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("invoices_household_status_idx").on(table.householdId, table.status),
+    index("invoices_household_due_idx").on(table.householdId, table.dueDate),
   ],
 );
 

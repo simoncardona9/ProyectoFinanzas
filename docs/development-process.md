@@ -154,6 +154,35 @@ write audit events for financial mutations.
 
 **Acceptance:** An invoice collection can be reconciled to an income transaction; IVA is traceable; settling a reserve records a tax payment.
 
+**Planned slices:**
+
+1. **7.1 — Invoice and IVA foundation:** create and list household-scoped
+   invoices with an immutable gross amount, configured IVA rate, calculated IVA
+   amount, service date, due date, client reference, and audit trail. This is
+   receivables data only: it does not create a transaction, reserve, or
+   dashboard effect.
+2. **7.2 — Invoice lifecycle and collection reconciliation:** add invoice
+   detail and allowed sent/cancelled/partially-collected/collected states, then
+   atomically link a full or partial same-currency collection to a paid income
+   transaction. Prevent collection beyond the remaining invoice balance.
+3. **7.3 — Protected IVA reserve:** create the invoice-derived IVA reserve and
+   its traceable links after the associated collection is recorded. Preserve
+   invoice currency, never combine UYU and USD, and do not make protected
+   funds available for spending.
+4. **7.4 — Tax-reserve settlement:** settle a reserve through an atomic,
+   same-currency tax-payment transaction and reserve-link update. Prevent
+   over-settlement and retain an audit trail.
+5. **7.5 — Dashboard integration and local acceptance:** replace the
+   dashboard's “reserve data unavailable” state with separate, traceable
+   protected-reserve totals and prove with synthetic data that protected funds
+   are excluded from spendable cash.
+
+Scope boundary: client master data, electronic tax-filing integration,
+withholding rules, multi-tax invoices, tax return generation, automatic tax
+calculation from transactions, and currency conversion are not part of Step 7.
+Each slice keeps records household-scoped, restricts writes to owners/editors,
+uses atomic financial mutations and audit events, and keeps UYU/USD separate.
+
 ### Step 8 — Batch entry, migration, and reconciliation
 
 **Goal:** Let editors add many financial records safely, including approved

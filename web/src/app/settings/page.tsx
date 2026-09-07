@@ -65,6 +65,11 @@ export default async function SettingsPage() {
             title="Reporte de deudas"
             description="Revisar pagos, saldos originales y exposición con cotización explícita."
           />
+          <FeatureNavigationCard
+            href="/invoices"
+            title="Facturas e IVA"
+            description="Registrar facturas y ver el IVA calculado antes de cobrar o reservar fondos."
+          />
         </nav>
         <dl className="mt-8 divide-y divide-zinc-200">
           <div className="py-3">

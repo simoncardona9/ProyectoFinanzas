@@ -78,6 +78,13 @@
       "when": 1788675922273,
       "tag": "0010_real_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788803903763,
+      "tag": "0011_moaning_the_anarchist",
+      "breakpoints": true
     }
   ]
 }

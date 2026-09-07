@@ -288,6 +288,30 @@ financial items remain Step 4 obligation behavior.
   equivalent (`641250` minor units), currency isolation, eligible-rate
   filtering, and read-only behavior. The disposable household was reset.
 
+## Step 7 — Invoices, IVA, and tax reserves — in progress
+
+### Slice 7.1 — Invoice and IVA foundation — implemented, pending local acceptance
+
+- Added household-scoped draft invoices with client name, description, service
+  and due dates, gross amount, invoice currency, captured IVA rate, and
+  immutable calculated IVA and net amounts.
+- Gross amounts include IVA. IVA is extracted with explicit half-up minor-unit
+  rounding; a due date before the service date is rejected.
+- Added protected `GET`/`POST /api/v1/invoices`, owner/editor creation,
+  read-only access for every active-household role, atomic audit creation, and
+  the Spanish `/invoices` register.
+- Invoice records are receivables data only in this slice: they create no cash
+  movement, collection link, tax reserve, or dashboard change. The controlled
+  test-data reset now removes invoices as well.
+- Added migration `0011_moaning_the_anarchist.sql`, invoice calculation and
+  validation tests, and API contract documentation.
+
+### Verification
+
+- `pnpm db:migrate` — passed against the configured local PostgreSQL database.
+- `pnpm exec tsc --noEmit`, `pnpm test` (41 tests), `pnpm lint`, `pnpm db:check`,
+  and `pnpm build` — passed.
+
 ## Local container runtime — documented
 
 - Docker Compose runs the local stack: PostgreSQL, one-shot migrations,

@@ -4,6 +4,143 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/invoices:
+    get:
+      operationId: listInvoices
+      summary: List invoices in the active household.
+      description: All active-household roles may read invoices. Each result includes its remaining receivable balance. Invoice detail exposes traceable protected IVA reserves; dashboard effects remain out of scope.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: status,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum: [draft, sent, partially_collected, collected, cancelled],
+              },
+          }
+        - {
+            name: currency,
+            in: query,
+            schema: { type: string, enum: [UYU, USD] },
+          }
+        - { name: dueFrom, in: query, schema: { type: string, format: date } }
+        - { name: dueTo, in: query, schema: { type: string, format: date } }
+        - {
+            name: limit,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
+        - {
+            name: offset,
+            in: query,
+            schema: { type: integer, minimum: 0, default: 0 },
+          }
+      responses:
+        "200": { description: Household-scoped invoices }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createInvoice
+      summary: Create a draft invoice with an immutable IVA breakdown.
+      description: Requires owner or editor. The gross amount includes IVA; IVA is extracted from grossAmountMinor using ivaRateBasisPoints and half-up minor-unit rounding. The invoice and audit event are inserted atomically. This operation does not affect cash, create an income transaction, or reserve tax funds.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceWrite" }
+      responses:
+        "201": { description: Draft invoice and audit event created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "422": { description: Due date is before service date }
+  /api/v1/invoices/{invoiceId}:
+    get:
+      operationId: getInvoice
+      summary: Get a household-scoped invoice, collections, and audit trail.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: invoiceId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        "200": { description: Invoice detail }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Invoice not found }
+  /api/v1/invoices/{invoiceId}/send:
+    post:
+      operationId: sendInvoice
+      summary: Mark a draft invoice as sent.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: invoiceId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        "200": { description: Sent invoice }
+        "403": { description: Owner or editor role required }
+        "422": { description: Invoice is not a draft }
+  /api/v1/invoices/{invoiceId}/payments:
+    post:
+      operationId: collectInvoice
+      summary: Atomically record a same-currency collection and paid income transaction.
+      description: A collection cannot exceed the remaining balance; it atomically creates a linked paid income transaction, a same-currency protected IVA reserve, and an audit event. The IVA reserve is allocated cumulatively from the invoice's immutable IVA, so partial reserves sum exactly to it when fully collected. Dashboard effects remain out of scope.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: invoiceId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceCollectionWrite" }
+      responses:
+        "201":
+          {
+            description: Collection,
+            income transaction,
+            and invoice state created atomically,
+          }
+        "403": { description: Owner or editor role required }
+        "422":
+          {
+            description: Invalid state,
+            currency,
+            account,
+            or remaining balance,
+          }
+  /api/v1/invoices/{invoiceId}/cancel:
+    post:
+      operationId: cancelInvoice
+      summary: Cancel an unpaid draft or sent invoice with an audit reason.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: invoiceId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        "200": { description: Cancelled invoice }
+        "403": { description: Owner or editor role required }
+        "422":
+          {
+            description: Invoice has already received a collection or is closed,
+          }
   /api/v1/reports/debts:
     get:
       operationId: getDebtReport
@@ -16,7 +153,7 @@ paths:
             in: query,
             required: false,
             schema: { type: string, format: uuid },
-            description: Explicit active-household USD-purchase rate (UYU to USD). No conversion or combined exposure is returned when omitted.
+            description: Explicit active-household USD-purchase rate (UYU to USD). No conversion or combined exposure is returned when omitted.,
           }
       responses:
         "200":
@@ -29,17 +166,70 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [debts, totalsByOriginalCurrency, selectedRate, uyuEquivalentExposureMinor]
+                    required:
+                      [
+                        debts,
+                        totalsByOriginalCurrency,
+                        selectedRate,
+                        uyuEquivalentExposureMinor,
+                      ]
                     properties:
-                      debts: { type: array, items: { $ref: "#/components/schemas/DebtReportRow" } }
+                      debts:
+                        {
+                          type: array,
+                          items: { $ref: "#/components/schemas/DebtReportRow" },
+                        }
                       totalsByOriginalCurrency: { type: object }
                       selectedRate: { type: [object, "null"] }
                       uyuEquivalentExposureMinor: { type: [integer, "null"] }
               example:
-                { data: { debts: [{ id: "00000000-0000-4000-8000-000000000001", currency: USD, originalAmountMinor: 20000, paidAmountMinor: 5000, remainingAmountMinor: 15000, uyuEquivalentAmountMinor: 641250 }], totalsByOriginalCurrency: { UYU: { originalAmountMinor: 0, paidAmountMinor: 0, remainingAmountMinor: 0 }, USD: { originalAmountMinor: 20000, paidAmountMinor: 5000, remainingAmountMinor: 15000 } }, selectedRate: { rate: "42.75", effectiveDate: "2026-09-06", source: "Banco Central", kind: confirmed }, uyuEquivalentExposureMinor: 641250 } }
+                {
+                  data:
+                    {
+                      debts:
+                        [
+                          {
+                            id: "00000000-0000-4000-8000-000000000001",
+                            currency: USD,
+                            originalAmountMinor: 20000,
+                            paidAmountMinor: 5000,
+                            remainingAmountMinor: 15000,
+                            uyuEquivalentAmountMinor: 641250,
+                          },
+                        ],
+                      totalsByOriginalCurrency:
+                        {
+                          UYU:
+                            {
+                              originalAmountMinor: 0,
+                              paidAmountMinor: 0,
+                              remainingAmountMinor: 0,
+                            },
+                          USD:
+                            {
+                              originalAmountMinor: 20000,
+                              paidAmountMinor: 5000,
+                              remainingAmountMinor: 15000,
+                            },
+                        },
+                      selectedRate:
+                        {
+                          rate: "42.75",
+                          effectiveDate: "2026-09-06",
+                          source: "Banco Central",
+                          kind: confirmed,
+                        },
+                      uyuEquivalentExposureMinor: 641250,
+                    },
+                }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "422": { description: The selected rate is missing, belongs to another household, or is not a USD-purchase rate }
+        "422":
+          {
+            description: The selected rate is missing,
+            belongs to another household,
+            or is not a USD-purchase rate,
+          }
   /api/v1/exchange-rates:
     get:
       operationId: listExchangeRates
@@ -47,13 +237,29 @@ paths:
       description: All active-household roles can read only their household's rates. Rates are returned as explicit references and never alter balances or calculate exposure by themselves.
       security: [{ sessionCookie: [] }]
       parameters:
-        - { name: baseCurrency, in: query, schema: { type: string, enum: [UYU, USD] } }
-        - { name: quoteCurrency, in: query, schema: { type: string, enum: [UYU, USD] } }
+        - {
+            name: baseCurrency,
+            in: query,
+            schema: { type: string, enum: [UYU, USD] },
+          }
+        - {
+            name: quoteCurrency,
+            in: query,
+            schema: { type: string, enum: [UYU, USD] },
+          }
         - { name: from, in: query, schema: { type: string, format: date } }
         - { name: to, in: query, schema: { type: string, format: date } }
-        - { name: movement, in: query, schema: { type: string, enum: [buy_usd, sell_usd, reference] } }
+        - {
+            name: movement,
+            in: query,
+            schema: { type: string, enum: [buy_usd, sell_usd, reference] },
+          }
       responses:
-        "200": { description: Household-scoped exchange-rate list, newest effective date first }
+        "200":
+          {
+            description: Household-scoped exchange-rate list,
+            newest effective date first,
+          }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
@@ -67,13 +273,28 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ExchangeRateWrite" }
             example:
-              { baseCurrency: USD, quoteCurrency: UYU, rate: "42.75000000", effectiveDate: "2026-09-06", source: "Banco Central", kind: confirmed, movement: buy_usd }
+              {
+                baseCurrency: USD,
+                quoteCurrency: UYU,
+                rate: "42.75000000",
+                effectiveDate: "2026-09-06",
+                source: "Banco Central",
+                kind: confirmed,
+                movement: buy_usd,
+              }
       responses:
         "201": { description: Exchange-rate reference and audit event created }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { description: Owner or editor role required }
-        "409": { description: A rate already exists for this household, pair, date, kind, and movement }
+        "409":
+          {
+            description: A rate already exists for this household,
+            pair,
+            date,
+            kind,
+            and movement,
+          }
         "422": { description: The pair is not USD to UYU }
   /api/v1/debts:
     get:
@@ -182,7 +403,7 @@ paths:
             in: query,
             required: false,
             schema: { type: string, format: uuid },
-            description: Explicit active-household USD-purchase rate (UYU to USD) for a USD debt.
+            description: Explicit active-household USD-purchase rate (UYU to USD) for a USD debt.,
           }
       responses:
         "200": { description: Household-scoped debt detail and audit events }
@@ -191,7 +412,12 @@ paths:
           {
             description: Debt does not belong to the active household or does not exist,
           }
-        "422": { description: The selected rate is missing, belongs to another household, or is not a USD-purchase rate }
+        "422":
+          {
+            description: The selected rate is missing,
+            belongs to another household,
+            or is not a USD-purchase rate,
+          }
   /api/v1/debts/{debtId}/payments:
     post:
       operationId: payDebt
@@ -319,9 +545,11 @@ paths:
       description: >
         Read-only, household-scoped summary. It returns separate UYU and USD
         totals; currencies are never converted or combined. Expected income is
-        included only in projected cash, never current cash. Current cash comes
-        from cash and bank accounts and paid movements, while the projection
-        subtracts open obligations due during the requested month.
+        included only in projected cash, never current cash. Current cash is
+        spendable cash: it comes from cash and bank accounts and paid movements,
+        less the remaining protected IVA reserves. The response exposes those
+        reserves separately, while the projection also subtracts open obligations
+        due during the requested month.
       security: [{ sessionCookie: [] }]
       parameters:
         - {
@@ -338,7 +566,7 @@ paths:
             paid income,
             one-off income,
             pending obligations,
-            and projected cash.,
+            protected IVA reserves, and projected cash.,
           }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -1076,6 +1304,54 @@ components:
             incurredDate: { type: string, format: date },
           },
       }
+    InvoiceWrite:
+      {
+        type: object,
+        required:
+          [
+            clientName,
+            description,
+            serviceDate,
+            dueDate,
+            grossAmountMinor,
+            ivaRateBasisPoints,
+            currency,
+          ],
+        properties:
+          {
+            clientName: { type: string, minLength: 1, maxLength: 200 },
+            description: { type: string, minLength: 1, maxLength: 500 },
+            serviceDate: { type: string, format: date },
+            dueDate: { type: string, format: date },
+            grossAmountMinor:
+              {
+                type: integer,
+                minimum: 1,
+                maximum: 2000000000,
+                description: Gross amount including IVA.,
+              },
+            ivaRateBasisPoints:
+              {
+                type: integer,
+                minimum: 0,
+                maximum: 10000,
+                description: IVA percentage times 100; 2200 is 22%.,
+              },
+            currency: { type: string, enum: [UYU, USD] },
+          },
+      }
+    InvoiceCollectionWrite:
+      {
+        type: object,
+        required: [amountMinor, accountId, paidDate],
+        properties:
+          {
+            amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+            accountId: { type: string, format: uuid },
+            paidDate: { type: string, format: date },
+            description: { type: string, minLength: 1, maxLength: 500 },
+          },
+      }
     Debt:
       {
         type: object,
@@ -1117,7 +1393,18 @@ components:
     DebtReportRow:
       {
         type: object,
-        required: [id, creditorName, description, currency, originalAmountMinor, paidAmountMinor, remainingAmountMinor, status, uyuEquivalentAmountMinor],
+        required:
+          [
+            id,
+            creditorName,
+            description,
+            currency,
+            originalAmountMinor,
+            paidAmountMinor,
+            remainingAmountMinor,
+            status,
+            uyuEquivalentAmountMinor,
+          ],
         properties:
           {
             id: { type: string, format: uuid },
@@ -1134,16 +1421,35 @@ components:
     ExchangeRateWrite:
       {
         type: object,
-        required: [baseCurrency, quoteCurrency, rate, effectiveDate, source, kind, movement],
+        required:
+          [
+            baseCurrency,
+            quoteCurrency,
+            rate,
+            effectiveDate,
+            source,
+            kind,
+            movement,
+          ],
         properties:
           {
             baseCurrency: { type: string, enum: [UYU, USD] },
             quoteCurrency: { type: string, enum: [UYU, USD] },
-            rate: { type: string, pattern: '^(?:0|[1-9]\\d*)(?:\\.\\d{1,8})?$', description: Positive decimal; zero is rejected. },
+            rate:
+              {
+                type: string,
+                pattern: '^(?:0|[1-9]\\d*)(?:\\.\\d{1,8})?$',
+                description: Positive decimal; zero is rejected.,
+              },
             effectiveDate: { type: string, format: date },
             source: { type: string, minLength: 1, maxLength: 200 },
             kind: { type: string, enum: [confirmed, planning] },
-            movement: { type: string, enum: [buy_usd, sell_usd, reference], description: buy_usd means UYU to USD; sell_usd means USD to UYU; reference has no currency movement. },
+            movement:
+              {
+                type: string,
+                enum: [buy_usd, sell_usd, reference],
+                description: buy_usd means UYU to USD; sell_usd means USD to UYU; reference has no currency movement.,
+              },
           },
       }
     PaidTransactionUpdate:

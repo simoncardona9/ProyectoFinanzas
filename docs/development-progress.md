@@ -288,6 +288,116 @@ financial items remain Step 4 obligation behavior.
   equivalent (`641250` minor units), currency isolation, eligible-rate
   filtering, and read-only behavior. The disposable household was reset.
 
+## Step 7 — Invoices, IVA, and tax reserves — completed
+
+### Slice 7.1 — Invoice and IVA foundation — completed
+
+- Added household-scoped draft invoices with client name, description, service
+  and due dates, gross amount, invoice currency, captured IVA rate, and
+  immutable calculated IVA and net amounts.
+- Gross amounts include IVA. IVA is extracted with explicit half-up minor-unit
+  rounding; a due date before the service date is rejected.
+- Added protected `GET`/`POST /api/v1/invoices`, owner/editor creation,
+  read-only access for every active-household role, atomic audit creation, and
+  the Spanish `/invoices` register.
+- Invoice records are receivables data only in this slice: they create no cash
+  movement, collection link, tax reserve, or dashboard change. The controlled
+  test-data reset now removes invoices as well.
+- Added migration `0011_moaning_the_anarchist.sql`, invoice calculation and
+  validation tests, and API contract documentation.
+
+### Verification
+
+- `pnpm db:migrate` — passed against the configured local PostgreSQL database.
+- `pnpm exec tsc --noEmit`, `pnpm test` (41 tests), `pnpm lint`, `pnpm db:check`,
+  and `pnpm build` — passed.
+- On 2026-09-07, the household completed the local invoice review. It confirmed
+  draft invoice creation, the displayed gross/net/IVA breakdown, unchanged
+  cash and dashboard figures, and viewer read-only access.
+
+### Slice 7.2 — Invoice lifecycle and collection reconciliation — completed
+
+- Added invoice detail, send and unpaid-cancellation transitions, plus immutable
+  collection records linked atomically to newly created paid income transactions.
+- A collection requires an active same-currency account, cannot exceed the
+  remaining gross receivable, and moves the invoice to `partially_collected` or
+  `collected`. Concurrent balance changes roll back the transaction and link.
+- The Spanish invoice register now exposes remaining balance, invoice detail,
+  lifecycle actions, and partial/full collection entry. IVA reserves and
+  dashboard changes remain deferred to Slice 7.3.
+
+### Verification
+
+- `pnpm db:migrate`, `pnpm exec tsc --noEmit`, `pnpm test` (45 tests),
+  `pnpm lint`, `pnpm db:check`, and `pnpm build` — passed.
+- On 2026-09-07, the household completed the local lifecycle review. It
+  confirmed sending an invoice, partial and final same-currency collections,
+  linked paid income, zero balance on collection, cancellation protection after
+  collection, and read-only account selection filtered to the invoice currency.
+
+### Slice 7.3 — Protected IVA reserve — completed
+
+- Every successful invoice collection now atomically creates one protected,
+  same-currency IVA reserve linked to its invoice and source collection. The
+  reserve keeps original and remaining minor-unit amounts for later settlement.
+- Partial-collection reserve allocation uses exact-integer cumulative half-up
+  rounding. Consequently, the reserve portions equal the invoice's immutable
+  IVA exactly when its gross amount is fully collected.
+- Invoice detail shows the protected IVA for each collection. The dashboard
+  remains intentionally unchanged until Slice 7.5 and no reserve-settlement
+  action exists until Slice 7.4.
+- Added migration `0013_elite_emma_frost.sql`, reserve-allocation tests, and
+  documentation for the traceable invoice-collection-reserve relationship.
+
+### Verification
+
+- `pnpm db:migrate` applied the new reserve schema to the configured local
+  PostgreSQL database.
+- `pnpm exec tsc --noEmit`, `pnpm test` (47 tests), `pnpm lint`,
+  `pnpm db:check`, and `pnpm build` — passed.
+- On 2026-09-07, the household completed the local protected-reserve review.
+  It confirmed same-currency account filtering, linked partial and final
+  collections, one protected IVA amount per collection, reserve portions that
+  total the captured invoice IVA, and unchanged dashboard behavior.
+
+### Slice 7.4 — Tax-reserve settlement — completed
+
+- Added the tax-reserve settlement ledger and a protected settlement endpoint.
+  Each settlement atomically creates a same-currency paid tax expense,
+  retain its transaction link and reference, reduce the reserve, and audit both
+  the payment and reserve mutation.
+- Added the repeatable synthetic-data checklist in
+  `docs/tax-reserve-acceptance.md`, including partial and final settlement,
+  over-settlement rejection, traceability, and reset verification.
+
+### Verification and local acceptance
+
+- `pnpm db:migrate`, `pnpm exec tsc --noEmit`, `pnpm test` (51 tests),
+  `pnpm lint`, `pnpm db:check`, and `pnpm build` — passed.
+- On 2026-09-08, the household completed the local tax-reserve settlement
+  review with synthetic data. It confirmed partial and final same-currency tax
+  payments, balance/status updates, over-settlement rejection without a
+  financial side effect, linked payment traceability, and successful test-data
+  reset.
+
+### Slice 7.5 — Dashboard integration and local acceptance — completed
+
+- The dashboard now exposes protected IVA totals separately per currency and
+  deducts each remaining protected reserve from spendable and projected cash.
+  Settled reserves are excluded; partial settlement reduces the protected
+  amount by exactly the tax payment.
+- Added `docs/dashboard-tax-reserve-acceptance.md` for the repeatable local
+  UYU and USD synthetic-data proof and invoice-to-dashboard traceability.
+- On 2026-09-08, the household completed the local dashboard review. It
+  confirmed protected IVA is displayed separately and excluded from spendable
+  and projected cash, while IVA settlement releases the corresponding amount
+  and UYU/USD remain separate.
+
+### Verification
+
+- `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
+  `pnpm build` — passed.
+
 ## Local container runtime — documented
 
 - Docker Compose runs the local stack: PostgreSQL, one-shot migrations,

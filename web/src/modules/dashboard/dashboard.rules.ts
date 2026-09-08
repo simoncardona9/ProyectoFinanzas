@@ -6,6 +6,7 @@ export type CurrencyDashboardInput = {
   collectedIncomeMinor?: number;
   expectedIncomeMinor?: number;
   oneOffIncomeMinor?: number;
+  protectedReserveMinor?: number;
 };
 
 export function mergeDashboardCurrencies(inputs: CurrencyDashboardInput[]) {
@@ -19,6 +20,7 @@ export function mergeDashboardCurrencies(inputs: CurrencyDashboardInput[]) {
       collectedIncomeMinor: 0,
       expectedIncomeMinor: 0,
       oneOffIncomeMinor: 0,
+      protectedReserveMinor: 0,
     };
     current.currentCashMinor += input.currentCashMinor ?? 0;
     current.pendingObligationsMinor += input.pendingObligationsMinor ?? 0;
@@ -26,16 +28,22 @@ export function mergeDashboardCurrencies(inputs: CurrencyDashboardInput[]) {
     current.collectedIncomeMinor += input.collectedIncomeMinor ?? 0;
     current.expectedIncomeMinor += input.expectedIncomeMinor ?? 0;
     current.oneOffIncomeMinor += input.oneOffIncomeMinor ?? 0;
+    current.protectedReserveMinor += input.protectedReserveMinor ?? 0;
     byCurrency.set(input.currency, current);
   }
   return [...byCurrency.values()]
-    .map((summary) => ({
-      ...summary,
-      projectedCashMinor:
-        summary.currentCashMinor -
-        summary.pendingObligationsMinor +
-        summary.expectedIncomeMinor,
-    }))
+    .map((summary) => {
+      const currentCashMinor =
+        summary.currentCashMinor - summary.protectedReserveMinor;
+      return {
+        ...summary,
+        currentCashMinor,
+        projectedCashMinor:
+          currentCashMinor -
+          summary.pendingObligationsMinor +
+          summary.expectedIncomeMinor,
+      };
+    })
     .sort((a, b) => a.currency.localeCompare(b.currency));
 }
 

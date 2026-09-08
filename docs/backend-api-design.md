@@ -226,6 +226,13 @@ This controller manages household membership and roles, not passwords or session
 | `POST /invoices/:invoiceId/payments` | path; body: `amountMinor`, `currency`, `accountId`, `paidDate`                                       | Reconcile full or partial collection.      |
 | `POST /invoices/:invoiceId/cancel`   | path; body: `reason`                                                                                 | Cancel an unpaid invoice with audit trail. |
 
+Slice 7.1 implements only the household-scoped list and create endpoints. An
+owner or editor creates a `draft` invoice with a gross amount and an IVA rate
+in basis points; the service calculates and persists its immutable net and IVA
+minor-unit amounts together with its audit event. An invoice is receivables
+data at this stage: it does not create a transaction, collection link, reserve,
+or dashboard effect.
+
 ### 7. `debts.controller`
 
 | Method and path                | Parameters                                                                 | Purpose                                                     |
@@ -246,6 +253,12 @@ no exchange-rate, UYU-equivalent exposure, or term-edit endpoint.
 | `POST /tax-reserves`                   | body: `taxType`, `period`, `amountMinor`, `currency`, `dueDate`, `sourceInvoiceIds` | Create or adjust a protected reserve.     |
 | `GET /tax-reserves/:reserveId`         | path                                                                                | Get reserve details and settlement links. |
 | `POST /tax-reserves/:reserveId/settle` | path; body: `amountMinor`, `accountId`, `paidDate`, `reference`                     | Record tax payment and reduce reserve.    |
+
+Slice 7.4 implements reserve detail and settlement. A settlement requires an
+active account in the reserve's original currency, creates a paid expense
+transaction and immutable settlement link atomically, then reduces the reserve
+to `partially_settled` or `settled`. It cannot exceed the remaining protected
+amount; the payment transaction and reserve mutation both receive audit events.
 
 ### 9. `exchange-rates.controller`
 
@@ -275,7 +288,7 @@ neither selection nor calculation writes financial data.
 
 | Method and path            | Parameters                   | Purpose                                                                                                                                                                                                                        |
 | -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GET /dashboard`           | `period` (`YYYY-MM`)         | Return separate-currency current cash, paid, one-off, and expected income for the period, pending obligations, and projected cash. Tax reserves, debt, and currency conversion are added only when their source modules exist. |
+| `GET /dashboard`           | `period` (`YYYY-MM`)         | Return separate-currency spendable cash, protected IVA reserves, paid, one-off, and expected income for the period, pending obligations, and projected cash. Protected reserve balances are deducted from spendable and projected cash. |
 | `GET /dashboard/cash-flow` | `from`, `to`, `baseCurrency` | Return grouped cash-flow timeline.                                                                                                                                                                                             |
 | `GET /dashboard/alerts`    | `period`                     | Return overdue, low-buffer, due-soon, and USD-exposure alerts.                                                                                                                                                                 |
 

@@ -78,6 +78,34 @@
       "when": 1788675922273,
       "tag": "0010_real_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788803903763,
+      "tag": "0011_moaning_the_anarchist",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788806135684,
+      "tag": "0012_slim_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788809828657,
+      "tag": "0013_elite_emma_frost",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788812425489,
+      "tag": "0014_lumpy_microchip",
+      "breakpoints": true
     }
   ]
 }

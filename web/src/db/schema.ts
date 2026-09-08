@@ -63,6 +63,20 @@ export const debtStatus = pgEnum("debt_status", [
   "cancelled",
 ]);
 
+export const invoiceStatus = pgEnum("invoice_status", [
+  "draft",
+  "sent",
+  "partially_collected",
+  "collected",
+  "cancelled",
+]);
+
+export const taxReserveStatus = pgEnum("tax_reserve_status", [
+  "protected",
+  "partially_settled",
+  "settled",
+]);
+
 export const exchangeRateKind = pgEnum("exchange_rate_kind", [
   "confirmed",
   "planning",
@@ -291,6 +305,119 @@ export const obligations = pgTable(
   (table) => [
     index("obligations_household_due_idx").on(table.householdId, table.dueDate),
     index("obligations_category_idx").on(table.categoryId),
+  ],
+);
+
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    clientName: text("client_name").notNull(),
+    description: text("description").notNull(),
+    serviceDate: date("service_date").notNull(),
+    dueDate: date("due_date").notNull(),
+    grossAmountMinor: integer("gross_amount_minor").notNull(),
+    netAmountMinor: integer("net_amount_minor").notNull(),
+    ivaRateBasisPoints: integer("iva_rate_basis_points").notNull(),
+    ivaAmountMinor: integer("iva_amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    status: invoiceStatus("status").notNull().default("draft"),
+    remainingAmountMinor: integer("remaining_amount_minor").notNull(),
+    sentDate: date("sent_date"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("invoices_household_status_idx").on(table.householdId, table.status),
+    index("invoices_household_due_idx").on(table.householdId, table.dueDate),
+  ],
+);
+
+export const invoiceCollections = pgTable(
+  "invoice_collections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("invoice_collections_transaction_unique").on(table.transactionId),
+    index("invoice_collections_invoice_idx").on(table.invoiceId),
+  ],
+);
+
+export const taxReserves = pgTable(
+  "tax_reserves",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "restrict" }),
+    invoiceCollectionId: uuid("invoice_collection_id")
+      .notNull()
+      .references(() => invoiceCollections.id, { onDelete: "restrict" }),
+    originalAmountMinor: integer("original_amount_minor").notNull(),
+    remainingAmountMinor: integer("remaining_amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    status: taxReserveStatus("status").notNull().default("protected"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("tax_reserves_invoice_collection_unique").on(
+      table.invoiceCollectionId,
+    ),
+    index("tax_reserves_household_status_idx").on(
+      table.householdId,
+      table.status,
+    ),
+    index("tax_reserves_invoice_idx").on(table.invoiceId),
+  ],
+);
+
+export const taxReserveSettlements = pgTable(
+  "tax_reserve_settlements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    taxReserveId: uuid("tax_reserve_id")
+      .notNull()
+      .references(() => taxReserves.id, { onDelete: "restrict" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    reference: text("reference").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("tax_reserve_settlements_transaction_unique").on(
+      table.transactionId,
+    ),
+    index("tax_reserve_settlements_reserve_idx").on(table.taxReserveId),
   ],
 );
 

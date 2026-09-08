@@ -35,11 +35,22 @@ Object storage for receipts and imports
 - A user may also upload an original CSV or Excel/XLSX/XLSM file. The application
   transparently parses it into the same canonical, versioned staged-JSON
   representation before validation.
+- Excel parsing is schema-driven rather than template-position-driven. It
+  normalizes sheet and header labels (case, accents, whitespace, punctuation)
+  and matches configured aliases to supported entities and fields. It must
+  tolerate reordered sheets, added columns, moved headers, blank formatted
+  cells, and presentation-only rows; it must not infer a financial field from
+  an uncertain match.
 - Keep one parser service per supported file type (for example CSV and
   Excel/XLSX/XLSM). Parser services only read their file format; a shared
   normalization, validation, preview, and commit pipeline consumes their
-  canonical staged JSON output. Template-specific sheet and column mappings are
-  configuration/adapters, rather than financial-domain logic in a parser.
+  canonical staged JSON output. Sheet aliases, header aliases, required fields,
+  and entity-specific conversion rules are versioned mapping configuration,
+  rather than financial-domain logic or fixed ranges in a parser.
+- The parser emits both extracted staged JSON and a mapping report: detected
+  sheets, proposed entity/field matches with confidence, ignored columns/rows,
+  and ambiguities. The preview requires the user to resolve any ambiguity or
+  missing required mapping before validation and commit can proceed.
 - Preserve the immutable original upload or JSON bundle hash and provenance for
   every staged row (import ID, source name, sheet when applicable, and source
   row/path) for audit and reconciliation. Do not treat spreadsheet formulas as

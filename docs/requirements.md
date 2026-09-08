@@ -37,6 +37,26 @@
 - Support grocery spending summaries by product, market, and period when receipt line items are recorded.
 - Keep financial periods per household and support open, close, and controlled reopen workflows for each month.
 
+### Batch import and spreadsheet migration
+
+- Accept versioned JSON bundles and original `.csv`, `.xlsx`, and `.xlsm`
+  workbooks as batch-import sources.
+- Read a workbook even when its sheet order, extra presentation columns,
+  styling, blank formatted cells, row positions, or non-essential labels differ
+  from a known template. The import must identify supported sheets and columns
+  from normalized header names and configured aliases, not fixed cell addresses
+  or formula ranges.
+- Extract only fields that match a supported financial entity and convert them
+  into the same versioned canonical batch JSON used by direct JSON imports.
+  Unknown sheets/columns and unmatched rows must be reported, never silently
+  interpreted as financial records.
+- Show the proposed sheet/entity and column/field mappings, match confidence,
+  unmatched data, and row-level conversion errors for human review. Ambiguous
+  matches require a user-selected mapping before the batch can be committed.
+- Preserve the original source file and row provenance for each extracted
+  record. Parsing and previewing a file must not create or change live
+  financial records; only an explicitly reviewed, validated batch may commit.
+
 ## Non-functional requirements
 
 - Responsive web interface suitable for phone and desktop.
@@ -45,3 +65,6 @@
 - Clear error messages, validation, and no silent recalculations.
 - Amounts must be stored with decimal-safe monetary arithmetic, never floating-point business logic.
 - Spanish interface initially; future localization must remain possible.
+- Spreadsheet parsing must be resilient to harmless layout variation while
+  failing clearly and safely for missing required fields, ambiguous mappings,
+  unsupported workbook features, or malformed data.

@@ -111,10 +111,19 @@ same versioned canonical staged JSON model. Both paths use the shared mapping,
 validation, preview-generation, idempotency, and explicit transactional-commit
 services.
 
+For Excel/XLSX/XLSM, the parser detects mappings by normalized sheet/header
+labels and configured aliases, rather than fixed sheet order, row numbers, or
+cell ranges. Its staged preview includes the proposed mappings, confidence,
+unmatched source data, and row-level errors. Ambiguous or incomplete required
+mappings remain uncommittable until an editor explicitly resolves them. Extra
+formatting, blank styled cells, presentation rows, and unknown columns are
+ignored with a visible warning; they are never converted into records.
+
 Each staged record retains its source provenance (`importId`, source name,
 sheet when applicable, and row number/JSON path). File-type parsers must not
 write live financial records or evaluate spreadsheet formulas as financial
-truth.
+truth. They extract source values only; financial amounts and totals are
+revalidated from canonical data by the shared import pipeline.
 
 - List filters use explicit query parameters, never free-form SQL-like expressions.
 - Mutating endpoints require an authenticated `owner` or `editor`, unless a stricter rule is listed.

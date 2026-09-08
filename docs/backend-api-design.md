@@ -254,6 +254,12 @@ no exchange-rate, UYU-equivalent exposure, or term-edit endpoint.
 | `GET /tax-reserves/:reserveId`         | path                                                                                | Get reserve details and settlement links. |
 | `POST /tax-reserves/:reserveId/settle` | path; body: `amountMinor`, `accountId`, `paidDate`, `reference`                     | Record tax payment and reduce reserve.    |
 
+Slice 7.4 implements reserve detail and settlement. A settlement requires an
+active account in the reserve's original currency, creates a paid expense
+transaction and immutable settlement link atomically, then reduces the reserve
+to `partially_settled` or `settled`. It cannot exceed the remaining protected
+amount; the payment transaction and reserve mutation both receive audit events.
+
 ### 9. `exchange-rates.controller`
 
 | Method and path              | Parameters                                                                       | Purpose                                  |

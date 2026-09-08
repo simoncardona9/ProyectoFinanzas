@@ -19,6 +19,7 @@ This folder is the product and technical foundation for replacing the family-fin
 | [data-migration.md](data-migration.md) | Plan to migrate and reconcile the Excel workbook. |
 | [dashboard-acceptance.md](dashboard-acceptance.md) | Synthetic local reconciliation checklist for the dashboard. |
 | [debt-acceptance.md](debt-acceptance.md) | Synthetic local acceptance checklist for debt payments and selected-rate exposure. |
+| [tax-reserve-acceptance.md](tax-reserve-acceptance.md) | Synthetic local acceptance checklist for IVA reserve settlement. |
 | [roadmap.md](roadmap.md) | Phased implementation plan. |
 | [development-process.md](development-process.md) | Incremental delivery, validation, release, and feedback process. |
 | [git-workflow.md](git-workflow.md) | Branches, pull requests, local testing, and GitHub ownership rules. |

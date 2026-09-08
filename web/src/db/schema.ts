@@ -397,6 +397,30 @@ export const taxReserves = pgTable(
   ],
 );
 
+export const taxReserveSettlements = pgTable(
+  "tax_reserve_settlements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    taxReserveId: uuid("tax_reserve_id")
+      .notNull()
+      .references(() => taxReserves.id, { onDelete: "restrict" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    reference: text("reference").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("tax_reserve_settlements_transaction_unique").on(
+      table.transactionId,
+    ),
+    index("tax_reserve_settlements_reserve_idx").on(table.taxReserveId),
+  ],
+);
+
 export const obligationPayments = pgTable(
   "obligation_payments",
   {

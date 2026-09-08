@@ -61,6 +61,7 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
   const [message, setMessage] = useState("");
   const [grossAmount, setGrossAmount] = useState("0,00");
   const [collectionAmount, setCollectionAmount] = useState("0,00");
+  const [settlementAmount, setSettlementAmount] = useState("0,00");
   const [formKey, setFormKey] = useState(0);
   const load = useCallback(async () => {
     try {
@@ -95,6 +96,27 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
         error instanceof Error
           ? error.message
           : "No se pudo actualizar la factura.",
+      );
+    }
+  };
+  const settleReserve = async (reserveId: string, body: unknown) => {
+    try {
+      await api(`/api/v1/tax-reserves/${reserveId}/settle`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      setSettlementAmount("0,00");
+      setMessage("Pago de IVA registrado y reserva actualizada.");
+      await load();
+      if (detail)
+        setDetail(
+          await api<InvoiceDetail>(`/api/v1/invoices/${detail.invoice.id}`),
+        );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo registrar el pago de IVA.",
       );
     }
   };
@@ -312,8 +334,94 @@ export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
                       collection.reserveAmountMinor,
                       detail.invoice.currency,
                     )}
+                    {collection.reserveRemainingAmountMinor !== null &&
+                      ` · pendiente: ${money(
+                        collection.reserveRemainingAmountMinor,
+                        detail.invoice.currency,
+                      )}`}
+                    {collection.reserveStatus &&
+                      ` · estado: ${collection.reserveStatus}`}
                   </>
                 )}
+                {collection.reserveId && (
+                  <a
+                    href={`/api/v1/tax-reserves/${collection.reserveId}`}
+                    className="ml-2 text-emerald-700 underline"
+                  >
+                    Ver vínculos de pago
+                  </a>
+                )}
+                {canEdit &&
+                  collection.reserveId &&
+                  collection.reserveRemainingAmountMinor !== null &&
+                  collection.reserveRemainingAmountMinor > 0 && (
+                    <form
+                      className="mt-2 grid gap-2 md:grid-cols-5"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const form = new FormData(event.currentTarget);
+                        const amountMinor = parseMoneyToMinor(settlementAmount);
+                        if (!amountMinor || amountMinor <= 0)
+                          return setMessage("Ingresa un pago de IVA válido.");
+                        void settleReserve(collection.reserveId!, {
+                          amountMinor,
+                          accountId: form.get("accountId"),
+                          paidDate: form.get("paidDate"),
+                          reference: form.get("reference"),
+                        });
+                      }}
+                    >
+                      <input
+                        type="text"
+                        required
+                        inputMode="decimal"
+                        value={settlementAmount}
+                        onChange={(event) =>
+                          setSettlementAmount(
+                            formatMoneyInput(event.target.value),
+                          )
+                        }
+                        onFocus={(event) => event.currentTarget.select()}
+                        placeholder="Pago IVA"
+                        className="rounded border p-2"
+                      />
+                      <select
+                        name="accountId"
+                        required
+                        className="rounded border p-2"
+                      >
+                        <option value="">
+                          Cuenta de {detail.invoice.currency}
+                        </option>
+                        {accounts
+                          .filter(
+                            (account) =>
+                              account.currency === detail.invoice.currency,
+                          )
+                          .map((account) => (
+                            <option key={account.id} value={account.id}>
+                              {account.name}
+                            </option>
+                          ))}
+                      </select>
+                      <input
+                        name="paidDate"
+                        type="date"
+                        required
+                        defaultValue={new Date().toISOString().slice(0, 10)}
+                        className="rounded border p-2"
+                      />
+                      <input
+                        name="reference"
+                        required
+                        placeholder="Referencia de pago"
+                        className="rounded border p-2"
+                      />
+                      <button className="rounded bg-emerald-700 p-2 text-white">
+                        Pagar IVA
+                      </button>
+                    </form>
+                  )}
               </li>
             ))}
             {!detail.collections.length && <li>Aún no hay cobranzas.</li>}

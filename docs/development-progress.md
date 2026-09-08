@@ -360,6 +360,26 @@ financial items remain Step 4 obligation behavior.
   collections, one protected IVA amount per collection, reserve portions that
   total the captured invoice IVA, and unchanged dashboard behavior.
 
+### Slice 7.4 — Tax-reserve settlement — completed
+
+- Added the tax-reserve settlement ledger and a protected settlement endpoint.
+  Each settlement atomically creates a same-currency paid tax expense,
+  retain its transaction link and reference, reduce the reserve, and audit both
+  the payment and reserve mutation.
+- Added the repeatable synthetic-data checklist in
+  `docs/tax-reserve-acceptance.md`, including partial and final settlement,
+  over-settlement rejection, traceability, and reset verification.
+
+### Verification and local acceptance
+
+- `pnpm db:migrate`, `pnpm exec tsc --noEmit`, `pnpm test` (51 tests),
+  `pnpm lint`, `pnpm db:check`, and `pnpm build` — passed.
+- On 2026-09-08, the household completed the local tax-reserve settlement
+  review with synthetic data. It confirmed partial and final same-currency tax
+  payments, balance/status updates, over-settlement rejection without a
+  financial side effect, linked payment traceability, and successful test-data
+  reset.
+
 ## Local container runtime — documented
 
 - Docker Compose runs the local stack: PostgreSQL, one-shot migrations,

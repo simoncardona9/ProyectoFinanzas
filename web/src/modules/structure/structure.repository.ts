@@ -11,6 +11,7 @@ import {
   invoices,
   obligationPayments,
   obligations,
+  taxReserveSettlements,
   taxReserves,
   transactions,
 } from "@/db/schema";
@@ -24,6 +25,17 @@ export const structureRepository = {
       await tx
         .delete(exchangeRates)
         .where(eq(exchangeRates.householdId, householdId));
+      await tx
+        .delete(taxReserveSettlements)
+        .where(
+          inArray(
+            taxReserveSettlements.taxReserveId,
+            tx
+              .select({ id: taxReserves.id })
+              .from(taxReserves)
+              .where(eq(taxReserves.householdId, householdId)),
+          ),
+        );
       await tx
         .delete(taxReserves)
         .where(eq(taxReserves.householdId, householdId));

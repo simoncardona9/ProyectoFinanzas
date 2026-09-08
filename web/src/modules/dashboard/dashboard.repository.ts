@@ -1,6 +1,6 @@
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { transactions } from "@/db/schema";
+import { taxReserves, transactions } from "@/db/schema";
 
 export const dashboardRepository = {
   async collectedIncome(householdId: string, from: string, to: string) {
@@ -47,6 +47,25 @@ export const dashboardRepository = {
     return rows.map((row) => ({
       currency: row.currency,
       expectedIncomeMinor: Number(row.expectedIncomeMinor),
+    }));
+  },
+  async protectedReserves(householdId: string) {
+    const rows = await db
+      .select({
+        currency: taxReserves.currency,
+        protectedReserveMinor: sql<string>`coalesce(sum(${taxReserves.remainingAmountMinor}), 0)`,
+      })
+      .from(taxReserves)
+      .where(
+        and(
+          eq(taxReserves.householdId, householdId),
+          sql`${taxReserves.status} in ('protected', 'partially_settled')`,
+        ),
+      )
+      .groupBy(taxReserves.currency);
+    return rows.map((row) => ({
+      currency: row.currency,
+      protectedReserveMinor: Number(row.protectedReserveMinor),
     }));
   },
 };

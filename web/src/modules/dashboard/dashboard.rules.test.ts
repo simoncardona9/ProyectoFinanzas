@@ -16,6 +16,7 @@ describe("dashboard currency rollup", () => {
           collectedIncomeMinor: 5_000,
           expectedIncomeMinor: 2_500,
           oneOffIncomeMinor: 1_000,
+          protectedReserveMinor: 1_100,
         },
         {
           currency: "USD",
@@ -33,15 +34,36 @@ describe("dashboard currency rollup", () => {
         collectedIncomeMinor: 50,
         expectedIncomeMinor: 0,
         oneOffIncomeMinor: 0,
+        protectedReserveMinor: 0,
       },
       {
         currency: "UYU",
         currentCashMinor: 10_000,
         pendingObligationsMinor: 2_000,
-        projectedCashMinor: 10_500,
+          projectedCashMinor: 9_400,
         collectedIncomeMinor: 5_000,
         expectedIncomeMinor: 2_500,
-        oneOffIncomeMinor: 1_000,
+          oneOffIncomeMinor: 1_000,
+          protectedReserveMinor: 1_100,
+        },
+      ]);
+    });
+  it("removes protected reserves from spendable and projected cash", () => {
+    expect(
+      mergeDashboardCurrencies([
+        { currency: "UYU", currentCashMinor: 12_200 },
+        { currency: "UYU", protectedReserveMinor: 2_200 },
+      ]),
+    ).toEqual([
+      {
+        currency: "UYU",
+        currentCashMinor: 12_200,
+        pendingObligationsMinor: 0,
+        projectedCashMinor: 10_000,
+        collectedIncomeMinor: 0,
+        expectedIncomeMinor: 0,
+        oneOffIncomeMinor: 0,
+        protectedReserveMinor: 2_200,
       },
     ]);
   });

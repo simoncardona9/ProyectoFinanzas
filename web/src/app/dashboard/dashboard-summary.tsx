@@ -12,6 +12,7 @@ type CurrencySummary = {
   collectedIncomeMinor: number;
   expectedIncomeMinor: number;
   oneOffIncomeMinor: number;
+  protectedReserveMinor: number;
 };
 type Dashboard = {
   period: string;
@@ -83,7 +84,7 @@ export function DashboardSummary() {
             <h2 className="text-xl font-semibold">{summary.currency}</h2>
             <dl className="mt-4 grid gap-3 text-sm">
               <div className="flex justify-between gap-4">
-                <dt>Efectivo disponible</dt>
+                <dt>Efectivo disponible para gastar</dt>
                 <dd className="font-semibold">
                   {money(summary.currentCashMinor, summary.currency)}
                 </dd>
@@ -106,6 +107,10 @@ export function DashboardSummary() {
                   {money(summary.pendingObligationsMinor, summary.currency)}
                 </dd>
               </div>
+              <div className="flex justify-between gap-4 text-amber-900">
+                <dt>IVA protegido</dt>
+                <dd>{money(summary.protectedReserveMinor, summary.currency)}</dd>
+              </div>
               <div className="flex justify-between gap-4 border-t border-emerald-200 pt-3">
                 <dt className="font-semibold">Efectivo proyectado</dt>
                 <dd className="font-semibold">
@@ -126,6 +131,9 @@ export function DashboardSummary() {
               >
                 Datos de obligaciones
               </a>
+              <Link className="text-emerald-800 underline" href="/invoices">
+                Facturas y reservas de IVA
+              </Link>
             </div>
           </section>
         ))}
@@ -139,9 +147,10 @@ export function DashboardSummary() {
       <section className="rounded-xl border border-zinc-200 p-5 text-sm text-zinc-700">
         <h2 className="font-semibold">Cómo se calculan estos importes</h2>
         <p className="mt-2">
-          El efectivo disponible se obtiene de las cuentas de efectivo y banco,
-          sus saldos iniciales y sus movimientos pagados. La proyección resta
-          las obligaciones abiertas que vencen en el mes elegido. Cada moneda se
+          El efectivo disponible para gastar se obtiene de las cuentas de
+          efectivo y banco, sus saldos iniciales y sus movimientos pagados,
+          menos el IVA aún protegido. La proyección también resta las
+          obligaciones abiertas que vencen en el mes elegido. Cada moneda se
           mantiene separada.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
@@ -152,11 +161,6 @@ export function DashboardSummary() {
             Ver obligaciones
           </Link>
         </div>
-        <p className="mt-4 text-zinc-500">
-          Las reservas fiscales se incorporarán en un corte posterior; no se
-          muestran como cero para evitar confundir información aún no registrada
-          con un importe real.
-        </p>
       </section>
     </div>
   );

@@ -545,9 +545,11 @@ paths:
       description: >
         Read-only, household-scoped summary. It returns separate UYU and USD
         totals; currencies are never converted or combined. Expected income is
-        included only in projected cash, never current cash. Current cash comes
-        from cash and bank accounts and paid movements, while the projection
-        subtracts open obligations due during the requested month.
+        included only in projected cash, never current cash. Current cash is
+        spendable cash: it comes from cash and bank accounts and paid movements,
+        less the remaining protected IVA reserves. The response exposes those
+        reserves separately, while the projection also subtracts open obligations
+        due during the requested month.
       security: [{ sessionCookie: [] }]
       parameters:
         - {
@@ -564,7 +566,7 @@ paths:
             paid income,
             one-off income,
             pending obligations,
-            and projected cash.,
+            protected IVA reserves, and projected cash.,
           }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }

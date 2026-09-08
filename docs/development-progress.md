@@ -380,6 +380,15 @@ financial items remain Step 4 obligation behavior.
   financial side effect, linked payment traceability, and successful test-data
   reset.
 
+### Slice 7.5 — Dashboard integration and local acceptance — in progress
+
+- The dashboard now exposes protected IVA totals separately per currency and
+  deducts each remaining protected reserve from spendable and projected cash.
+  Settled reserves are excluded; partial settlement reduces the protected
+  amount by exactly the tax payment.
+- Added `docs/dashboard-tax-reserve-acceptance.md` for the repeatable local
+  UYU and USD synthetic-data proof and invoice-to-dashboard traceability.
+
 ## Local container runtime — documented
 
 - Docker Compose runs the local stack: PostgreSQL, one-shot migrations,

@@ -7,16 +7,19 @@ export async function getDashboard(householdId: string, period: string) {
   const [year, month] = period.split("-").map(Number);
   const from = `${period}-01`;
   const to = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
-  const [forecast, income, expectedIncome, household] = await Promise.all([
+  const [forecast, income, expectedIncome, protectedReserves, household] =
+    await Promise.all([
     obligationRepository.forecast(householdId, from, to),
     dashboardRepository.collectedIncome(householdId, from, to),
     dashboardRepository.expectedIncome(householdId, from, to),
+    dashboardRepository.protectedReserves(householdId),
     authRepository.getHousehold(householdId),
-  ]);
+    ]);
   const currencies = mergeDashboardCurrencies([
     ...forecast,
     ...income,
     ...expectedIncome,
+    ...protectedReserves,
   ]);
   return {
     period,
@@ -30,7 +33,7 @@ export async function getDashboard(householdId: string, period: string) {
       : [],
     capabilities: {
       expectedIncome: true,
-      taxReserves: false,
+      taxReserves: true,
     },
   };
 }

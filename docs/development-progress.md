@@ -288,7 +288,7 @@ financial items remain Step 4 obligation behavior.
   equivalent (`641250` minor units), currency isolation, eligible-rate
   filtering, and read-only behavior. The disposable household was reset.
 
-## Step 7 — Invoices, IVA, and tax reserves — in progress
+## Step 7 — Invoices, IVA, and tax reserves — completed
 
 ### Slice 7.1 — Invoice and IVA foundation — completed
 
@@ -380,7 +380,7 @@ financial items remain Step 4 obligation behavior.
   financial side effect, linked payment traceability, and successful test-data
   reset.
 
-### Slice 7.5 — Dashboard integration and local acceptance — in progress
+### Slice 7.5 — Dashboard integration and local acceptance — completed
 
 - The dashboard now exposes protected IVA totals separately per currency and
   deducts each remaining protected reserve from spendable and projected cash.
@@ -388,6 +388,15 @@ financial items remain Step 4 obligation behavior.
   amount by exactly the tax payment.
 - Added `docs/dashboard-tax-reserve-acceptance.md` for the repeatable local
   UYU and USD synthetic-data proof and invoice-to-dashboard traceability.
+- On 2026-09-08, the household completed the local dashboard review. It
+  confirmed protected IVA is displayed separately and excluded from spendable
+  and projected cash, while IVA settlement releases the corresponding amount
+  and UYU/USD remain separate.
+
+### Verification
+
+- `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
+  `pnpm build` — passed.
 
 ## Local container runtime — documented
 

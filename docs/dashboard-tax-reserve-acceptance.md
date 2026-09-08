@@ -39,4 +39,7 @@ reserve, settlements, and synthetic transactions without an integrity error.
 
 ## Acceptance result
 
-Pending local execution.
+**Passed locally on 2026-09-08.** The dashboard showed the protected UYU IVA
+separately and excluded it from spendable and projected cash. Partial and final
+settlement released the matching protected amount without changing the
+post-IVA spendable balance.

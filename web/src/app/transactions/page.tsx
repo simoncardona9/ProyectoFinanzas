@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/shared/auth/request-auth";
-import { BackLink } from "@/shared/ui/navigation";
+import { BackLink, FeatureNavigationCard } from "@/shared/ui/navigation";
 import { TransactionRegister } from "./transaction-register";
 
 export default async function TransactionsPage() {
@@ -28,6 +28,13 @@ export default async function TransactionsPage() {
           Registra ingresos y egresos pagados en pesos uruguayos o dólares
           estadounidenses.
         </p>
+        <div className="mt-4">
+          <FeatureNavigationCard
+            href="/imports"
+            title="Importar movimientos"
+            description="Abrir el mismo asistente de revisión por lote."
+          />
+        </div>
         <TransactionRegister
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />

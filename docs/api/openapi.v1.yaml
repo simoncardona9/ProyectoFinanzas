@@ -566,7 +566,8 @@ paths:
             paid income,
             one-off income,
             pending obligations,
-            protected IVA reserves, and projected cash.,
+            protected IVA reserves,
+            and projected cash.,
           }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -1105,6 +1106,7 @@ paths:
                   example:
                     {
                       version: "finance-import/v1",
+                      source: { type: json_paste },
                       transactions:
                         [
                           {
@@ -1489,10 +1491,20 @@ components:
     JsonImportBundle:
       {
         type: object,
-        required: [version],
+        required: [version, source],
         properties:
           {
             version: { type: string, enum: ["finance-import/v1"] },
+            source:
+              {
+                type: object,
+                required: [type],
+                properties:
+                  {
+                    type: { type: string, enum: [json_paste, json_upload] },
+                    name: { type: string, minLength: 1, maxLength: 255 },
+                  },
+              },
             accounts: { type: array, items: { type: object } },
             categories: { type: array, items: { type: object } },
             transactions:

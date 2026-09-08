@@ -66,6 +66,11 @@ export default async function SettingsPage() {
             description="Revisar pagos, saldos originales y exposición con cotización explícita."
           />
           <FeatureNavigationCard
+            href="/imports"
+            title="Importación por lote"
+            description="Pegar o cargar JSON para una revisión sin modificar registros."
+          />
+          <FeatureNavigationCard
             href="/invoices"
             title="Facturas e IVA"
             description="Registrar facturas y ver el IVA calculado antes de cobrar o reservar fondos."

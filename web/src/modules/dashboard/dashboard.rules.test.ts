@@ -38,16 +38,16 @@ describe("dashboard currency rollup", () => {
       },
       {
         currency: "UYU",
-        currentCashMinor: 10_000,
+        currentCashMinor: 8_900,
         pendingObligationsMinor: 2_000,
-          projectedCashMinor: 9_400,
+        projectedCashMinor: 9_400,
         collectedIncomeMinor: 5_000,
         expectedIncomeMinor: 2_500,
-          oneOffIncomeMinor: 1_000,
-          protectedReserveMinor: 1_100,
-        },
-      ]);
-    });
+        oneOffIncomeMinor: 1_000,
+        protectedReserveMinor: 1_100,
+      },
+    ]);
+  });
   it("removes protected reserves from spendable and projected cash", () => {
     expect(
       mergeDashboardCurrencies([
@@ -57,7 +57,7 @@ describe("dashboard currency rollup", () => {
     ).toEqual([
       {
         currency: "UYU",
-        currentCashMinor: 12_200,
+        currentCashMinor: 10_000,
         pendingObligationsMinor: 0,
         projectedCashMinor: 10_000,
         collectedIncomeMinor: 0,

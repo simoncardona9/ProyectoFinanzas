@@ -32,14 +32,18 @@ export function mergeDashboardCurrencies(inputs: CurrencyDashboardInput[]) {
     byCurrency.set(input.currency, current);
   }
   return [...byCurrency.values()]
-    .map((summary) => ({
-      ...summary,
-      projectedCashMinor:
-        summary.currentCashMinor -
-        summary.protectedReserveMinor -
-        summary.pendingObligationsMinor +
-        summary.expectedIncomeMinor,
-    }))
+    .map((summary) => {
+      const currentCashMinor =
+        summary.currentCashMinor - summary.protectedReserveMinor;
+      return {
+        ...summary,
+        currentCashMinor,
+        projectedCashMinor:
+          currentCashMinor -
+          summary.pendingObligationsMinor +
+          summary.expectedIncomeMinor,
+      };
+    })
     .sort((a, b) => a.currency.localeCompare(b.currency));
 }
 

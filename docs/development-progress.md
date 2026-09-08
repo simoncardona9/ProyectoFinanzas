@@ -398,6 +398,41 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
+## Step 8 — Batch entry, migration, and reconciliation — planned (6 slices)
+
+Step 8 has been decomposed before implementation into six vertical slices:
+
+1. Canonical JSON staging and shared assistant.
+2. Safe, ordered category and account import.
+3. Atomic core cash-flow import for transactions, obligations, and expected
+   income.
+4. Historical linked-record import for debts, invoices/collections/IVA
+   reserves, and exchange rates.
+5. CSV and Excel/XLSX/XLSM conversion into the same staged JSON pipeline.
+6. August 2026 reconciliation and local acceptance.
+
+### Planning findings
+
+- The existing August migration mapping covers more than the five initially
+  named assistant entry points: it includes debt, invoice/IVA-reserve, and
+  exchange-rate data. The plan therefore assigns those relationships to Slice
+  8.4 instead of silently omitting them or expanding an earlier slice.
+- The August 2026 report is not yet an approved import source. The DualBoot
+  conversion source, TEC billing alignment, invalid cash dates, historical
+  labels, and fixed formula ranges must be corrected and signed off before its
+  records can be committed.
+- A newer September 2026 `.xlsm` workbook is now available for current-month
+  migration planning. Its defined table, hidden rows, formatted empty tail,
+  emoji status labels, and formula cells are explicit Slice 8.5 parser and
+  preview requirements. It has no `Histórico` sheet and no embedded VBA project
+  in the inspected package; neither condition may be assumed for future files.
+- The September workbook also is not an approved import source yet. Its exact
+  content hash and declared period must be recorded, and it must pass the same
+  reconciliation gate before any real-use commit.
+- No Step 8 implementation has started. The detailed boundaries and acceptance
+  gate are recorded in `docs/development-process.md` and
+  `docs/data-migration.md`.
+
 ## Local container runtime — documented
 
 - Docker Compose runs the local stack: PostgreSQL, one-shot migrations,

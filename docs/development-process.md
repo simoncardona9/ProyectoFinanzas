@@ -207,13 +207,56 @@ historical information, without propagating input or spreadsheet mistakes.
   the existing result rather than duplicate financial records.
 - Commit a reviewed import atomically: all accepted records and their audit
   events are persisted, or no live record changes.
-- Reconcile August 2026 figures before importing them.
+- Treat August 2026 as a reconciliation gate, not as an import source that is
+  presumed correct. Its DualBoot conversion source/formula, TEC billing
+  alignment, invalid cash-sheet dates, historical dashboard labels, and fixed
+  formula ranges must be resolved and signed off before a production-like
+  historical commit.
 
 **Acceptance:** An editor can paste or upload a valid JSON bundle, preview its
 resolved records and totals, correct reported row errors, and explicitly commit
 it once without duplicates. CSV/Excel uploads use the same preview and commit
 path. No live record changes before confirmation; a failed commit leaves no
 partial records. Imported totals reconcile to the approved source report.
+
+**Planned slices (6):**
+
+1. **8.1 — Canonical JSON staging and shared assistant:** define the
+   `finance-import/v1` bundle and provenance model; add the shared assistant,
+   JSON paste/`.json` upload, household-local name resolution, row-level
+   preview, currency-separated totals, and validation errors. This slice makes
+   no live financial changes.
+2. **8.2 — Structure import with safe ordering:** add reviewed, atomic, and
+   idempotent import of categories (including parent-before-child ordering) and
+   accounts. Preserve per-row provenance and normal audit events; reject
+   missing, ambiguous, archived, or circular prerequisites.
+3. **8.3 — Core cash-flow import commit:** add atomic, idempotent import of
+   paid transactions, obligations, and expected income, using the same staged
+   batch. Validate all rows before commit, resolve only active-household
+   references, and retain source links and audit events for every created
+   record.
+4. **8.4 — Historical linked-record import:** extend the canonical model and
+   commit pipeline for the existing debt, invoice/collection/IVA-reserve, and
+   exchange-rate records needed to represent the August workbook without
+   inventing links or combining currencies. Historical summaries remain
+   reconciliation evidence, not live balance-changing records.
+5. **8.5 — CSV and Excel/XLSX/XLSM conversion:** add dedicated CSV and Excel
+   parsers that produce the identical canonical staged JSON, mapping report,
+   and provenance. Mapping is alias-driven and reviewable; parsers never write
+   live records, execute macros, recalculate formulas, or treat formula values
+   as financial truth. They must identify hidden rows, Excel date serials,
+   defined-table ranges, and presentation-only trailing rows for review.
+6. **8.6 — August 2026 reconciliation and acceptance:** correct and sign off
+   the documented source discrepancies, compare imported totals against that
+   approved report by entity and currency, exercise retry/rollback behavior,
+   and retain a repeatable synthetic acceptance procedure.
+
+**Scope finding:** The original Step 8 entry-point list named accounts,
+categories, transactions, obligations, and expected income, but the approved
+August migration plan also contains debts, invoices/IVA reserves, and
+exchange-rate assumptions. Slice 8.4 makes that additional historical scope
+explicit. No August historical batch may commit before Slice 8.6's
+reconciliation gate is satisfied.
 
 ### Step 9 — Monthly close, reports, and backup recovery
 

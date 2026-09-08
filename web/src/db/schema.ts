@@ -88,6 +88,13 @@ export const exchangeRateMovement = pgEnum("exchange_rate_movement", [
   "reference",
 ]);
 
+export const importSourceType = pgEnum("import_source_type", [
+  "json_paste",
+  "json_upload",
+]);
+
+export const importStatus = pgEnum("import_status", ["staged", "invalid"]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
@@ -520,6 +527,43 @@ export const exchangeRates = pgTable(
     index("exchange_rates_household_date_idx").on(
       table.householdId,
       table.effectiveDate,
+    ),
+  ],
+);
+
+/**
+ * A staged batch is deliberately separate from financial records. Slice 8.1
+ * only writes this review/provenance record; committing is introduced later.
+ */
+export const importBatches = pgTable(
+  "import_batches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    idempotencyKey: text("idempotency_key").notNull(),
+    contentHash: text("content_hash").notNull(),
+    sourceType: importSourceType("source_type").notNull(),
+    sourceName: text("source_name"),
+    bundle: jsonb("bundle").$type<Record<string, unknown>>().notNull(),
+    preview: jsonb("preview").$type<Record<string, unknown>>().notNull(),
+    status: importStatus("status").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("import_batches_household_idempotency_unique").on(
+      table.householdId,
+      table.idempotencyKey,
+    ),
+    index("import_batches_household_created_idx").on(
+      table.householdId,
+      table.createdAt,
     ),
   ],
 );

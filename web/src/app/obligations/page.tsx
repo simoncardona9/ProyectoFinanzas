@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/shared/auth/request-auth";
-import { BackLink } from "@/shared/ui/navigation";
+import { BackLink, FeatureNavigationCard } from "@/shared/ui/navigation";
 import { ObligationManager } from "./obligation-manager";
 
 export default async function ObligationsPage() {
@@ -28,6 +28,13 @@ export default async function ObligationsPage() {
           Las obligaciones pendientes afectan la proyección, pero no el efectivo
           actual hasta registrar un pago.
         </p>
+        <div className="mt-4">
+          <FeatureNavigationCard
+            href="/imports"
+            title="Importar obligaciones"
+            description="Abrir el mismo asistente de revisión por lote."
+          />
+        </div>
         <ObligationManager
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />

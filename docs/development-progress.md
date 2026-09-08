@@ -398,7 +398,7 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
-## Step 8 — Batch entry, migration, and reconciliation — planned (6 slices)
+## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.1)
 
 Step 8 has been decomposed before implementation into six vertical slices:
 
@@ -429,9 +429,16 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - The September workbook also is not an approved import source yet. Its exact
   content hash and declared period must be recorded, and it must pass the same
   reconciliation gate before any real-use commit.
-- No Step 8 implementation has started. The detailed boundaries and acceptance
-  gate are recorded in `docs/development-process.md` and
-  `docs/data-migration.md`.
+- Slice 8.1 now provides the `/imports` shared assistant and the protected
+  `POST /api/v1/imports/json/preview` route. It accepts `finance-import/v1`
+  JSON pasted or loaded from a `.json` file, resolves transaction account and
+  category names only in the active household, and returns row-level results
+  plus separate UYU/USD totals without writing live financial records.
+- Each preview persists only an audited staged-batch provenance record with its
+  source type/name, content hash, and idempotency key. Reusing a key with the
+  same content returns its existing preview; using it with different content is
+  rejected. Accounts, categories, obligations, and expected-income rows are
+  visibly deferred until their respective commit slices.
 
 ## Local container runtime — documented
 

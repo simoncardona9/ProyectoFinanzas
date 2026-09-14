@@ -1,0 +1,9 @@
+# Optional Docker Compose override for publishing the application through an
+# ngrok agent running on the Windows host. ngrok provides the public HTTPS
+# certificate; Caddy only receives HTTP on localhost port 80.
+services:
+  proxy:
+    ports: !override
+      - "127.0.0.1:${HTTP_PORT:-80}:80"
+    volumes:
+      - ./Caddyfile.ngrok:/etc/caddy/Caddyfile:ro

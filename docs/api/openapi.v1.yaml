@@ -1624,6 +1624,45 @@ components:
                       },
                   },
               },
+            debts:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required: [reference, creditorName, description, amountMinor, currency, incurredDate],
+                    properties:
+                      {
+                        reference: { type: string, minLength: 1, maxLength: 120 },
+                        creditorName: { type: string, minLength: 1, maxLength: 200 },
+                        description: { type: string, minLength: 1, maxLength: 500 },
+                        amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+                        currency: { type: string, enum: [UYU, USD] },
+                        incurredDate: { type: string, format: date },
+                      },
+                  },
+              },
+            debtPayments:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required: [debt, amountMinor, account, paidDate],
+                    properties:
+                      {
+                        debt: { type: string, minLength: 1, maxLength: 120 },
+                        amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+                        account: { type: string, minLength: 1, maxLength: 120 },
+                        paidDate: { type: string, format: date },
+                        description: { type: string, minLength: 1, maxLength: 500 },
+                      },
+                  },
+              },
+            invoices: { type: array, items: { type: object, required: [reference, clientName, description, serviceDate, dueDate, grossAmountMinor, ivaRateBasisPoints, currency] } },
+            invoiceCollections: { type: array, items: { type: object, required: [reference, invoice, amountMinor, account, paidDate] } },
+            ivaReserves: { type: array, items: { type: object, required: [collection, amountMinor] } },
+            exchangeRates: { type: array, items: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveDate, source, kind, movement] } },
           },
       }
     Error:

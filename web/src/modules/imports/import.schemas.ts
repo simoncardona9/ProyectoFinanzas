@@ -83,6 +83,73 @@ const category = z
       });
   });
 
+const reference = z.string().trim().min(1).max(120);
+const debt = z.object({
+  reference,
+  creditorName: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(500),
+  amountMinor: z.number().int().positive().max(2_000_000_000),
+  currency,
+  incurredDate: z.iso.date(),
+});
+
+const debtPayment = z.object({
+  debt: reference,
+  amountMinor: z.number().int().positive().max(2_000_000_000),
+  account: reference,
+  paidDate: z.iso.date(),
+  description: z.string().trim().min(1).max(500).optional(),
+});
+
+const invoice = z.object({
+  reference,
+  clientName: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(500),
+  serviceDate: z.iso.date(),
+  dueDate: z.iso.date(),
+  grossAmountMinor: z.number().int().positive().max(2_000_000_000),
+  ivaRateBasisPoints: z.number().int().min(0).max(10_000),
+  currency,
+  sentDate: z.iso.date().optional(),
+});
+
+const invoiceCollection = z.object({
+  reference,
+  invoice: reference,
+  amountMinor: z.number().int().positive().max(2_000_000_000),
+  account: reference,
+  paidDate: z.iso.date(),
+  description: z.string().trim().min(1).max(500).optional(),
+});
+
+const ivaReserve = z.object({
+  collection: reference,
+  amountMinor: z.number().int().min(0).max(2_000_000_000),
+});
+
+const exchangeRate = z
+  .object({
+    baseCurrency: currency,
+    quoteCurrency: currency,
+    rate: z
+      .union([z.string(), z.number()])
+      .transform(String)
+      .refine(
+        (value) =>
+          /^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/.test(value) &&
+          !/^0(?:\.0+)?$/.test(value),
+        "Rate must be a positive decimal with at most 8 decimal places.",
+      ),
+    effectiveDate: z.iso.date(),
+    source: z.string().trim().min(1).max(200),
+    kind: z.enum(["confirmed", "planning"]),
+    movement: z.enum(["buy_usd", "sell_usd", "reference"]),
+  })
+  .refine((row) => row.baseCurrency !== row.quoteCurrency, {
+    message: "The base and quote currencies must differ.",
+    path: ["quoteCurrency"],
+  });
+
 /** Canonical v1 rows are staged before any financial record is created. */
 export const financeImportBundleSchema = z
   .object({
@@ -93,6 +160,12 @@ export const financeImportBundleSchema = z
     transactions: z.array(transaction).optional().default([]),
     obligations: z.array(obligation).optional().default([]),
     expectedIncome: z.array(expectedIncome).optional().default([]),
+    debts: z.array(debt).optional().default([]),
+    debtPayments: z.array(debtPayment).optional().default([]),
+    invoices: z.array(invoice).optional().default([]),
+    invoiceCollections: z.array(invoiceCollection).optional().default([]),
+    ivaReserves: z.array(ivaReserve).optional().default([]),
+    exchangeRates: z.array(exchangeRate).optional().default([]),
   })
   .superRefine((bundle, ctx) => {
     if (

@@ -398,7 +398,7 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
-## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.3)
+## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.4)
 
 Step 8 has been decomposed before implementation into six vertical slices:
 
@@ -498,6 +498,23 @@ Step 8 has been decomposed before implementation into six vertical slices:
   paid transactions, pending obligation, and planned expected income; the
   displayed UYU totals reconcile; and a repeated confirmation does not create
   duplicates.
+
+### Slice 8.4 — Historical linked-record import — completed
+
+- The canonical `finance-import/v1` bundle now stages debts and their
+  same-currency payments, invoices, invoice collections, IVA reserves, and
+  dated exchange rates using human-readable, bundle-local references.
+- Preview validates every link, active account and currency match, invoice
+  chronology, debt/invoice overpayment, deterministic IVA allocation, and
+  duplicate exchange-rate keys before any live write.
+- The existing explicit commit transaction creates the linked history in
+  dependency order with per-row audit provenance and retains retry safety.
+  Historical report summaries remain preview/reconciliation evidence and are
+  not imported as balance-changing records.
+- On 2026-09-15, the household completed the local UI acceptance flow with a
+  disposable synthetic household. It verified preview-before-write validation,
+  linked debt payment, invoice collection, protected IVA reserve, exchange-rate
+  creation, expected UYU amounts, and retry safety without duplicates.
 
 ## Local container runtime — documented
 

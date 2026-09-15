@@ -107,10 +107,17 @@ and validates those references before returning a preview.
 
 The initial documented bundle fields cover the Step 8 core cash-flow path
 (accounts, categories, transactions, obligations, and expected income).
-Historical debt, invoice/collection/IVA-reserve, and exchange-rate records are
-an explicit later Slice 8.4 extension; their linked-record schema must be
-documented before that slice is implemented. A parser must not claim support
-for those entities until the canonical schema and atomic-link validation exist.
+Slice 8.4 extends `finance-import/v1` with linked historical rows. `debts`
+have a bundle-unique human-readable `reference`; `debtPayments` point to that
+reference and an active same-currency account name. `invoices` likewise have a
+bundle-unique `reference`; `invoiceCollections` point to an invoice reference
+and an active same-currency account name; and `ivaReserves` point to a
+collection reference. Each reserve amount must equal the deterministic
+cumulative IVA allocation for its collection. `exchangeRates` use the normal
+base/quote, date, kind, movement, source, and positive decimal rate fields.
+All of these links are validated before the single commit transaction. Existing
+IDs are never accepted as import references, and summary/report rows remain
+outside the live model.
 
 `POST /imports` accepts an original CSV or Excel upload. The server selects a
 dedicated parser service for its file type, which transparently produces the

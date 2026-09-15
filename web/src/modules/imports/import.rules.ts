@@ -1,4 +1,5 @@
 import type { FinanceImportBundle } from "./import.schemas";
+import { calculateCollectionIvaReserve, calculateInvoiceIva } from "@/modules/invoices/invoice.rules";
 
 type Reference = {
   id?: string;
@@ -28,6 +29,10 @@ export type ImportPreview = {
       transactionExpenseMinor: number;
       obligationMinor: number;
       expectedIncomeMinor: number;
+      debtPaymentMinor: number;
+      invoiceGrossMinor: number;
+      invoiceCollectionMinor: number;
+      ivaReserveMinor: number;
     }
   >;
   errors: number;
@@ -63,6 +68,7 @@ export function buildImportPreview(
   bundle: FinanceImportBundle,
   accounts: Reference[],
   categories: Reference[],
+  existingRateKeys: string[] = [],
 ): ImportPreview {
   const totals = {
     UYU: {
@@ -70,12 +76,20 @@ export function buildImportPreview(
       transactionExpenseMinor: 0,
       obligationMinor: 0,
       expectedIncomeMinor: 0,
+      debtPaymentMinor: 0,
+      invoiceGrossMinor: 0,
+      invoiceCollectionMinor: 0,
+      ivaReserveMinor: 0,
     },
     USD: {
       transactionIncomeMinor: 0,
       transactionExpenseMinor: 0,
       obligationMinor: 0,
       expectedIncomeMinor: 0,
+      debtPaymentMinor: 0,
+      invoiceGrossMinor: 0,
+      invoiceCollectionMinor: 0,
+      ivaReserveMinor: 0,
     },
   };
   const rows: ImportPreview["rows"] = [];
@@ -296,6 +310,85 @@ export function buildImportPreview(
           : undefined,
       errors,
     });
+  });
+  const references = (rows: Array<{ reference: string }>) =>
+    duplicateNames(rows.map((row) => row.reference));
+  const debtDuplicates = references(bundle.debts);
+  const debtRows = new Map(bundle.debts.map((row) => [nameKey(row.reference), row]));
+  bundle.debts.forEach((debt, index) => {
+    const errors: RowError[] = [];
+    if (debtDuplicates.has(nameKey(debt.reference)))
+      errors.push({ field: "reference", message: "La referencia de deuda se repite en el paquete." });
+    rows.push({ entity: "debts", row: index + 1, status: errors.length ? "invalid" : "valid", errors });
+  });
+  const debtPaid = new Map<string, number>();
+  bundle.debtPayments.forEach((payment, index) => {
+    const errors: RowError[] = [];
+    const debt = debtRows.get(nameKey(payment.debt));
+    if (!debt) errors.push({ field: "debt", message: "La referencia de deuda no existe en el paquete." });
+    const account = resolveAccount(payment.account, debt?.currency ?? "", errors);
+    const paid = (debtPaid.get(nameKey(payment.debt)) ?? 0) + payment.amountMinor;
+    debtPaid.set(nameKey(payment.debt), paid);
+    if (debt && paid > debt.amountMinor)
+      errors.push({ field: "amountMinor", message: "Los pagos superan el saldo original de la deuda." });
+    if (!errors.length && debt) totals[debt.currency as "UYU" | "USD"].debtPaymentMinor += payment.amountMinor;
+    rows.push({ entity: "debtPayments", row: index + 1, status: errors.length ? "invalid" : "valid", resolved: account?.id ? { accountId: account.id } : undefined, errors });
+  });
+  const invoiceDuplicates = references(bundle.invoices);
+  const invoiceRows = new Map(bundle.invoices.map((row) => [nameKey(row.reference), row]));
+  bundle.invoices.forEach((invoice, index) => {
+    const errors: RowError[] = [];
+    if (invoiceDuplicates.has(nameKey(invoice.reference))) errors.push({ field: "reference", message: "La referencia de factura se repite en el paquete." });
+    if (invoice.dueDate < invoice.serviceDate) errors.push({ field: "dueDate", message: "El vencimiento no puede ser anterior al servicio." });
+    if (!errors.length) totals[invoice.currency].invoiceGrossMinor += invoice.grossAmountMinor;
+    rows.push({ entity: "invoices", row: index + 1, status: errors.length ? "invalid" : "valid", errors });
+  });
+  const collectionDuplicates = references(bundle.invoiceCollections);
+  const collectionsByReference = new Map(bundle.invoiceCollections.map((row) => [nameKey(row.reference), row]));
+  const reserveCollectionDuplicates = duplicateNames(
+    bundle.ivaReserves.map((row) => row.collection),
+  );
+  const reserveCollections = new Set(
+    bundle.ivaReserves.map((row) => nameKey(row.collection)),
+  );
+  const collected = new Map<string, number>();
+  bundle.invoiceCollections.forEach((collection, index) => {
+    const errors: RowError[] = [];
+    const invoice = invoiceRows.get(nameKey(collection.invoice));
+    if (collectionDuplicates.has(nameKey(collection.reference))) errors.push({ field: "reference", message: "La referencia de cobranza se repite en el paquete." });
+    if (!invoice) errors.push({ field: "invoice", message: "La referencia de factura no existe en el paquete." });
+    if (invoice && !invoice.sentDate) errors.push({ field: "invoice", message: "Una factura cobrada debe declarar sentDate." });
+    const account = resolveAccount(collection.account, invoice?.currency ?? "", errors);
+    const totalCollected = (collected.get(nameKey(collection.invoice)) ?? 0) + collection.amountMinor;
+    collected.set(nameKey(collection.invoice), totalCollected);
+    if (invoice && totalCollected > invoice.grossAmountMinor) errors.push({ field: "amountMinor", message: "Las cobranzas superan el total de la factura." });
+    if (!reserveCollections.has(nameKey(collection.reference)))
+      errors.push({ field: "ivaReserve", message: "Cada cobranza debe incluir su reserva IVA vinculada." });
+    if (!errors.length && invoice) totals[invoice.currency].invoiceCollectionMinor += collection.amountMinor;
+    rows.push({ entity: "invoiceCollections", row: index + 1, status: errors.length ? "invalid" : "valid", resolved: account?.id ? { accountId: account.id } : undefined, errors });
+  });
+  const collectionAmounts = new Map<string, number>();
+  bundle.ivaReserves.forEach((reserve, index) => {
+    const errors: RowError[] = [];
+    const collection = collectionsByReference.get(nameKey(reserve.collection));
+    const invoice = collection && invoiceRows.get(nameKey(collection.invoice));
+    if (!collection || !invoice) errors.push({ field: "collection", message: "La cobranza de IVA no existe en el paquete." });
+    if (reserveCollectionDuplicates.has(nameKey(reserve.collection)))
+      errors.push({ field: "collection", message: "La cobranza tiene más de una reserva IVA." });
+    const previous = collection && invoice ? collectionAmounts.get(nameKey(collection.invoice)) ?? 0 : 0;
+    const expected = collection && invoice ? calculateCollectionIvaReserve({ grossAmountMinor: invoice.grossAmountMinor, ivaAmountMinor: calculateInvoiceIva(invoice.grossAmountMinor, invoice.ivaRateBasisPoints).ivaAmountMinor, remainingAmountMinor: invoice.grossAmountMinor - previous }, collection.amountMinor) : 0;
+    if (collection && invoice) collectionAmounts.set(nameKey(collection.invoice), previous + collection.amountMinor);
+    if (!errors.length && reserve.amountMinor !== expected) errors.push({ field: "amountMinor", message: "La reserva IVA no coincide con la asignación calculada de la cobranza." });
+    if (!errors.length && invoice) totals[invoice.currency].ivaReserveMinor += reserve.amountMinor;
+    rows.push({ entity: "ivaReserves", row: index + 1, status: errors.length ? "invalid" : "valid", errors });
+  });
+  const rateKeys = new Set<string>();
+  bundle.exchangeRates.forEach((rate, index) => {
+    const errors: RowError[] = [];
+    const key = [rate.baseCurrency, rate.quoteCurrency, rate.effectiveDate, rate.kind, rate.movement].join(":");
+    if (rateKeys.has(key) || existingRateKeys.includes(key)) errors.push({ field: "effectiveDate", message: "La tasa se repite para el par, fecha, tipo y movimiento." });
+    rateKeys.add(key);
+    rows.push({ entity: "exchangeRates", row: index + 1, status: errors.length ? "invalid" : "valid", errors });
   });
   return {
     rows,

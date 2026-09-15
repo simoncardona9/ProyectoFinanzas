@@ -40,10 +40,18 @@ export async function previewJsonImport(
       );
     return existing.preview;
   }
-  const [accounts, categories] = await importRepository.listReferences(
-    context.membership.householdId,
+  const [[accounts, categories], existingRates] = await Promise.all([
+    importRepository.listReferences(context.membership.householdId),
+    importRepository.listExchangeRateKeys(context.membership.householdId),
+  ]);
+  const preview = buildImportPreview(
+    bundle,
+    accounts,
+    categories,
+    existingRates.map((rate) =>
+      [rate.baseCurrency, rate.quoteCurrency, rate.effectiveDate, rate.kind, rate.movement].join(":"),
+    ),
   );
-  const preview = buildImportPreview(bundle, accounts, categories);
   const batch = await importRepository.create({
     householdId: context.membership.householdId,
     actorUserId: context.user.id,
@@ -143,14 +151,28 @@ export async function commitCoreCashFlowImport(
       transactionsCreated: bundle.transactions.length,
       obligationsCreated: bundle.obligations.length,
       expectedIncomeCreated: bundle.expectedIncome.length,
+      debtsCreated: bundle.debts.length,
+      debtPaymentsCreated: bundle.debtPayments.length,
+      invoicesCreated: bundle.invoices.length,
+      invoiceCollectionsCreated: bundle.invoiceCollections.length,
+      ivaReservesCreated: bundle.ivaReserves.length,
+      exchangeRatesCreated: bundle.exchangeRates.length,
       alreadyCommitted: true,
     };
-  const [accounts, categories] = await importRepository.listReferences(
-    context.membership.householdId,
-  );
+  const [[accounts, categories], existingRates] = await Promise.all([
+    importRepository.listReferences(context.membership.householdId),
+    importRepository.listExchangeRateKeys(context.membership.householdId),
+  ]);
   // Revalidate immediately before claiming the batch: a reference may have been
   // archived or changed after the reviewer saw the staged preview.
-  const preview = buildImportPreview(bundle, accounts, categories);
+  const preview = buildImportPreview(
+    bundle,
+    accounts,
+    categories,
+    existingRates.map((rate) =>
+      [rate.baseCurrency, rate.quoteCurrency, rate.effectiveDate, rate.kind, rate.movement].join(":"),
+    ),
+  );
   canCommit(preview);
   const result = await importRepository.commitCoreCashFlow({
     householdId: context.membership.householdId,
@@ -169,3 +191,6 @@ export async function commitCoreCashFlowImport(
     );
   return { ...result, alreadyCommitted: false };
 }
+
+/** Slice 8.4 commits all historical links alongside the core staged rows. */
+export const commitHistoricalImport = commitCoreCashFlowImport;

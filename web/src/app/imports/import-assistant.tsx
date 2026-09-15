@@ -45,6 +45,10 @@ type Preview = {
       transactionExpenseMinor: number;
       obligationMinor: number;
       expectedIncomeMinor: number;
+      debtPaymentMinor: number;
+      invoiceGrossMinor: number;
+      invoiceCollectionMinor: number;
+      ivaReserveMinor: number;
     }
   >;
 };
@@ -116,7 +120,7 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
       setMessage(
         result.data.alreadyCommitted
           ? "Esta importación ya estaba confirmada; no se duplicó ningún registro."
-          : `Importación confirmada: ${result.data.categoriesCreated} categoría(s), ${result.data.accountsCreated} cuenta(s), ${result.data.transactionsCreated} movimiento(s), ${result.data.obligationsCreated} obligación(es) y ${result.data.expectedIncomeCreated} ingreso(s) esperado(s).`,
+          : `Importación confirmada: ${result.data.categoriesCreated} categoría(s), ${result.data.accountsCreated} cuenta(s), ${result.data.transactionsCreated} movimiento(s), ${result.data.obligationsCreated} obligación(es), ${result.data.expectedIncomeCreated} ingreso(s) esperado(s), ${result.data.debtsCreated} deuda(s), ${result.data.invoicesCreated} factura(s) y ${result.data.exchangeRatesCreated} tasa(s).`,
       );
     } catch (error) {
       setMessage(
@@ -229,6 +233,18 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
                 Ingresos esperados:{" "}
                 {formatMinor(
                   preview.totals[currency].expectedIncomeMinor,
+                  currency,
+                )}
+                <br />
+                Cobranzas de facturas:{" "}
+                {formatMinor(
+                  preview.totals[currency].invoiceCollectionMinor,
+                  currency,
+                )}
+                <br />
+                IVA protegido:{" "}
+                {formatMinor(
+                  preview.totals[currency].ivaReserveMinor,
                   currency,
                 )}
               </div>

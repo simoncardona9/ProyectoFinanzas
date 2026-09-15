@@ -218,4 +218,21 @@ describe("buildImportPreview", () => {
         .field,
     ).toBe("currency");
   });
+
+  it("validates linked historical debts, invoices, IVA reserves, and rates", () => {
+    const historical = financeImportBundleSchema.parse({
+      version: "finance-import/v1",
+      source: { type: "json_paste" },
+      debts: [{ reference: "tarjeta-ago", creditorName: "Banco", description: "Tarjeta", amountMinor: 10_000, currency: "UYU", incurredDate: "2026-08-01" }],
+      debtPayments: [{ debt: "tarjeta-ago", amountMinor: 2_000, account: "Banco UYU", paidDate: "2026-08-05" }],
+      invoices: [{ reference: "fac-1", clientName: "Cliente", description: "Clase", serviceDate: "2026-08-01", dueDate: "2026-08-10", grossAmountMinor: 12_200, ivaRateBasisPoints: 2_200, currency: "UYU", sentDate: "2026-08-02" }],
+      invoiceCollections: [{ reference: "cob-1", invoice: "fac-1", amountMinor: 12_200, account: "Banco UYU", paidDate: "2026-08-10" }],
+      ivaReserves: [{ collection: "cob-1", amountMinor: 2_200 }],
+      exchangeRates: [{ baseCurrency: "UYU", quoteCurrency: "USD", rate: "42.75", effectiveDate: "2026-08-01", source: "BCU", kind: "confirmed", movement: "buy_usd" }],
+    });
+    const preview = buildImportPreview(historical, [{ id: "account", name: "Banco UYU", currency: "UYU", active: true }], []);
+    expect(preview.errors).toBe(0);
+    expect(preview.totals.UYU.debtPaymentMinor).toBe(2_000);
+    expect(preview.totals.UYU.ivaReserveMinor).toBe(2_200);
+  });
 });

@@ -56,6 +56,17 @@
 - Preserve the original source file and row provenance for each extracted
   record. Parsing and previewing a file must not create or change live
   financial records; only an explicitly reviewed, validated batch may commit.
+- For Excel/XLSX/XLSM, use defined tables as mapping evidence when available;
+  detect hidden/filtered rows and presentation-only formatted tails; convert
+  dates from the declared workbook date system; and preserve each original cell
+  value/formula as restricted provenance.
+- Never execute macros or VBA, external links, or formulas from an uploaded
+  workbook. Detect and report whether an `.xlsm` package contains macros.
+  Formula cells may be shown with cached values for review but require explicit
+  confirmation before providing a financial amount for import.
+- An import batch must record its original filename, byte content hash, and
+  declared financial period. A file timestamp or “latest” filename does not
+  establish source precedence.
 
 ## Non-functional requirements
 

@@ -145,6 +145,32 @@ proxy TCP de Docker. No abras el puerto 3000 hacia la red.
 Permite conexiones TCP entrantes a los puertos 80 y 443 en el Firewall de
 Windows para el perfil de red privado.
 
+### Acceso público temporal con ngrok
+
+ngrok permite compartir temporalmente la aplicación de Docker sin abrir
+puertos en el router ni confiar el certificado local de Caddy. Esta modalidad
+debe usarse únicamente con datos y credenciales sintéticos: la URL queda
+accesible desde Internet mientras el túnel esté ejecutándose.
+
+1. Inicia la pila usando el override de ngrok. Este publica el proxy sólo en
+   `127.0.0.1:80`; ngrok termina el HTTPS público y Caddy reenvía HTTP local a
+   la aplicación:
+
+   ```powershell
+   docker compose -f compose.yaml -f compose.ngrok.yaml up --build -d
+   ```
+
+2. Con una sesión iniciada en ngrok y un dominio ya asignado a la cuenta,
+   inicia el túnel desde PowerShell:
+
+   ```powershell
+   ngrok http 80 --url=https://starfish-trailside-rocklike.ngrok-free.dev
+   ```
+
+3. Abre `https://starfish-trailside-rocklike.ngrok-free.dev`. Para detener el
+   acceso público, termina ngrok con `Ctrl+C`. Para volver al acceso LAN HTTPS,
+   baja la pila y arráncala de nuevo sin `compose.ngrok.yaml`.
+
 ### Cuenta de prueba de Docker
 
 El servicio `seed` se ejecuta después de las migraciones y antes de iniciar la

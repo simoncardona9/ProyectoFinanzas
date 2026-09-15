@@ -398,6 +398,124 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
+## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.4)
+
+Step 8 has been decomposed before implementation into six vertical slices:
+
+1. Canonical JSON staging and shared assistant.
+2. Safe, ordered category and account import.
+3. Atomic core cash-flow import for transactions, obligations, and expected
+   income.
+4. Historical linked-record import for debts, invoices/collections/IVA
+   reserves, and exchange rates.
+5. CSV and Excel/XLSX/XLSM conversion into the same staged JSON pipeline.
+6. August 2026 reconciliation and local acceptance.
+
+### Planning findings
+
+- The existing August migration mapping covers more than the five initially
+  named assistant entry points: it includes debt, invoice/IVA-reserve, and
+  exchange-rate data. The plan therefore assigns those relationships to Slice
+  8.4 instead of silently omitting them or expanding an earlier slice.
+- The August 2026 report is not yet an approved import source. The DualBoot
+  conversion source, TEC billing alignment, invalid cash dates, historical
+  labels, and fixed formula ranges must be corrected and signed off before its
+  records can be committed.
+- A newer September 2026 `.xlsm` workbook is now available for current-month
+  migration planning. Its defined table, hidden rows, formatted empty tail,
+  emoji status labels, and formula cells are explicit Slice 8.5 parser and
+  preview requirements. It has no `Histórico` sheet and no embedded VBA project
+  in the inspected package; neither condition may be assumed for future files.
+- The September workbook also is not an approved import source yet. Its exact
+  content hash and declared period must be recorded, and it must pass the same
+  reconciliation gate before any real-use commit.
+- Slice 8.1 now provides the `/imports` shared assistant and the protected
+  `POST /api/v1/imports/json/preview` route. It accepts `finance-import/v1`
+  JSON pasted or loaded from a `.json` file, resolves transaction account and
+  category names only in the active household, and returns row-level results
+  plus separate UYU/USD totals without writing live financial records.
+- Each preview persists only an audited staged-batch provenance record with its
+  source type/name, content hash, and idempotency key. Reusing a key with the
+  same content returns its existing preview; using it with different content is
+  rejected. Accounts, categories, obligations, and expected-income rows are
+  visibly deferred until their respective commit slices.
+- Slice 8.2 adds an explicit, owner/editor-only confirmation for a clean
+  accounts/categories-only preview. The commit uses the original idempotency
+  key, creates all categories (with parent-before-child ordering) and accounts
+  plus their per-row audit provenance in one transaction, and returns the
+  prior result on a retry. Any invalid or deferred row prevents the commit.
+
+### Slice 8.2 — Structure import with safe ordering — completed
+
+- The canonical JSON schema now validates account and category rows, including
+  account currency/opening balance details and the required expense-category
+  classification.
+- Preview rejects duplicate structure names, existing names, a missing,
+  inactive, ambiguous, wrong-kind, self-referencing, or out-of-order parent.
+- An owner or editor may explicitly confirm only a clean, structure-only
+  preview by typing `IMPORT`. The endpoint uses the original preview key and
+  is repeat-safe: a retry reports the prior completed result without duplicate
+  records.
+- Migration `0016_motionless_ironclad.sql` adds the committed import-batch
+  state. The atomic commit writes every imported account/category and its
+  row-level import provenance to the audit log, or rolls everything back.
+
+### Verification
+
+- `pnpm test` — passed (56 tests).
+- `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`,
+  and `pnpm build` — passed.
+- On 2026-09-15, the household completed the local UI acceptance flow with
+  synthetic structure data. It confirmed preview-before-write behavior, the
+  explicit `IMPORT` confirmation, correctly created accounts and categories,
+  retry safety without duplicates, and validation errors that prevent commits.
+
+### Slice 8.3 — Core cash-flow import commit — completed
+
+- Extended the canonical staged JSON model with paid transactions, planned or
+  pending obligations, and planned or pending expected income. Account and
+  category names resolve only in the active household or against valid
+  prerequisites staged in the same bundle.
+- The reviewed commit creates categories and accounts before dependent
+  cash-flow records in one transaction. Every imported record has a normal
+  audit event containing the import ID, entity type, and source row; a failed
+  insert rolls back the full batch.
+- Reusing the preview idempotency key after a successful commit returns the
+  original counts rather than creating duplicates. References are revalidated
+  immediately before the batch is claimed, so an archived or changed reference
+  cannot be silently used after preview.
+- The shared import assistant and OpenAPI contract now describe confirmation
+  and result counts for all Slice 8.3 entities.
+
+### Verification
+
+- `pnpm test` — passed (58 tests).
+- `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm db:check`, and `pnpm build` —
+  passed.
+- On 2026-09-15, the household completed the local UI acceptance flow with
+  synthetic data. It confirmed that preview and invalid references make no
+  live changes; a clean batch creates its account/category prerequisites,
+  paid transactions, pending obligation, and planned expected income; the
+  displayed UYU totals reconcile; and a repeated confirmation does not create
+  duplicates.
+
+### Slice 8.4 — Historical linked-record import — completed
+
+- The canonical `finance-import/v1` bundle now stages debts and their
+  same-currency payments, invoices, invoice collections, IVA reserves, and
+  dated exchange rates using human-readable, bundle-local references.
+- Preview validates every link, active account and currency match, invoice
+  chronology, debt/invoice overpayment, deterministic IVA allocation, and
+  duplicate exchange-rate keys before any live write.
+- The existing explicit commit transaction creates the linked history in
+  dependency order with per-row audit provenance and retains retry safety.
+  Historical report summaries remain preview/reconciliation evidence and are
+  not imported as balance-changing records.
+- On 2026-09-15, the household completed the local UI acceptance flow with a
+  disposable synthetic household. It verified preview-before-write validation,
+  linked debt payment, invoice collection, protected IVA reserve, exchange-rate
+  creation, expected UYU amounts, and retry safety without duplicates.
+
 ## Local container runtime — documented
 
 - Docker Compose runs the local stack: PostgreSQL, one-shot migrations,

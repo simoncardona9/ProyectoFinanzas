@@ -1,0 +1,8 @@
+{
+  # ngrok terminates public TLS. Keep this hop local and plain HTTP.
+  auto_https off
+}
+
+:80 {
+  reverse_proxy web:3000
+}

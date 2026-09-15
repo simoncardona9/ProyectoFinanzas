@@ -21,6 +21,7 @@ This folder is the product and technical foundation for replacing the family-fin
 | [debt-acceptance.md](debt-acceptance.md) | Synthetic local acceptance checklist for debt payments and selected-rate exposure. |
 | [tax-reserve-acceptance.md](tax-reserve-acceptance.md) | Synthetic local acceptance checklist for IVA reserve settlement. |
 | [dashboard-tax-reserve-acceptance.md](dashboard-tax-reserve-acceptance.md) | Synthetic local acceptance checklist for protected IVA on the dashboard. |
+| [import-historical-acceptance.md](import-historical-acceptance.md) | Synthetic local UI checklist for the Slice 8.4 linked historical import. |
 | [roadmap.md](roadmap.md) | Phased implementation plan. |
 | [development-process.md](development-process.md) | Incremental delivery, validation, release, and feedback process. |
 | [git-workflow.md](git-workflow.md) | Branches, pull requests, local testing, and GitHub ownership rules. |

@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/shared/auth/request-auth";
-import { BackLink, FeatureNavigationCard } from "@/shared/ui/navigation";
-import { StructureManager } from "./structure-manager";
-export default async function StructurePage() {
+import { BackLink } from "@/shared/ui/navigation";
+import { ImportAssistant } from "./import-assistant";
+
+export default async function ImportsPage() {
   let context;
   try {
     context = await requireAuth();
@@ -18,22 +19,16 @@ export default async function StructurePage() {
               Finanzas Familiares
             </p>
             <h1 className="mt-2 text-2xl font-semibold">
-              Cuentas y categorías
+              Asistente de importación
             </h1>
           </div>
           <BackLink href="/settings">Volver a configuración</BackLink>
         </div>
         <p className="mt-2 text-zinc-600">
-          Define la estructura financiera antes de registrar movimientos.
+          Pega o carga un paquete JSON para revisar referencias, filas y
+          totales. Esta etapa no crea ni cambia registros financieros.
         </p>
-        <div className="mt-4">
-          <FeatureNavigationCard
-            href="/imports"
-            title="Importar estructura"
-            description="Abrir el mismo asistente de revisión por lote."
-          />
-        </div>
-        <StructureManager
+        <ImportAssistant
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />
       </section>

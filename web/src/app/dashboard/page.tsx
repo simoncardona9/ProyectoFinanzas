@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/shared/auth/request-auth";
-import { BackLink } from "@/shared/ui/navigation";
+import { BackLink, FeatureNavigationCard } from "@/shared/ui/navigation";
 import { DashboardSummary } from "./dashboard-summary";
 
 export default async function DashboardPage() {
@@ -24,6 +24,13 @@ export default async function DashboardPage() {
         <p className="mt-2 text-zinc-600">
           Consulta el efectivo y la proyección mensual con importes trazables.
         </p>
+        <div className="mt-4">
+          <FeatureNavigationCard
+            href="/imports"
+            title="Importar ingresos esperados"
+            description="Abrir el mismo asistente de revisión por lote."
+          />
+        </div>
         <DashboardSummary />
       </section>
     </main>

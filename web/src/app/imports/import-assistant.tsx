@@ -12,15 +12,19 @@ function formatMinor(amountMinor: number, currency: string) {
 const example = {
   version: "finance-import/v1",
   source: { type: "json_paste" },
-  transactions: [
+  categories: [
     {
-      date: "2026-09-08",
-      type: "expense",
-      amountMinor: 125050,
+      name: "Ingresos importados",
+      kind: "income",
+    },
+  ],
+  accounts: [
+    {
+      name: "Efectivo importado",
+      type: "cash",
       currency: "UYU",
-      account: "Banco República",
-      category: "Hogar y supermercado",
-      description: "Compra semanal",
+      openingBalanceMinor: 0,
+      openingBalanceDate: "2026-09-01",
     },
   ],
 };
@@ -44,6 +48,8 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
   const [text, setText] = useState(() => JSON.stringify(example, null, 2));
   const [preview, setPreview] = useState<Preview>();
   const [message, setMessage] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   const previewBundle = async () => {
     if (!canEdit) return;
     setMessage("");
@@ -56,11 +62,12 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
       return;
     }
     try {
+      const key = crypto.randomUUID();
       const response = await fetch("/api/v1/imports/json/preview", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
+          "Idempotency-Key": key,
         },
         body: JSON.stringify(body),
       });
@@ -70,6 +77,8 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
           result.error?.message ?? "No se pudo previsualizar el paquete.",
         );
       setPreview(result.data);
+      setIdempotencyKey(key);
+      setConfirmation("");
       setMessage(
         result.data.errors
           ? "Revisa las filas marcadas antes de continuar."
@@ -78,6 +87,35 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Error al previsualizar.",
+      );
+    }
+  };
+  const commit = async () => {
+    if (!preview?.importId || !idempotencyKey || confirmation !== "IMPORT")
+      return;
+    try {
+      const response = await fetch(
+        `/api/v1/imports/${preview.importId}/commit`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({ confirmation }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error?.message ?? "No se pudo confirmar.");
+      setMessage(
+        result.data.alreadyCommitted
+          ? "Esta importación ya estaba confirmada; no se duplicó ningún registro."
+          : `Importación confirmada: ${result.data.categoriesCreated} categoría(s) y ${result.data.accountsCreated} cuenta(s).`,
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Error al confirmar.",
       );
     }
   };
@@ -185,6 +223,32 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
                 <li key={warning}>{warning}</li>
               ))}
             </ul>
+          )}
+          {!preview.errors && !preview.warnings.length && canEdit && (
+            <div className="mt-5 grid gap-2 rounded bg-amber-50 p-4 text-sm text-amber-900">
+              <label htmlFor="import-confirmation">
+                Escribe <strong>IMPORT</strong> para crear estas cuentas y
+                categorías. Esta acción no puede incluir movimientos u otras
+                filas diferidas.
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  id="import-confirmation"
+                  value={confirmation}
+                  onChange={(event) => setConfirmation(event.target.value)}
+                  className="rounded border border-amber-300 bg-white p-2"
+                  placeholder="IMPORT"
+                />
+                <button
+                  type="button"
+                  disabled={confirmation !== "IMPORT"}
+                  onClick={() => void commit()}
+                  className="rounded bg-emerald-700 px-3 py-2 font-medium text-white disabled:opacity-50"
+                >
+                  Confirmar estructura
+                </button>
+              </div>
+            </div>
           )}
           <ul className="mt-4 divide-y">
             {preview.rows.map((row) => (

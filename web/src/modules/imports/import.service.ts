@@ -3,7 +3,7 @@ import type { AuthContext } from "@/shared/auth/auth.types";
 import { ApiError } from "@/shared/errors/api-error";
 import type { FinanceImportBundle } from "./import.schemas";
 import { importRepository } from "./import.repository";
-import { buildImportPreview } from "./import.rules";
+import { buildImportPreview, type ImportPreview } from "./import.rules";
 
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
@@ -53,4 +53,75 @@ export async function previewJsonImport(
     preview,
   });
   return { importId: batch.id, ...preview };
+}
+
+function canCommitStructure(
+  preview: ImportPreview,
+  bundle: FinanceImportBundle,
+) {
+  if (preview.errors)
+    throw new ApiError(
+      422,
+      "IMPORT_HAS_ERRORS",
+      "La importación tiene filas inválidas y no se puede confirmar.",
+    );
+  if (
+    bundle.transactions.length ||
+    bundle.obligations.length ||
+    bundle.expectedIncome.length
+  )
+    throw new ApiError(
+      422,
+      "IMPORT_HAS_DEFERRED_ROWS",
+      "Esta entrega solo puede confirmar cuentas y categorías; elimina las filas diferidas o espera su próxima entrega.",
+    );
+}
+
+export async function commitStructureImport(
+  context: AuthContext,
+  importId: string,
+  idempotencyKey: string,
+) {
+  const batch = await importRepository.findById(
+    context.membership.householdId,
+    importId,
+  );
+  if (!batch)
+    throw new ApiError(
+      404,
+      "NOT_FOUND",
+      "No existe esa importación en el hogar activo.",
+    );
+  if (batch.idempotencyKey !== idempotencyKey)
+    throw new ApiError(
+      409,
+      "IDEMPOTENCY_KEY_CONFLICT",
+      "La confirmación debe usar la clave de idempotencia de la previsualización.",
+    );
+  const bundle = batch.bundle as FinanceImportBundle;
+  const preview = batch.preview as unknown as ImportPreview;
+  if (batch.status === "committed")
+    return {
+      importId: batch.id,
+      accountsCreated: bundle.accounts.length,
+      categoriesCreated: bundle.categories.length,
+      alreadyCommitted: true,
+    };
+  canCommitStructure(preview, bundle);
+  const result = await importRepository.commitStructure({
+    householdId: context.membership.householdId,
+    actorUserId: context.user.id,
+    importId: batch.id,
+    bundle,
+    parentCategoryIds: preview.rows
+      .filter((row) => row.entity === "categories")
+      .map((row) => row.resolved?.parentCategoryId),
+  });
+  if (!result)
+    throw new ApiError(
+      409,
+      "IMPORT_STATE_CONFLICT",
+      "La importación ya fue confirmada o cambió de estado.",
+    );
+  return { ...result, alreadyCommitted: false };
 }

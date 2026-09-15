@@ -93,7 +93,11 @@ export const importSourceType = pgEnum("import_source_type", [
   "json_upload",
 ]);
 
-export const importStatus = pgEnum("import_status", ["staged", "invalid"]);
+export const importStatus = pgEnum("import_status", [
+  "staged",
+  "invalid",
+  "committed",
+]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),

@@ -23,16 +23,46 @@ const transaction = z
     path: ["isOneOff"],
   });
 
+const account = z.object({
+  name: z.string().trim().min(1).max(120),
+  type: z.enum(["cash", "bank", "card", "loan", "reserve_envelope"]),
+  currency,
+  openingBalanceMinor: z.number().int().min(-2_000_000_000).max(2_000_000_000),
+  openingBalanceDate: z.iso.date(),
+});
+
+const category = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    kind: z.enum(["income", "expense", "transfer"]),
+    parent: z.string().trim().min(1).max(120).nullable().optional(),
+    defaultClassification: z
+      .enum(["fixed", "variable", "discretionary"])
+      .nullable()
+      .optional(),
+  })
+  .superRefine((row, ctx) => {
+    if (row.kind === "expense" && !row.defaultClassification)
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultClassification"],
+        message: "Expense categories require a classification.",
+      });
+    if (row.kind !== "expense" && row.defaultClassification)
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultClassification"],
+        message: "Only expense categories can have a classification.",
+      });
+  });
+
 /** The v1 surface deliberately stages only core entities; commits arrive in later slices. */
 export const financeImportBundleSchema = z
   .object({
     version: z.literal("finance-import/v1"),
     source,
-    accounts: z.array(z.record(z.string(), z.unknown())).optional().default([]),
-    categories: z
-      .array(z.record(z.string(), z.unknown()))
-      .optional()
-      .default([]),
+    accounts: z.array(account).optional().default([]),
+    categories: z.array(category).optional().default([]),
     transactions: z.array(transaction).optional().default([]),
     obligations: z
       .array(z.record(z.string(), z.unknown()))

@@ -46,4 +46,65 @@ describe("buildImportPreview", () => {
       "category",
     ]);
   });
+
+  it("accepts ordered categories and accounts for the structure commit", () => {
+    const structureBundle = financeImportBundleSchema.parse({
+      version: "finance-import/v1",
+      source: { type: "json_paste" },
+      categories: [
+        { name: "Ingresos importados", kind: "income" },
+        {
+          name: "Clases importadas",
+          kind: "income",
+          parent: "Ingresos importados",
+        },
+      ],
+      accounts: [
+        {
+          name: "Caja importada",
+          type: "cash",
+          currency: "UYU",
+          openingBalanceMinor: 0,
+          openingBalanceDate: "2026-09-01",
+        },
+      ],
+    });
+    const preview = buildImportPreview(structureBundle, [], []);
+    expect(preview.errors).toBe(0);
+    expect(preview.rows.map((row) => row.status)).toEqual([
+      "valid",
+      "valid",
+      "valid",
+    ]);
+  });
+
+  it("rejects a child before its parent and duplicate structure names", () => {
+    const structureBundle = financeImportBundleSchema.parse({
+      version: "finance-import/v1",
+      source: { type: "json_paste" },
+      categories: [
+        { name: "Hija", kind: "income", parent: "Padre" },
+        { name: "Padre", kind: "income" },
+      ],
+      accounts: [
+        {
+          name: "Caja",
+          type: "cash",
+          currency: "UYU",
+          openingBalanceMinor: 0,
+          openingBalanceDate: "2026-09-01",
+        },
+        {
+          name: "Caja",
+          type: "bank",
+          currency: "UYU",
+          openingBalanceMinor: 0,
+          openingBalanceDate: "2026-09-01",
+        },
+      ],
+    });
+    const preview = buildImportPreview(structureBundle, [], []);
+    expect(preview.errors).toBe(3);
+    expect(preview.rows[2].errors[0].field).toBe("parent");
+  });
 });

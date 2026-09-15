@@ -398,7 +398,7 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
-## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.1)
+## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.2)
 
 Step 8 has been decomposed before implementation into six vertical slices:
 
@@ -439,6 +439,32 @@ Step 8 has been decomposed before implementation into six vertical slices:
   same content returns its existing preview; using it with different content is
   rejected. Accounts, categories, obligations, and expected-income rows are
   visibly deferred until their respective commit slices.
+- Slice 8.2 adds an explicit, owner/editor-only confirmation for a clean
+  accounts/categories-only preview. The commit uses the original idempotency
+  key, creates all categories (with parent-before-child ordering) and accounts
+  plus their per-row audit provenance in one transaction, and returns the
+  prior result on a retry. Any invalid or deferred row prevents the commit.
+
+### Slice 8.2 — Structure import with safe ordering — implemented, pending local acceptance
+
+- The canonical JSON schema now validates account and category rows, including
+  account currency/opening balance details and the required expense-category
+  classification.
+- Preview rejects duplicate structure names, existing names, a missing,
+  inactive, ambiguous, wrong-kind, self-referencing, or out-of-order parent.
+- An owner or editor may explicitly confirm only a clean, structure-only
+  preview by typing `IMPORT`. The endpoint uses the original preview key and
+  is repeat-safe: a retry reports the prior completed result without duplicate
+  records.
+- Migration `0016_motionless_ironclad.sql` adds the committed import-batch
+  state. The atomic commit writes every imported account/category and its
+  row-level import provenance to the audit log, or rolls everything back.
+
+### Verification
+
+- `pnpm test` — passed (56 tests).
+- `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`,
+  and `pnpm build` — passed.
 
 ## Local container runtime — documented
 

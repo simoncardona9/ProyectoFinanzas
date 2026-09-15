@@ -1086,9 +1086,10 @@ paths:
       summary: Stage and validate a JSON batch-entry bundle.
       description: >
         Owner/editor only. The server scopes reference resolution to the active
-        household and returns a preview without creating live financial records
-        or changing balances. The Idempotency-Key identifies a retry of the
-        same bundle; reusing it with different content is rejected.
+        household (including valid accounts/categories staged earlier in the
+        same bundle) and returns a preview without creating live financial
+        records or changing balances. The Idempotency-Key identifies a retry of
+        the same bundle; reusing it with different content is rejected.
       security: [{ sessionCookie: [] }]
       parameters:
         - name: Idempotency-Key
@@ -1144,9 +1145,11 @@ paths:
       summary: Atomically commit a reviewed staged import.
       description: >
         Owner/editor only. The import must belong to the active household and
-        have no unresolved validation errors. The server creates all approved
-        records and audit events in one transaction or rolls back all changes.
-        Retrying with the original idempotency key returns the prior result.
+        have no unresolved validation errors. The server creates categories,
+        accounts, paid transactions, obligations, and planned/pending expected
+        income (in that prerequisite order) with audit provenance in one
+        transaction or rolls back all changes. Retrying with the original
+        idempotency key returns the prior result.
       security: [{ sessionCookie: [] }]
       parameters:
         - name: importId
@@ -1540,8 +1543,87 @@ components:
                       },
                   },
               },
-            obligations: { type: array, items: { type: object } },
-            expectedIncome: { type: array, items: { type: object } },
+            obligations:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [
+                        description,
+                        amountMinor,
+                        currency,
+                        dueDate,
+                        category,
+                        classification,
+                      ],
+                    properties:
+                      {
+                        description:
+                          { type: string, minLength: 1, maxLength: 500 },
+                        amountMinor:
+                          { type: integer, minimum: 1, maximum: 2000000000 },
+                        currency: { type: string, enum: [UYU, USD] },
+                        dueDate: { type: string, format: date },
+                        category:
+                          { type: string, minLength: 1, maxLength: 120 },
+                        classification:
+                          {
+                            type: string,
+                            enum: [fixed, variable, discretionary],
+                          },
+                        status:
+                          {
+                            type: string,
+                            enum: [planned, pending],
+                            default: pending,
+                          },
+                        recurrenceRule:
+                          {
+                            type: [string, "null"],
+                            enum: [monthly, quarterly, yearly, null],
+                          },
+                      },
+                  },
+              },
+            expectedIncome:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [
+                        date,
+                        amountMinor,
+                        currency,
+                        account,
+                        category,
+                        description,
+                      ],
+                    properties:
+                      {
+                        date: { type: string, format: date },
+                        amountMinor:
+                          { type: integer, minimum: 1, maximum: 2000000000 },
+                        currency: { type: string, enum: [UYU, USD] },
+                        account: { type: string, minLength: 1, maxLength: 120 },
+                        category:
+                          { type: string, minLength: 1, maxLength: 120 },
+                        description:
+                          { type: string, minLength: 1, maxLength: 500 },
+                        status:
+                          {
+                            type: string,
+                            enum: [planned, pending],
+                            default: pending,
+                          },
+                        isRecurring: { type: boolean, default: false },
+                        isOneOff: { type: boolean, default: false },
+                      },
+                  },
+              },
           },
       }
     Error:

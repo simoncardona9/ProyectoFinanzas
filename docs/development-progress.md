@@ -398,7 +398,7 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
-## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.2)
+## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.3)
 
 Step 8 has been decomposed before implementation into six vertical slices:
 
@@ -445,7 +445,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
   plus their per-row audit provenance in one transaction, and returns the
   prior result on a retry. Any invalid or deferred row prevents the commit.
 
-### Slice 8.2 — Structure import with safe ordering — implemented, pending local acceptance
+### Slice 8.2 — Structure import with safe ordering — completed
 
 - The canonical JSON schema now validates account and category rows, including
   account currency/opening balance details and the required expense-category
@@ -465,6 +465,39 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - `pnpm test` — passed (56 tests).
 - `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`,
   and `pnpm build` — passed.
+- On 2026-09-15, the household completed the local UI acceptance flow with
+  synthetic structure data. It confirmed preview-before-write behavior, the
+  explicit `IMPORT` confirmation, correctly created accounts and categories,
+  retry safety without duplicates, and validation errors that prevent commits.
+
+### Slice 8.3 — Core cash-flow import commit — completed
+
+- Extended the canonical staged JSON model with paid transactions, planned or
+  pending obligations, and planned or pending expected income. Account and
+  category names resolve only in the active household or against valid
+  prerequisites staged in the same bundle.
+- The reviewed commit creates categories and accounts before dependent
+  cash-flow records in one transaction. Every imported record has a normal
+  audit event containing the import ID, entity type, and source row; a failed
+  insert rolls back the full batch.
+- Reusing the preview idempotency key after a successful commit returns the
+  original counts rather than creating duplicates. References are revalidated
+  immediately before the batch is claimed, so an archived or changed reference
+  cannot be silently used after preview.
+- The shared import assistant and OpenAPI contract now describe confirmation
+  and result counts for all Slice 8.3 entities.
+
+### Verification
+
+- `pnpm test` — passed (58 tests).
+- `pnpm exec tsc --noEmit`, `pnpm lint`, `pnpm db:check`, and `pnpm build` —
+  passed.
+- On 2026-09-15, the household completed the local UI acceptance flow with
+  synthetic data. It confirmed that preview and invalid references make no
+  live changes; a clean batch creates its account/category prerequisites,
+  paid transactions, pending obligation, and planned expected income; the
+  displayed UYU totals reconcile; and a repeated confirmation does not create
+  duplicates.
 
 ## Local container runtime — documented
 

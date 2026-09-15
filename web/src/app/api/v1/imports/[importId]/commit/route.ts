@@ -1,7 +1,7 @@
 import { requireRole } from "@/shared/auth/authorization";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { errorResponse } from "@/shared/errors/api-error";
-import { commitStructureImport } from "@/modules/imports/import.service";
+import { commitCoreCashFlowImport } from "@/modules/imports/import.service";
 
 export const runtime = "nodejs";
 
@@ -31,7 +31,7 @@ export async function POST(
         { status: 400 },
       );
     return Response.json(
-      { data: await commitStructureImport(auth, importId, idempotencyKey) },
+      { data: await commitCoreCashFlowImport(auth, importId, idempotencyKey) },
       { status: 201 },
     );
   } catch (error) {

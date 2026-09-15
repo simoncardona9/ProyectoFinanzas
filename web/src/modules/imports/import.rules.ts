@@ -1,7 +1,7 @@
 import type { FinanceImportBundle } from "./import.schemas";
 
 type Reference = {
-  id: string;
+  id?: string;
   name: string;
   currency?: string;
   kind?: string;
@@ -23,7 +23,12 @@ export type ImportPreview = {
   }>;
   totals: Record<
     "UYU" | "USD",
-    { transactionIncomeMinor: number; transactionExpenseMinor: number }
+    {
+      transactionIncomeMinor: number;
+      transactionExpenseMinor: number;
+      obligationMinor: number;
+      expectedIncomeMinor: number;
+    }
   >;
   errors: number;
   warnings: string[];
@@ -60,8 +65,18 @@ export function buildImportPreview(
   categories: Reference[],
 ): ImportPreview {
   const totals = {
-    UYU: { transactionIncomeMinor: 0, transactionExpenseMinor: 0 },
-    USD: { transactionIncomeMinor: 0, transactionExpenseMinor: 0 },
+    UYU: {
+      transactionIncomeMinor: 0,
+      transactionExpenseMinor: 0,
+      obligationMinor: 0,
+      expectedIncomeMinor: 0,
+    },
+    USD: {
+      transactionIncomeMinor: 0,
+      transactionExpenseMinor: 0,
+      obligationMinor: 0,
+      expectedIncomeMinor: 0,
+    },
   };
   const rows: ImportPreview["rows"] = [];
   const accountDuplicateNames = duplicateNames(
@@ -163,60 +178,76 @@ export function buildImportPreview(
     });
   });
 
-  const unsupported = ["obligations", "expectedIncome"] as const;
-  for (const entity of unsupported) {
-    for (let index = 0; index < bundle[entity].length; index++)
-      rows.push({
-        entity,
-        row: index + 1,
-        status: "deferred",
-        errors: [
-          {
-            field: entity,
-            message:
-              "Esta entidad se previsualiza, pero su validación y escritura llegarán en una próxima entrega.",
-          },
-        ],
-      });
-  }
-  bundle.transactions.forEach((transaction, index) => {
-    const errors: RowError[] = [];
-    const accountMatches = matches(accounts, transaction.account);
-    const categoryMatches = matches(categories, transaction.category);
-    const account = accountMatches.length === 1 ? accountMatches[0] : undefined;
-    const category =
-      categoryMatches.length === 1 ? categoryMatches[0] : undefined;
-    if (accountMatches.length !== 1)
+  const stagedAccounts = bundle.accounts.map((row) => ({
+    id: undefined,
+    name: row.name,
+    currency: row.currency,
+    active: true,
+  }));
+  const stagedCategories = bundle.categories.map((row) => ({
+    id: undefined,
+    name: row.name,
+    kind: row.kind,
+    active: true,
+  }));
+  const resolvedAccounts = [...accounts, ...stagedAccounts];
+  const resolvedCategories = [...categories, ...stagedCategories];
+
+  function resolveAccount(name: string, currency: string, errors: RowError[]) {
+    const candidates = matches(resolvedAccounts, name);
+    const account = candidates.length === 1 ? candidates[0] : undefined;
+    if (candidates.length !== 1)
       errors.push({
         field: "account",
-        message: accountMatches.length
-          ? "El nombre de cuenta es ambiguo en este hogar."
-          : "No existe esa cuenta en el hogar activo.",
+        message: candidates.length
+          ? "El nombre de cuenta es ambiguo en este hogar o paquete."
+          : "No existe esa cuenta en el hogar activo ni en el paquete.",
       });
-    else if (account && !account.active)
+    else if (!account?.active)
       errors.push({ field: "account", message: "La cuenta está archivada." });
-    else if (account && account.currency !== transaction.currency)
+    else if (account.currency !== currency)
       errors.push({
         field: "currency",
         message: "La moneda no coincide con la cuenta.",
       });
-    if (categoryMatches.length !== 1)
+    return account;
+  }
+
+  function resolveCategory(name: string, kind: string, errors: RowError[]) {
+    const candidates = matches(resolvedCategories, name);
+    const category = candidates.length === 1 ? candidates[0] : undefined;
+    if (candidates.length !== 1)
       errors.push({
         field: "category",
-        message: categoryMatches.length
-          ? "El nombre de categoría es ambiguo en este hogar."
-          : "No existe esa categoría en el hogar activo.",
+        message: candidates.length
+          ? "El nombre de categoría es ambiguo en este hogar o paquete."
+          : "No existe esa categoría en el hogar activo ni en el paquete.",
       });
-    else if (category && !category.active)
+    else if (!category?.active)
       errors.push({
         field: "category",
         message: "La categoría está archivada.",
       });
-    else if (category && category.kind !== transaction.type)
+    else if (category.kind !== kind)
       errors.push({
         field: "category",
         message: "El tipo de categoría no coincide con el movimiento.",
       });
+    return category;
+  }
+
+  bundle.transactions.forEach((transaction, index) => {
+    const errors: RowError[] = [];
+    const account = resolveAccount(
+      transaction.account,
+      transaction.currency,
+      errors,
+    );
+    const category = resolveCategory(
+      transaction.category,
+      transaction.type,
+      errors,
+    );
     if (!errors.length) {
       if (transaction.type === "income")
         totals[transaction.currency].transactionIncomeMinor +=
@@ -236,12 +267,40 @@ export function buildImportPreview(
       errors,
     });
   });
+  bundle.obligations.forEach((obligation, index) => {
+    const errors: RowError[] = [];
+    const category = resolveCategory(obligation.category, "expense", errors);
+    if (!errors.length)
+      totals[obligation.currency].obligationMinor += obligation.amountMinor;
+    rows.push({
+      entity: "obligations",
+      row: index + 1,
+      status: errors.length ? "invalid" : "valid",
+      resolved: category?.id ? { categoryId: category.id } : undefined,
+      errors,
+    });
+  });
+  bundle.expectedIncome.forEach((income, index) => {
+    const errors: RowError[] = [];
+    const account = resolveAccount(income.account, income.currency, errors);
+    const category = resolveCategory(income.category, "income", errors);
+    if (!errors.length)
+      totals[income.currency].expectedIncomeMinor += income.amountMinor;
+    rows.push({
+      entity: "expectedIncome",
+      row: index + 1,
+      status: errors.length ? "invalid" : "valid",
+      resolved:
+        account?.id && category?.id
+          ? { accountId: account.id, categoryId: category.id }
+          : undefined,
+      errors,
+    });
+  });
   return {
     rows,
     totals,
     errors: rows.filter((row) => row.status === "invalid").length,
-    warnings: rows.some((row) => row.status === "deferred")
-      ? ["Las filas diferidas no se pueden confirmar todavía."]
-      : [],
+    warnings: [],
   };
 }

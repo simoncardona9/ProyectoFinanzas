@@ -40,7 +40,12 @@ type Preview = {
   }>;
   totals: Record<
     "UYU" | "USD",
-    { transactionIncomeMinor: number; transactionExpenseMinor: number }
+    {
+      transactionIncomeMinor: number;
+      transactionExpenseMinor: number;
+      obligationMinor: number;
+      expectedIncomeMinor: number;
+    }
   >;
 };
 
@@ -111,7 +116,7 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
       setMessage(
         result.data.alreadyCommitted
           ? "Esta importación ya estaba confirmada; no se duplicó ningún registro."
-          : `Importación confirmada: ${result.data.categoriesCreated} categoría(s) y ${result.data.accountsCreated} cuenta(s).`,
+          : `Importación confirmada: ${result.data.categoriesCreated} categoría(s), ${result.data.accountsCreated} cuenta(s), ${result.data.transactionsCreated} movimiento(s), ${result.data.obligationsCreated} obligación(es) y ${result.data.expectedIncomeCreated} ingreso(s) esperado(s).`,
       );
     } catch (error) {
       setMessage(
@@ -195,8 +200,8 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
             Resultado de la previsualización
           </h2>
           <p className="mt-1 text-sm text-zinc-600">
-            {preview.errors} fila(s) con errores. Las filas diferidas pertenecen
-            a entregas posteriores y no se pueden confirmar todavía.
+            {preview.errors} fila(s) con errores. Nada se incorpora a los
+            registros financieros antes de la confirmación explícita.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {(["UYU", "USD"] as const).map((currency) => (
@@ -214,6 +219,18 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
                   preview.totals[currency].transactionExpenseMinor,
                   currency,
                 )}
+                <br />
+                Obligaciones:{" "}
+                {formatMinor(
+                  preview.totals[currency].obligationMinor,
+                  currency,
+                )}
+                <br />
+                Ingresos esperados:{" "}
+                {formatMinor(
+                  preview.totals[currency].expectedIncomeMinor,
+                  currency,
+                )}
               </div>
             ))}
           </div>
@@ -227,9 +244,9 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
           {!preview.errors && !preview.warnings.length && canEdit && (
             <div className="mt-5 grid gap-2 rounded bg-amber-50 p-4 text-sm text-amber-900">
               <label htmlFor="import-confirmation">
-                Escribe <strong>IMPORT</strong> para crear estas cuentas y
-                categorías. Esta acción no puede incluir movimientos u otras
-                filas diferidas.
+                Escribe <strong>IMPORT</strong> para confirmar las filas
+                revisadas. Cuentas y categorías se crean antes que los
+                movimientos, obligaciones e ingresos esperados dependientes.
               </label>
               <div className="flex flex-wrap gap-2">
                 <input
@@ -245,7 +262,7 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
                   onClick={() => void commit()}
                   className="rounded bg-emerald-700 px-3 py-2 font-medium text-white disabled:opacity-50"
                 >
-                  Confirmar estructura
+                  Confirmar importación
                 </button>
               </div>
             </div>

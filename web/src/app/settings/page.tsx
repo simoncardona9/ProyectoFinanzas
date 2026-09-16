@@ -68,7 +68,7 @@ export default async function SettingsPage() {
           <FeatureNavigationCard
             href="/imports"
             title="Importación por lote"
-            description="Pegar o cargar JSON para una revisión sin modificar registros."
+            description="Pegar JSON o convertir CSV/Excel para una revisión sin modificar registros."
           />
           <FeatureNavigationCard
             href="/invoices"

@@ -398,7 +398,7 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
-## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.4)
+## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.6 next)
 
 Step 8 has been decomposed before implementation into six vertical slices:
 
@@ -515,6 +515,35 @@ Step 8 has been decomposed before implementation into six vertical slices:
   disposable synthetic household. It verified preview-before-write validation,
   linked debt payment, invoice collection, protected IVA reserve, exchange-rate
   creation, expected UYU amounts, and retry safety without duplicates.
+
+### Slice 8.5 — CSV and Excel/XLSX/XLSM conversion — completed
+
+- Added a 10 MB owner/editor-only file-preview route and shared-assistant UI
+  path for `.csv`, `.xlsx`, and `.xlsm`. It converts upload bytes to the same
+  `finance-import/v1` staged bundle and then calls the existing preview service;
+  it has no file-specific financial writer.
+- The conversion report exposes detected headers, populated and hidden rows,
+  formula blocks, macro presence (without executing macros), mapping issues,
+  source filename, original SHA-256, and optional declared period. Formula
+  amounts and ambiguous/missing financial fields block staging instead of being
+  treated as financial truth.
+- Initial aliases cover generic transaction and obligation-shaped rows. Direct
+  inspection of the supplied August/September workbooks shows that their
+  `Caja` and `Responsabilidades` status/account/date conventions, plus the
+  `Facturación`, `Deudas USD`, and `Configuración` layouts, still need explicit
+  sheet-specific mappings before either file can produce a committable preview.
+  This is fail-closed: those populated/ambiguous rows remain review findings
+  rather than silently created records.
+- On 2026-09-16, the household completed the local UI acceptance flow using
+  the supplied synthetic CSV/XLSX fixtures. It confirmed JSON setup of the
+  test structure, valid CSV conversion and preview-before-write behavior,
+  explicit commit and retry safety, formula-derived amount blocking, hidden-row
+  reporting, and no unintended records from rejected conversion attempts.
+
+### Verification
+
+- `pnpm test` (63 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
+  `pnpm db:check`, `pnpm db:migrate`, and `pnpm build` — passed.
 
 ## Local container runtime — documented
 

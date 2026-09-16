@@ -52,6 +52,13 @@ type Preview = {
     }
   >;
 };
+type ConversionReport = {
+  format: string;
+  hasMacros: boolean;
+  source: { name?: string; originalContentHash?: string; declaredPeriod?: string };
+  sheets: Array<{ name: string; headerRow: number; hiddenRows: number; populatedRows: number }>;
+  issues: Array<{ sheet: string; row?: number; severity: "warning" | "error"; message: string }>;
+};
 
 export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
   const [text, setText] = useState(() => JSON.stringify(example, null, 2));
@@ -59,10 +66,13 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
   const [message, setMessage] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
   const [confirmation, setConfirmation] = useState("");
+  const [declaredPeriod, setDeclaredPeriod] = useState("");
+  const [conversion, setConversion] = useState<ConversionReport>();
   const previewBundle = async () => {
     if (!canEdit) return;
     setMessage("");
     setPreview(undefined);
+    setConversion(undefined);
     let body: Record<string, unknown>;
     try {
       body = JSON.parse(text);
@@ -150,6 +160,42 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
       setMessage("El archivo no contiene JSON válido.");
     }
   };
+  const uploadFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !canEdit) return;
+    setMessage("");
+    setPreview(undefined);
+    setConversion(undefined);
+    const extension = file.name.toLocaleLowerCase().split(".").pop();
+    if (!extension || !["csv", "xlsx", "xlsm"].includes(extension)) {
+      setMessage("Selecciona un archivo .csv, .xlsx o .xlsm.");
+      return;
+    }
+    try {
+      const key = crypto.randomUUID();
+      const form = new FormData();
+      form.set("file", file);
+      if (declaredPeriod) form.set("declaredPeriod", declaredPeriod);
+      const response = await fetch("/api/v1/imports/file/preview", {
+        method: "POST",
+        headers: { "Idempotency-Key": key },
+        body: form,
+      });
+      const result = await response.json();
+      if (!result.data) throw new Error(result.error?.message ?? "No se pudo convertir el archivo.");
+      setConversion(result.data.conversion);
+      if (!response.ok) {
+        setMessage("La conversión requiere correcciones. No se creó ninguna previsualización ni se modificó ningún registro.");
+        return;
+      }
+      setPreview(result.data.preview);
+      setIdempotencyKey(key);
+      setConfirmation("");
+      setMessage("Archivo convertido y previsualizado. Revisa el mapeo antes de confirmar.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Error al convertir el archivo.");
+    }
+  };
   return (
     <div className="mt-6 grid gap-5">
       {!canEdit && (
@@ -169,6 +215,16 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
             disabled={!canEdit}
           />
         </label>
+        <label className="cursor-pointer rounded border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-800">
+          Convertir CSV/Excel
+          <input
+            className="sr-only"
+            type="file"
+            accept=".csv,text/csv,.xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12"
+            onChange={(event) => void uploadFile(event)}
+            disabled={!canEdit}
+          />
+        </label>
         <button
           type="button"
           className="rounded border border-zinc-300 px-3 py-2 text-sm"
@@ -177,6 +233,10 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
           Restaurar ejemplo
         </button>
       </div>
+      <label className="grid max-w-xs gap-1 text-sm text-zinc-700">
+        Período declarado del archivo (opcional)
+        <input type="month" value={declaredPeriod} onChange={(event) => setDeclaredPeriod(event.target.value)} className="rounded border border-zinc-300 p-2" disabled={!canEdit} />
+      </label>
       <textarea
         aria-label="Paquete JSON"
         value={text}
@@ -197,6 +257,24 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
         <p className="rounded bg-emerald-50 p-3 text-sm text-emerald-900">
           {message}
         </p>
+      )}
+      {conversion && (
+        <section className="rounded-xl border border-zinc-200 p-5 text-sm">
+          <h2 className="font-semibold">Informe de conversión {conversion.format.toUpperCase()}</h2>
+          <p className="mt-1 text-zinc-600">
+            {conversion.hasMacros ? "Se detectaron macros; no se ejecutaron. " : "No se detectaron macros ejecutables. "}
+            Las filas ocultas se incluyen para revisión y las filas solo formateadas se ignoran.
+          </p>
+          <p className="mt-1 break-all text-zinc-600">
+            Archivo: {conversion.source.name ?? "sin nombre"} · SHA-256 original: {conversion.source.originalContentHash ?? "no disponible"}{conversion.source.declaredPeriod ? ` · período declarado: ${conversion.source.declaredPeriod}` : ""}
+          </p>
+          <ul className="mt-3 list-disc pl-5">
+            {conversion.sheets.map((sheet) => <li key={sheet.name}>{sheet.name}: cabecera en fila {sheet.headerRow}, {sheet.populatedRows} fila(s) poblada(s), {sheet.hiddenRows} oculta(s).</li>)}
+          </ul>
+          {!!conversion.issues.length && <ul className="mt-3 divide-y rounded border border-amber-200">
+            {conversion.issues.map((issue, index) => <li key={`${issue.sheet}-${issue.row}-${index}`} className={issue.severity === "error" ? "p-2 text-red-700" : "p-2 text-amber-800"}>{issue.sheet}{issue.row ? ` · fila ${issue.row}` : ""}: {issue.message}</li>)}
+          </ul>}
+        </section>
       )}
       {preview && (
         <section className="rounded-xl border border-zinc-200 p-5">

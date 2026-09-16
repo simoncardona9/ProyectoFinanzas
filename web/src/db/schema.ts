@@ -91,6 +91,8 @@ export const exchangeRateMovement = pgEnum("exchange_rate_movement", [
 export const importSourceType = pgEnum("import_source_type", [
   "json_paste",
   "json_upload",
+  "csv_upload",
+  "excel_upload",
 ]);
 
 export const importStatus = pgEnum("import_status", [

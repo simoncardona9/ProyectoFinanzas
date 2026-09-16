@@ -2,8 +2,11 @@ import { z } from "zod";
 
 const currency = z.enum(["UYU", "USD"]);
 const source = z.object({
-  type: z.enum(["json_paste", "json_upload"]),
+  type: z.enum(["json_paste", "json_upload", "csv_upload", "excel_upload"]),
   name: z.string().trim().min(1).max(255).optional(),
+  /** SHA-256 of the original uploaded bytes, never a spreadsheet formula result. */
+  originalContentHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  declaredPeriod: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
 });
 
 const transactionFields = z.object({

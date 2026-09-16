@@ -25,8 +25,9 @@ export default async function ImportsPage() {
           <BackLink href="/settings">Volver a configuración</BackLink>
         </div>
         <p className="mt-2 text-zinc-600">
-          Pega o carga un paquete JSON para revisar referencias, filas y
-          totales. Esta etapa no crea ni cambia registros financieros.
+          Pega/carga JSON o convierte CSV y Excel para revisar referencias,
+          filas, mapeo y totales. Esta etapa no crea ni cambia registros
+          financieros.
         </p>
         <ImportAssistant
           canEdit={["owner", "editor"].includes(context.membership.role)}

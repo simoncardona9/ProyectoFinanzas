@@ -91,6 +91,14 @@ data without running macros.
   unambiguously.
 - `csv-import-parser`: handles `.csv` uploads and emits the same canonical
   staged JSON plus source provenance.
+- The Slice 8.5 file-preview route accepts a maximum 10 MB `.csv`, `.xlsx`,
+  or `.xlsm` file and an optional reviewer-declared `YYYY-MM` source period.
+  It records the original byte SHA-256 in the staged source metadata. The
+  initial alias mappings cover generic transaction and obligation-shaped rows.
+  The supplied August/September workbook layouts still require explicit
+  sheet-specific lifecycle, account, and linked-record mappings before they
+  can produce a committable preview; other populated or ambiguous sheets remain
+  review findings, never silently created records.
 - Shared normalization, mapping, validation, preview, and commit services must
   operate only on that canonical model, so adding a new file type does not
   duplicate financial validation or database-writing logic.

@@ -15,7 +15,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed:test-user": "node scripts/seed-test-user.mjs",
     "db:studio": "drizzle-kit studio",
-    "db:check": "drizzle-kit check"
+    "db:check": "drizzle-kit check",
+    "fixtures:import-acceptance": "node scripts/create-import-acceptance-fixtures.mjs"
   },
   "dependencies": {
     "argon2": "^0.45.1",
@@ -24,6 +25,7 @@
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

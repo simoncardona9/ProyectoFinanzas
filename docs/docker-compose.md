@@ -49,6 +49,25 @@ Docker Desktop is the only runtime dependency for this workflow. Node.js,
 pnpm, and PostgreSQL on the host are optional and are needed only for direct
 source development outside containers.
 
+## Optional public access with ngrok
+
+The normal Compose configuration is for LAN HTTPS. To share the application
+temporarily without opening router ports, use the ngrok override. It changes
+the proxy to listen only on `127.0.0.1:80` and uses HTTP for the local ngrok to
+Caddy hop; ngrok terminates the public HTTPS connection.
+
+```powershell
+docker compose -f compose.yaml -f compose.ngrok.yaml up --build -d
+ngrok http 80 --url=https://starfish-trailside-rocklike.ngrok-free.dev
+```
+
+The ngrok domain must belong to the account configured on the Windows host.
+While the command runs, the public URL is reachable from the Internet. Use
+only synthetic data and unique test credentials, and stop the command with
+`Ctrl+C` when remote access is no longer needed. To return to the normal LAN
+HTTPS configuration, stop the stack and start it without
+`compose.ngrok.yaml`.
+
 ## Kubernetes boundary
 
 Docker Compose is the supported local runtime only. Kubernetes is not

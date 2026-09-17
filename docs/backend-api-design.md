@@ -105,6 +105,20 @@ The bundle uses household-local, human-readable references (for example,
 account and category names), rather than database UUIDs. The server resolves
 and validates those references before returning a preview.
 
+The initial documented bundle fields cover the Step 8 core cash-flow path
+(accounts, categories, transactions, obligations, and expected income).
+Slice 8.4 extends `finance-import/v1` with linked historical rows. `debts`
+have a bundle-unique human-readable `reference`; `debtPayments` point to that
+reference and an active same-currency account name. `invoices` likewise have a
+bundle-unique `reference`; `invoiceCollections` point to an invoice reference
+and an active same-currency account name; and `ivaReserves` point to a
+collection reference. Each reserve amount must equal the deterministic
+cumulative IVA allocation for its collection. `exchangeRates` use the normal
+base/quote, date, kind, movement, source, and positive decimal rate fields.
+All of these links are validated before the single commit transaction. Existing
+IDs are never accepted as import references, and summary/report rows remain
+outside the live model.
+
 `POST /imports` accepts an original CSV or Excel upload. The server selects a
 dedicated parser service for its file type, which transparently produces the
 same versioned canonical staged JSON model. Both paths use the shared mapping,
@@ -118,6 +132,15 @@ unmatched source data, and row-level errors. Ambiguous or incomplete required
 mappings remain uncommittable until an editor explicitly resolves them. Extra
 formatting, blank styled cells, presentation rows, and unknown columns are
 ignored with a visible warning; they are never converted into records.
+
+The Excel parser also reports defined-table ranges, hidden/filtered-row status,
+date-system conversion, and any formula/macro presence. It never executes VBA,
+external links, or formulas, and it never recalculates a workbook. A formula's
+text and cached value are restricted provenance only; a formula-derived amount
+must be explicitly confirmed in the staged review before commit. The batch
+stores the original filename, byte content hash, and declared source period so
+the reviewer, rather than a timestamp or “latest” filename, chooses the source
+of record.
 
 Each staged record retains its source provenance (`importId`, source name,
 sheet when applicable, and row number/JSON path). File-type parsers must not

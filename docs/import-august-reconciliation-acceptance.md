@@ -128,3 +128,12 @@ August import remains blocked until a corrected report is preserved outside the
 application, its SHA-256 is entered in the bundle, all five corrections are
 accountably signed off, and every UYU/USD entity total matches the staged
 canonical records.
+
+## Execution record
+
+Completed successfully on 2026-09-17 in a disposable local household. The
+unsigned and mismatched variants were blocked without live changes; an editor
+was restricted from confirmation; the owner committed the matched synthetic
+batch once; retry returned the existing result; and the household was reset.
+This execution record is synthetic acceptance evidence only and does not
+approve either supplied workbook for real-use import.

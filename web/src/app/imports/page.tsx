@@ -31,6 +31,7 @@ export default async function ImportsPage() {
         </p>
         <ImportAssistant
           canEdit={["owner", "editor"].includes(context.membership.role)}
+          canConfirmReconciledAugust={context.membership.role === "owner"}
         />
       </section>
     </main>

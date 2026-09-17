@@ -87,7 +87,13 @@ type ConversionReport = {
   }>;
 };
 
-export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
+export function ImportAssistant({
+  canEdit,
+  canConfirmReconciledAugust,
+}: {
+  canEdit: boolean;
+  canConfirmReconciledAugust: boolean;
+}) {
   const [text, setText] = useState(() => JSON.stringify(example, null, 2));
   const [preview, setPreview] = useState<Preview>();
   const [message, setMessage] = useState("");
@@ -459,6 +465,8 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
             !preview.warnings.length &&
             preview.reconciliation.status !== "required" &&
             preview.reconciliation.status !== "mismatched" &&
+            (preview.reconciliation.status !== "matched" ||
+              canConfirmReconciledAugust) &&
             canEdit && (
               <div className="mt-5 grid gap-2 rounded bg-amber-50 p-4 text-sm text-amber-900">
                 <label htmlFor="import-confirmation">
@@ -484,6 +492,15 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
                   </button>
                 </div>
               </div>
+            )}
+          {!preview.errors &&
+            !preview.warnings.length &&
+            preview.reconciliation.status === "matched" &&
+            !canConfirmReconciledAugust && (
+              <p className="mt-5 rounded bg-amber-50 p-4 text-sm text-amber-900">
+                La importación de agosto conciliada solo puede confirmarla la
+                persona propietaria del hogar.
+              </p>
             )}
           <ul className="mt-4 divide-y">
             {preview.rows.map((row) => (

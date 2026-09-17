@@ -398,7 +398,7 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
-## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.6)
+## Step 8 — Batch entry, migration, and reconciliation — completed
 
 Step 8 has been decomposed before implementation into six vertical slices:
 
@@ -550,7 +550,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - `pnpm test` (63 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
   `pnpm db:check`, `pnpm db:migrate`, and `pnpm build` — passed.
 
-### Slice 8.6 — August 2026 reconciliation and acceptance — in progress
+### Slice 8.6 — August 2026 reconciliation and acceptance — completed
 
 - A batch declared as `2026-08` now fails closed until it contains a
   hash-bound corrected-report declaration, accountable reviewer and timestamp,
@@ -559,12 +559,22 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - Preview reports the reconciliation state and per-entity/currency differences;
   a missing or mismatched report cannot reveal a confirmation action, and the
   service repeats the block for direct API calls. A matched August batch may be
-  finally confirmed only by the household owner, with safe sign-off metadata
-  retained in the import audit event.
+  finally confirmed only by the household owner: editors can review the matched
+  preview but see an owner-required message rather than a confirmation control.
+  Safe sign-off metadata is retained in the import audit event.
 - The repeatable synthetic gate/retry/rollback procedure is documented in
   `docs/import-august-reconciliation-acceptance.md`. This is not a production
   sign-off: the supplied August report still lists unresolved source facts and
   remains blocked pending a corrected, accountable source report.
+- On 2026-09-17, the household completed the documented synthetic acceptance
+  in a disposable local household. It verified the unsigned and mismatched
+  blocks, editor restriction, owner-only commit, idempotent retry, and atomic
+  rollback; the household was reset afterward.
+
+### Current verification
+
+- `pnpm test` (64 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
+  `pnpm build` — passed on 2026-09-17.
 
 ## Local container runtime — documented
 

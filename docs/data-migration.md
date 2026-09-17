@@ -128,9 +128,11 @@ original five assistant entry points. Slice 8.5 adds CSV and Excel conversion
 to the same pipeline, and Slice 8.6 performs the August reconciliation and
 acceptance.
 
-Until Slice 8.6 completes, either workbook may be parsed and previewed with
-synthetic or disposable data, but no August or September batch may be committed
-to a household used for real financial tracking.
+The synthetic Slice 8.6 acceptance completed on 2026-09-17. Either workbook
+may be parsed and previewed with synthetic or disposable data, but no August or
+September batch may be committed to a household used for real financial
+tracking until its source discrepancies are corrected and its accountable
+reconciliation report matches the staged canonical records.
 
 On 2026-09-17, the September reference workbook completed a local safe
 conversion/preview check with declared period `2026-09`. That result confirms

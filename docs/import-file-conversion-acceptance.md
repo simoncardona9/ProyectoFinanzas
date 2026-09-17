@@ -101,3 +101,12 @@ fixture setup, valid CSV conversion, preview-before-write behavior, explicit
 commit and retry safety, formula blocking, and hidden-row review. The supplied
 August/September workbooks remain blocked from real import pending their
 sheet-specific mappings and the Slice 8.6 reconciliation gate.
+
+## September reference-workbook preview result
+
+**Passed locally on 2026-09-17.** The household reviewer uploaded the supplied
+`Finanzas Familiares Setiembre 2026 - utima version.xlsm` through the safe
+CSV/Excel conversion path with declared period `2026-09` and confirmed the
+conversion/preview result was as expected. This was a non-production review:
+no import was confirmed, and the workbook remains unapproved for a real
+household until its mappings and reconciliation evidence are complete.

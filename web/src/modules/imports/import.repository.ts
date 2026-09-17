@@ -180,6 +180,16 @@ export const importRepository = {
         details: {
           accounts: values.bundle.accounts.length,
           categories: values.bundle.categories.length,
+          declaredPeriod: values.bundle.source.declaredPeriod,
+          reconciliation: values.bundle.source.reconciliation
+            ? {
+                reportName: values.bundle.source.reconciliation.reportName,
+                reportContentHash:
+                  values.bundle.source.reconciliation.reportContentHash,
+                reviewer: values.bundle.source.reconciliation.reviewer,
+                signedAt: values.bundle.source.reconciliation.signedAt,
+              }
+            : undefined,
         },
       });
       return {
@@ -390,52 +400,293 @@ export const importRepository = {
           },
         });
       }
-      const debtIds = new Map<string, { id: string; currency: string; remaining: number; description: string }>();
+      const debtIds = new Map<
+        string,
+        { id: string; currency: string; remaining: number; description: string }
+      >();
       for (let index = 0; index < values.bundle.debts.length; index++) {
         const row = values.bundle.debts[index];
-        const [debt] = await tx.insert(debts).values({ householdId: values.householdId, creditorName: row.creditorName, description: row.description, originalAmountMinor: row.amountMinor, remainingAmountMinor: row.amountMinor, currency: row.currency, incurredDate: row.incurredDate }).returning();
-        debtIds.set(nameKey(row.reference), { id: debt.id, currency: debt.currency, remaining: debt.remainingAmountMinor, description: debt.description });
-        await tx.insert(auditLogs).values({ householdId: values.householdId, actorUserId: values.actorUserId, action: "create", entityType: "debt", entityId: debt.id, details: { importId: values.importId, entity: "debts", row: index + 1 } });
+        const [debt] = await tx
+          .insert(debts)
+          .values({
+            householdId: values.householdId,
+            creditorName: row.creditorName,
+            description: row.description,
+            originalAmountMinor: row.amountMinor,
+            remainingAmountMinor: row.amountMinor,
+            currency: row.currency,
+            incurredDate: row.incurredDate,
+          })
+          .returning();
+        debtIds.set(nameKey(row.reference), {
+          id: debt.id,
+          currency: debt.currency,
+          remaining: debt.remainingAmountMinor,
+          description: debt.description,
+        });
+        await tx
+          .insert(auditLogs)
+          .values({
+            householdId: values.householdId,
+            actorUserId: values.actorUserId,
+            action: "create",
+            entityType: "debt",
+            entityId: debt.id,
+            details: {
+              importId: values.importId,
+              entity: "debts",
+              row: index + 1,
+            },
+          });
       }
       for (let index = 0; index < values.bundle.debtPayments.length; index++) {
-        const row = values.bundle.debtPayments[index]; const debt = debtIds.get(nameKey(row.debt));
-        if (!debt) throw new Error("Validated import debt reference disappeared.");
-        const [transaction] = await tx.insert(transactions).values({ householdId: values.householdId, date: row.paidDate, type: "debt_payment", status: "paid", amountMinor: row.amountMinor, currency: debt.currency, accountId: accountIdFor(row.account), categoryId: null, description: row.description ?? debt.description, isRecurring: false, isOneOff: false }).returning({ id: transactions.id });
-        await tx.insert(debtPayments).values({ debtId: debt.id, transactionId: transaction.id, amountMinor: row.amountMinor });
+        const row = values.bundle.debtPayments[index];
+        const debt = debtIds.get(nameKey(row.debt));
+        if (!debt)
+          throw new Error("Validated import debt reference disappeared.");
+        const [transaction] = await tx
+          .insert(transactions)
+          .values({
+            householdId: values.householdId,
+            date: row.paidDate,
+            type: "debt_payment",
+            status: "paid",
+            amountMinor: row.amountMinor,
+            currency: debt.currency,
+            accountId: accountIdFor(row.account),
+            categoryId: null,
+            description: row.description ?? debt.description,
+            isRecurring: false,
+            isOneOff: false,
+          })
+          .returning({ id: transactions.id });
+        await tx
+          .insert(debtPayments)
+          .values({
+            debtId: debt.id,
+            transactionId: transaction.id,
+            amountMinor: row.amountMinor,
+          });
         debt.remaining -= row.amountMinor;
-        await tx.update(debts).set({ remainingAmountMinor: debt.remaining, status: debt.remaining === 0 ? "paid" : "active", updatedAt: new Date() }).where(eq(debts.id, debt.id));
-        await tx.insert(auditLogs).values({ householdId: values.householdId, actorUserId: values.actorUserId, action: "payment", entityType: "debt", entityId: debt.id, details: { importId: values.importId, entity: "debtPayments", row: index + 1, transactionId: transaction.id } });
+        await tx
+          .update(debts)
+          .set({
+            remainingAmountMinor: debt.remaining,
+            status: debt.remaining === 0 ? "paid" : "active",
+            updatedAt: new Date(),
+          })
+          .where(eq(debts.id, debt.id));
+        await tx
+          .insert(auditLogs)
+          .values({
+            householdId: values.householdId,
+            actorUserId: values.actorUserId,
+            action: "payment",
+            entityType: "debt",
+            entityId: debt.id,
+            details: {
+              importId: values.importId,
+              entity: "debtPayments",
+              row: index + 1,
+              transactionId: transaction.id,
+            },
+          });
       }
-      const invoiceIds = new Map<string, { id: string; currency: string; gross: number; iva: number; remaining: number; description: string }>();
+      const invoiceIds = new Map<
+        string,
+        {
+          id: string;
+          currency: string;
+          gross: number;
+          iva: number;
+          remaining: number;
+          description: string;
+        }
+      >();
       for (let index = 0; index < values.bundle.invoices.length; index++) {
         const row = values.bundle.invoices[index];
-        const ivaAmountMinor = Math.floor((row.grossAmountMinor * row.ivaRateBasisPoints + Math.floor((10_000 + row.ivaRateBasisPoints) / 2)) / (10_000 + row.ivaRateBasisPoints));
-        const [invoice] = await tx.insert(invoices).values({ householdId: values.householdId, clientName: row.clientName, description: row.description, serviceDate: row.serviceDate, dueDate: row.dueDate, grossAmountMinor: row.grossAmountMinor, netAmountMinor: row.grossAmountMinor - ivaAmountMinor, ivaRateBasisPoints: row.ivaRateBasisPoints, ivaAmountMinor, currency: row.currency, sentDate: row.sentDate ?? null, status: row.sentDate ? "sent" : "draft", remainingAmountMinor: row.grossAmountMinor }).returning();
-        invoiceIds.set(nameKey(row.reference), { id: invoice.id, currency: invoice.currency, gross: invoice.grossAmountMinor, iva: invoice.ivaAmountMinor, remaining: invoice.remainingAmountMinor, description: invoice.description });
-        await tx.insert(auditLogs).values({ householdId: values.householdId, actorUserId: values.actorUserId, action: "create", entityType: "invoice", entityId: invoice.id, details: { importId: values.importId, entity: "invoices", row: index + 1 } });
+        const ivaAmountMinor = Math.floor(
+          (row.grossAmountMinor * row.ivaRateBasisPoints +
+            Math.floor((10_000 + row.ivaRateBasisPoints) / 2)) /
+            (10_000 + row.ivaRateBasisPoints),
+        );
+        const [invoice] = await tx
+          .insert(invoices)
+          .values({
+            householdId: values.householdId,
+            clientName: row.clientName,
+            description: row.description,
+            serviceDate: row.serviceDate,
+            dueDate: row.dueDate,
+            grossAmountMinor: row.grossAmountMinor,
+            netAmountMinor: row.grossAmountMinor - ivaAmountMinor,
+            ivaRateBasisPoints: row.ivaRateBasisPoints,
+            ivaAmountMinor,
+            currency: row.currency,
+            sentDate: row.sentDate ?? null,
+            status: row.sentDate ? "sent" : "draft",
+            remainingAmountMinor: row.grossAmountMinor,
+          })
+          .returning();
+        invoiceIds.set(nameKey(row.reference), {
+          id: invoice.id,
+          currency: invoice.currency,
+          gross: invoice.grossAmountMinor,
+          iva: invoice.ivaAmountMinor,
+          remaining: invoice.remainingAmountMinor,
+          description: invoice.description,
+        });
+        await tx
+          .insert(auditLogs)
+          .values({
+            householdId: values.householdId,
+            actorUserId: values.actorUserId,
+            action: "create",
+            entityType: "invoice",
+            entityId: invoice.id,
+            details: {
+              importId: values.importId,
+              entity: "invoices",
+              row: index + 1,
+            },
+          });
       }
-      const collectionIds = new Map<string, { id: string; invoiceId: string; currency: string; expectedReserve: number }>();
-      for (let index = 0; index < values.bundle.invoiceCollections.length; index++) {
-        const row = values.bundle.invoiceCollections[index]; const invoice = invoiceIds.get(nameKey(row.invoice));
-        if (!invoice) throw new Error("Validated import invoice reference disappeared.");
+      const collectionIds = new Map<
+        string,
+        {
+          id: string;
+          invoiceId: string;
+          currency: string;
+          expectedReserve: number;
+        }
+      >();
+      for (
+        let index = 0;
+        index < values.bundle.invoiceCollections.length;
+        index++
+      ) {
+        const row = values.bundle.invoiceCollections[index];
+        const invoice = invoiceIds.get(nameKey(row.invoice));
+        if (!invoice)
+          throw new Error("Validated import invoice reference disappeared.");
         const collectedBefore = invoice.gross - invoice.remaining;
-        const expectedReserve = Number(((BigInt(collectedBefore + row.amountMinor) * BigInt(invoice.iva) + BigInt(invoice.gross / 2)) / BigInt(invoice.gross)) - ((BigInt(collectedBefore) * BigInt(invoice.iva) + BigInt(invoice.gross / 2)) / BigInt(invoice.gross)));
-        const [transaction] = await tx.insert(transactions).values({ householdId: values.householdId, date: row.paidDate, type: "income", status: "paid", amountMinor: row.amountMinor, currency: invoice.currency, accountId: accountIdFor(row.account), categoryId: null, description: row.description ?? invoice.description, isRecurring: false, isOneOff: false }).returning({ id: transactions.id });
-        const [collection] = await tx.insert(invoiceCollections).values({ invoiceId: invoice.id, transactionId: transaction.id, amountMinor: row.amountMinor }).returning({ id: invoiceCollections.id });
+        const expectedReserve = Number(
+          (BigInt(collectedBefore + row.amountMinor) * BigInt(invoice.iva) +
+            BigInt(invoice.gross / 2)) /
+            BigInt(invoice.gross) -
+            (BigInt(collectedBefore) * BigInt(invoice.iva) +
+              BigInt(invoice.gross / 2)) /
+              BigInt(invoice.gross),
+        );
+        const [transaction] = await tx
+          .insert(transactions)
+          .values({
+            householdId: values.householdId,
+            date: row.paidDate,
+            type: "income",
+            status: "paid",
+            amountMinor: row.amountMinor,
+            currency: invoice.currency,
+            accountId: accountIdFor(row.account),
+            categoryId: null,
+            description: row.description ?? invoice.description,
+            isRecurring: false,
+            isOneOff: false,
+          })
+          .returning({ id: transactions.id });
+        const [collection] = await tx
+          .insert(invoiceCollections)
+          .values({
+            invoiceId: invoice.id,
+            transactionId: transaction.id,
+            amountMinor: row.amountMinor,
+          })
+          .returning({ id: invoiceCollections.id });
         invoice.remaining -= row.amountMinor;
-        await tx.update(invoices).set({ remainingAmountMinor: invoice.remaining, status: invoice.remaining === 0 ? "collected" : "partially_collected", updatedAt: new Date() }).where(eq(invoices.id, invoice.id));
-        collectionIds.set(nameKey(row.reference), { id: collection.id, invoiceId: invoice.id, currency: invoice.currency, expectedReserve });
-        await tx.insert(auditLogs).values({ householdId: values.householdId, actorUserId: values.actorUserId, action: "collection", entityType: "invoice", entityId: invoice.id, details: { importId: values.importId, entity: "invoiceCollections", row: index + 1, transactionId: transaction.id } });
+        await tx
+          .update(invoices)
+          .set({
+            remainingAmountMinor: invoice.remaining,
+            status:
+              invoice.remaining === 0 ? "collected" : "partially_collected",
+            updatedAt: new Date(),
+          })
+          .where(eq(invoices.id, invoice.id));
+        collectionIds.set(nameKey(row.reference), {
+          id: collection.id,
+          invoiceId: invoice.id,
+          currency: invoice.currency,
+          expectedReserve,
+        });
+        await tx
+          .insert(auditLogs)
+          .values({
+            householdId: values.householdId,
+            actorUserId: values.actorUserId,
+            action: "collection",
+            entityType: "invoice",
+            entityId: invoice.id,
+            details: {
+              importId: values.importId,
+              entity: "invoiceCollections",
+              row: index + 1,
+              transactionId: transaction.id,
+            },
+          });
       }
       for (let index = 0; index < values.bundle.ivaReserves.length; index++) {
-        const row = values.bundle.ivaReserves[index]; const collection = collectionIds.get(nameKey(row.collection));
-        if (!collection || row.amountMinor !== collection.expectedReserve) throw new Error("Validated import IVA reserve reference disappeared.");
-        const [reserve] = await tx.insert(taxReserves).values({ householdId: values.householdId, invoiceId: collection.invoiceId, invoiceCollectionId: collection.id, originalAmountMinor: row.amountMinor, remainingAmountMinor: row.amountMinor, currency: collection.currency }).returning({ id: taxReserves.id });
-        await tx.insert(auditLogs).values({ householdId: values.householdId, actorUserId: values.actorUserId, action: "create", entityType: "tax_reserve", entityId: reserve.id, details: { importId: values.importId, entity: "ivaReserves", row: index + 1 } });
+        const row = values.bundle.ivaReserves[index];
+        const collection = collectionIds.get(nameKey(row.collection));
+        if (!collection || row.amountMinor !== collection.expectedReserve)
+          throw new Error(
+            "Validated import IVA reserve reference disappeared.",
+          );
+        const [reserve] = await tx
+          .insert(taxReserves)
+          .values({
+            householdId: values.householdId,
+            invoiceId: collection.invoiceId,
+            invoiceCollectionId: collection.id,
+            originalAmountMinor: row.amountMinor,
+            remainingAmountMinor: row.amountMinor,
+            currency: collection.currency,
+          })
+          .returning({ id: taxReserves.id });
+        await tx
+          .insert(auditLogs)
+          .values({
+            householdId: values.householdId,
+            actorUserId: values.actorUserId,
+            action: "create",
+            entityType: "tax_reserve",
+            entityId: reserve.id,
+            details: {
+              importId: values.importId,
+              entity: "ivaReserves",
+              row: index + 1,
+            },
+          });
       }
       for (let index = 0; index < values.bundle.exchangeRates.length; index++) {
-        const row = values.bundle.exchangeRates[index]; const [rate] = await tx.insert(exchangeRates).values({ householdId: values.householdId, ...row }).returning({ id: exchangeRates.id });
-        await tx.insert(auditLogs).values({ householdId: values.householdId, actorUserId: values.actorUserId, action: "create", entityType: "exchange_rate", entityId: rate.id, details: { importId: values.importId, entity: "exchangeRates", row: index + 1 } });
+        const row = values.bundle.exchangeRates[index];
+        const [rate] = await tx
+          .insert(exchangeRates)
+          .values({ householdId: values.householdId, ...row })
+          .returning({ id: exchangeRates.id });
+        await tx
+          .insert(auditLogs)
+          .values({
+            householdId: values.householdId,
+            actorUserId: values.actorUserId,
+            action: "create",
+            entityType: "exchange_rate",
+            entityId: rate.id,
+            details: {
+              importId: values.importId,
+              entity: "exchangeRates",
+              row: index + 1,
+            },
+          });
       }
       const result = {
         importId: values.importId,
@@ -457,7 +708,19 @@ export const importRepository = {
         action: "commit",
         entityType: "import_batch",
         entityId: values.importId,
-        details: result,
+        details: {
+          ...result,
+          declaredPeriod: values.bundle.source.declaredPeriod,
+          reconciliation: values.bundle.source.reconciliation
+            ? {
+                reportName: values.bundle.source.reconciliation.reportName,
+                reportContentHash:
+                  values.bundle.source.reconciliation.reportContentHash,
+                reviewer: values.bundle.source.reconciliation.reviewer,
+                signedAt: values.bundle.source.reconciliation.signedAt,
+              }
+            : undefined,
+        },
       });
       return result;
     });

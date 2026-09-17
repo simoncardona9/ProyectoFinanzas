@@ -398,7 +398,7 @@ financial items remain Step 4 obligation behavior.
 - `pnpm test` (52 tests), `pnpm exec tsc --noEmit`, `pnpm lint`, and
   `pnpm build` — passed.
 
-## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.6 next)
+## Step 8 — Batch entry, migration, and reconciliation — in progress (Slice 8.6)
 
 Step 8 has been decomposed before implementation into six vertical slices:
 
@@ -539,11 +539,32 @@ Step 8 has been decomposed before implementation into six vertical slices:
   test structure, valid CSV conversion and preview-before-write behavior,
   explicit commit and retry safety, formula-derived amount blocking, hidden-row
   reporting, and no unintended records from rejected conversion attempts.
+- On 2026-09-17, the household uploaded the supplied September `.xlsm`
+  reference workbook through the safe conversion/preview path with period
+  `2026-09` and confirmed the result was as expected. It was not confirmed or
+  committed; this verifies the non-production review path only and does not
+  approve the workbook as a real import source.
 
 ### Verification
 
 - `pnpm test` (63 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
   `pnpm db:check`, `pnpm db:migrate`, and `pnpm build` — passed.
+
+### Slice 8.6 — August 2026 reconciliation and acceptance — in progress
+
+- A batch declared as `2026-08` now fails closed until it contains a
+  hash-bound corrected-report declaration, accountable reviewer and timestamp,
+  all five documented discrepancy corrections, and exact UYU/USD totals for
+  every canonical monetary entity.
+- Preview reports the reconciliation state and per-entity/currency differences;
+  a missing or mismatched report cannot reveal a confirmation action, and the
+  service repeats the block for direct API calls. A matched August batch may be
+  finally confirmed only by the household owner, with safe sign-off metadata
+  retained in the import audit event.
+- The repeatable synthetic gate/retry/rollback procedure is documented in
+  `docs/import-august-reconciliation-acceptance.md`. This is not a production
+  sign-off: the supplied August report still lists unresolved source facts and
+  remains blocked pending a corrected, accountable source report.
 
 ## Local container runtime — documented
 

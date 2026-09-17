@@ -45,19 +45,46 @@ type Preview = {
       transactionExpenseMinor: number;
       obligationMinor: number;
       expectedIncomeMinor: number;
+      debtOriginalMinor: number;
       debtPaymentMinor: number;
       invoiceGrossMinor: number;
       invoiceCollectionMinor: number;
       ivaReserveMinor: number;
     }
   >;
+  reconciliation: {
+    status: "not_required" | "required" | "matched" | "mismatched";
+    reportName?: string;
+    reviewer?: string;
+    signedAt?: string;
+    differences: Array<{
+      currency: "UYU" | "USD";
+      field: string;
+      expectedMinor: number;
+      actualMinor: number;
+    }>;
+  };
 };
 type ConversionReport = {
   format: string;
   hasMacros: boolean;
-  source: { name?: string; originalContentHash?: string; declaredPeriod?: string };
-  sheets: Array<{ name: string; headerRow: number; hiddenRows: number; populatedRows: number }>;
-  issues: Array<{ sheet: string; row?: number; severity: "warning" | "error"; message: string }>;
+  source: {
+    name?: string;
+    originalContentHash?: string;
+    declaredPeriod?: string;
+  };
+  sheets: Array<{
+    name: string;
+    headerRow: number;
+    hiddenRows: number;
+    populatedRows: number;
+  }>;
+  issues: Array<{
+    sheet: string;
+    row?: number;
+    severity: "warning" | "error";
+    message: string;
+  }>;
 };
 
 export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
@@ -182,18 +209,29 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
         body: form,
       });
       const result = await response.json();
-      if (!result.data) throw new Error(result.error?.message ?? "No se pudo convertir el archivo.");
+      if (!result.data)
+        throw new Error(
+          result.error?.message ?? "No se pudo convertir el archivo.",
+        );
       setConversion(result.data.conversion);
       if (!response.ok) {
-        setMessage("La conversión requiere correcciones. No se creó ninguna previsualización ni se modificó ningún registro.");
+        setMessage(
+          "La conversión requiere correcciones. No se creó ninguna previsualización ni se modificó ningún registro.",
+        );
         return;
       }
       setPreview(result.data.preview);
       setIdempotencyKey(key);
       setConfirmation("");
-      setMessage("Archivo convertido y previsualizado. Revisa el mapeo antes de confirmar.");
+      setMessage(
+        "Archivo convertido y previsualizado. Revisa el mapeo antes de confirmar.",
+      );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Error al convertir el archivo.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Error al convertir el archivo.",
+      );
     }
   };
   return (
@@ -235,7 +273,13 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
       </div>
       <label className="grid max-w-xs gap-1 text-sm text-zinc-700">
         Período declarado del archivo (opcional)
-        <input type="month" value={declaredPeriod} onChange={(event) => setDeclaredPeriod(event.target.value)} className="rounded border border-zinc-300 p-2" disabled={!canEdit} />
+        <input
+          type="month"
+          value={declaredPeriod}
+          onChange={(event) => setDeclaredPeriod(event.target.value)}
+          className="rounded border border-zinc-300 p-2"
+          disabled={!canEdit}
+        />
       </label>
       <textarea
         aria-label="Paquete JSON"
@@ -260,20 +304,49 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
       )}
       {conversion && (
         <section className="rounded-xl border border-zinc-200 p-5 text-sm">
-          <h2 className="font-semibold">Informe de conversión {conversion.format.toUpperCase()}</h2>
+          <h2 className="font-semibold">
+            Informe de conversión {conversion.format.toUpperCase()}
+          </h2>
           <p className="mt-1 text-zinc-600">
-            {conversion.hasMacros ? "Se detectaron macros; no se ejecutaron. " : "No se detectaron macros ejecutables. "}
-            Las filas ocultas se incluyen para revisión y las filas solo formateadas se ignoran.
+            {conversion.hasMacros
+              ? "Se detectaron macros; no se ejecutaron. "
+              : "No se detectaron macros ejecutables. "}
+            Las filas ocultas se incluyen para revisión y las filas solo
+            formateadas se ignoran.
           </p>
           <p className="mt-1 break-all text-zinc-600">
-            Archivo: {conversion.source.name ?? "sin nombre"} · SHA-256 original: {conversion.source.originalContentHash ?? "no disponible"}{conversion.source.declaredPeriod ? ` · período declarado: ${conversion.source.declaredPeriod}` : ""}
+            Archivo: {conversion.source.name ?? "sin nombre"} · SHA-256
+            original: {conversion.source.originalContentHash ?? "no disponible"}
+            {conversion.source.declaredPeriod
+              ? ` · período declarado: ${conversion.source.declaredPeriod}`
+              : ""}
           </p>
           <ul className="mt-3 list-disc pl-5">
-            {conversion.sheets.map((sheet) => <li key={sheet.name}>{sheet.name}: cabecera en fila {sheet.headerRow}, {sheet.populatedRows} fila(s) poblada(s), {sheet.hiddenRows} oculta(s).</li>)}
+            {conversion.sheets.map((sheet) => (
+              <li key={sheet.name}>
+                {sheet.name}: cabecera en fila {sheet.headerRow},{" "}
+                {sheet.populatedRows} fila(s) poblada(s), {sheet.hiddenRows}{" "}
+                oculta(s).
+              </li>
+            ))}
           </ul>
-          {!!conversion.issues.length && <ul className="mt-3 divide-y rounded border border-amber-200">
-            {conversion.issues.map((issue, index) => <li key={`${issue.sheet}-${issue.row}-${index}`} className={issue.severity === "error" ? "p-2 text-red-700" : "p-2 text-amber-800"}>{issue.sheet}{issue.row ? ` · fila ${issue.row}` : ""}: {issue.message}</li>)}
-          </ul>}
+          {!!conversion.issues.length && (
+            <ul className="mt-3 divide-y rounded border border-amber-200">
+              {conversion.issues.map((issue, index) => (
+                <li
+                  key={`${issue.sheet}-${issue.row}-${index}`}
+                  className={
+                    issue.severity === "error"
+                      ? "p-2 text-red-700"
+                      : "p-2 text-amber-800"
+                  }
+                >
+                  {issue.sheet}
+                  {issue.row ? ` · fila ${issue.row}` : ""}: {issue.message}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
       {preview && (
@@ -314,6 +387,12 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
                   currency,
                 )}
                 <br />
+                Deuda original:{" "}
+                {formatMinor(
+                  preview.totals[currency].debtOriginalMinor,
+                  currency,
+                )}
+                <br />
                 Cobranzas de facturas:{" "}
                 {formatMinor(
                   preview.totals[currency].invoiceCollectionMinor,
@@ -328,6 +407,47 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
               </div>
             ))}
           </div>
+          {preview.reconciliation.status !== "not_required" && (
+            <section
+              className={`mt-4 rounded p-3 text-sm ${preview.reconciliation.status === "matched" ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}
+            >
+              <strong>
+                Conciliación de agosto de 2026:{" "}
+                {preview.reconciliation.status === "matched"
+                  ? "coincide"
+                  : "pendiente o con diferencias"}
+                .
+              </strong>
+              {preview.reconciliation.reportName && (
+                <p className="mt-1">
+                  Informe: {preview.reconciliation.reportName} · revisor:{" "}
+                  {preview.reconciliation.reviewer} · firmado:{" "}
+                  {preview.reconciliation.signedAt}
+                </p>
+              )}
+              {preview.reconciliation.status === "required" && (
+                <p className="mt-1">
+                  Se necesita un informe corregido, con hash y firma responsable
+                  antes de confirmar.
+                </p>
+              )}
+              {!!preview.reconciliation.differences.length && (
+                <ul className="mt-2 list-disc pl-5">
+                  {preview.reconciliation.differences.map((difference) => (
+                    <li key={`${difference.currency}-${difference.field}`}>
+                      {difference.currency} · {difference.field}: informe{" "}
+                      {formatMinor(
+                        difference.expectedMinor,
+                        difference.currency,
+                      )}
+                      , importación{" "}
+                      {formatMinor(difference.actualMinor, difference.currency)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
           {!!preview.warnings.length && (
             <ul className="mt-4 list-disc pl-5 text-sm text-amber-800">
               {preview.warnings.map((warning) => (
@@ -335,32 +455,36 @@ export function ImportAssistant({ canEdit }: { canEdit: boolean }) {
               ))}
             </ul>
           )}
-          {!preview.errors && !preview.warnings.length && canEdit && (
-            <div className="mt-5 grid gap-2 rounded bg-amber-50 p-4 text-sm text-amber-900">
-              <label htmlFor="import-confirmation">
-                Escribe <strong>IMPORT</strong> para confirmar las filas
-                revisadas. Cuentas y categorías se crean antes que los
-                movimientos, obligaciones e ingresos esperados dependientes.
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <input
-                  id="import-confirmation"
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                  className="rounded border border-amber-300 bg-white p-2"
-                  placeholder="IMPORT"
-                />
-                <button
-                  type="button"
-                  disabled={confirmation !== "IMPORT"}
-                  onClick={() => void commit()}
-                  className="rounded bg-emerald-700 px-3 py-2 font-medium text-white disabled:opacity-50"
-                >
-                  Confirmar importación
-                </button>
+          {!preview.errors &&
+            !preview.warnings.length &&
+            preview.reconciliation.status !== "required" &&
+            preview.reconciliation.status !== "mismatched" &&
+            canEdit && (
+              <div className="mt-5 grid gap-2 rounded bg-amber-50 p-4 text-sm text-amber-900">
+                <label htmlFor="import-confirmation">
+                  Escribe <strong>IMPORT</strong> para confirmar las filas
+                  revisadas. Cuentas y categorías se crean antes que los
+                  movimientos, obligaciones e ingresos esperados dependientes.
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    id="import-confirmation"
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
+                    className="rounded border border-amber-300 bg-white p-2"
+                    placeholder="IMPORT"
+                  />
+                  <button
+                    type="button"
+                    disabled={confirmation !== "IMPORT"}
+                    onClick={() => void commit()}
+                    className="rounded bg-emerald-700 px-3 py-2 font-medium text-white disabled:opacity-50"
+                  >
+                    Confirmar importación
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
           <ul className="mt-4 divide-y">
             {preview.rows.map((row) => (
               <li key={`${row.entity}-${row.row}`} className="py-3 text-sm">

@@ -1,13 +1,68 @@
 import { z } from "zod";
 
 const currency = z.enum(["UYU", "USD"]);
-const source = z.object({
-  type: z.enum(["json_paste", "json_upload", "csv_upload", "excel_upload"]),
-  name: z.string().trim().min(1).max(255).optional(),
-  /** SHA-256 of the original uploaded bytes, never a spreadsheet formula result. */
-  originalContentHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
-  declaredPeriod: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional(),
+const reconciliationTotals = z.object({
+  transactionIncomeMinor: z.number().int().min(0),
+  transactionExpenseMinor: z.number().int().min(0),
+  obligationMinor: z.number().int().min(0),
+  expectedIncomeMinor: z.number().int().min(0),
+  debtOriginalMinor: z.number().int().min(0),
+  debtPaymentMinor: z.number().int().min(0),
+  invoiceGrossMinor: z.number().int().min(0),
+  invoiceCollectionMinor: z.number().int().min(0),
+  ivaReserveMinor: z.number().int().min(0),
 });
+const reconciliation = z.object({
+  /** Immutable hash of the corrected, separately retained source report. */
+  reportName: z.string().trim().min(1).max(255),
+  reportContentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  reviewer: z.string().trim().min(2).max(200),
+  signedAt: z.iso.datetime({ offset: true }),
+  /** Each known workbook discrepancy must have a documented correction. */
+  corrections: z
+    .array(
+      z.object({
+        issue: z.enum([
+          "dualboot_conversion",
+          "tec_billing_alignment",
+          "invalid_cash_dates",
+          "historical_dashboard_labels",
+          "fixed_formula_ranges",
+        ]),
+        correction: z.string().trim().min(10).max(1000),
+      }),
+    )
+    .length(5),
+  totals: z.object({ UYU: reconciliationTotals, USD: reconciliationTotals }),
+});
+const source = z
+  .object({
+    type: z.enum(["json_paste", "json_upload", "csv_upload", "excel_upload"]),
+    name: z.string().trim().min(1).max(255).optional(),
+    /** SHA-256 of the original uploaded bytes, never a spreadsheet formula result. */
+    originalContentHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+    declaredPeriod: z
+      .string()
+      .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+      .optional(),
+    reconciliation: reconciliation.optional(),
+  })
+  .superRefine((value, ctx) => {
+    const corrections = value.reconciliation?.corrections ?? [];
+    if (
+      new Set(corrections.map((correction) => correction.issue)).size !==
+      corrections.length
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["reconciliation", "corrections"],
+        message:
+          "Cada discrepancia conocida debe documentarse exactamente una vez.",
+      });
+  });
 
 const transactionFields = z.object({
   date: z.iso.date(),

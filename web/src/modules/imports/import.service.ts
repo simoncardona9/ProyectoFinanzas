@@ -21,6 +21,29 @@ export function importContentHash(bundle: FinanceImportBundle) {
   return createHash("sha256").update(stableJson(bundle)).digest("hex");
 }
 
+/** Keeps previews staged before Slice 8.6 safe to read and, for August, blocked. */
+function compatiblePreview(
+  value: unknown,
+  bundle: FinanceImportBundle,
+): ImportPreview {
+  const preview = value as ImportPreview;
+  if (preview.reconciliation) return preview;
+  return {
+    ...preview,
+    totals: {
+      UYU: { ...preview.totals.UYU, debtOriginalMinor: 0 },
+      USD: { ...preview.totals.USD, debtOriginalMinor: 0 },
+    },
+    reconciliation: {
+      status:
+        bundle.source.declaredPeriod === "2026-08"
+          ? "required"
+          : "not_required",
+      differences: [],
+    },
+  };
+}
+
 export async function previewJsonImport(
   context: AuthContext,
   idempotencyKey: string,
@@ -38,7 +61,13 @@ export async function previewJsonImport(
         "IDEMPOTENCY_KEY_REUSED",
         "La clave de idempotencia ya se usó con otro contenido.",
       );
-    return existing.preview;
+    return {
+      importId: existing.id,
+      ...compatiblePreview(
+        existing.preview,
+        existing.bundle as FinanceImportBundle,
+      ),
+    };
   }
   const [[accounts, categories], existingRates] = await Promise.all([
     importRepository.listReferences(context.membership.householdId),
@@ -49,7 +78,13 @@ export async function previewJsonImport(
     accounts,
     categories,
     existingRates.map((rate) =>
-      [rate.baseCurrency, rate.quoteCurrency, rate.effectiveDate, rate.kind, rate.movement].join(":"),
+      [
+        rate.baseCurrency,
+        rate.quoteCurrency,
+        rate.effectiveDate,
+        rate.kind,
+        rate.movement,
+      ].join(":"),
     ),
   );
   const batch = await importRepository.create({
@@ -63,12 +98,33 @@ export async function previewJsonImport(
   return { importId: batch.id, ...preview };
 }
 
-function canCommit(preview: ImportPreview) {
+function canCommit(preview: ImportPreview, context: AuthContext) {
   if (preview.errors)
     throw new ApiError(
       422,
       "IMPORT_HAS_ERRORS",
       "La importación tiene filas inválidas y no se puede confirmar.",
+    );
+  if (preview.reconciliation.status === "required")
+    throw new ApiError(
+      422,
+      "AUGUST_RECONCILIATION_REQUIRED",
+      "Agosto de 2026 requiere un informe corregido, firmado y conciliado antes de confirmar.",
+    );
+  if (preview.reconciliation.status === "mismatched")
+    throw new ApiError(
+      422,
+      "IMPORT_RECONCILIATION_MISMATCH",
+      "Los totales importados no coinciden con el informe de conciliación aprobado.",
+    );
+  if (
+    preview.reconciliation.status === "matched" &&
+    context.membership.role !== "owner"
+  )
+    throw new ApiError(
+      403,
+      "AUGUST_RECONCILIATION_OWNER_REQUIRED",
+      "Solo la persona propietaria puede confirmar una importación conciliada de agosto de 2026.",
     );
 }
 
@@ -94,7 +150,7 @@ export async function commitStructureImport(
       "La confirmación debe usar la clave de idempotencia de la previsualización.",
     );
   const bundle = batch.bundle as FinanceImportBundle;
-  const preview = batch.preview as unknown as ImportPreview;
+  const preview = compatiblePreview(batch.preview, bundle);
   if (batch.status === "committed")
     return {
       importId: batch.id,
@@ -102,7 +158,7 @@ export async function commitStructureImport(
       categoriesCreated: bundle.categories.length,
       alreadyCommitted: true,
     };
-  canCommit(preview);
+  canCommit(preview, context);
   const result = await importRepository.commitStructure({
     householdId: context.membership.householdId,
     actorUserId: context.user.id,
@@ -170,10 +226,16 @@ export async function commitCoreCashFlowImport(
     accounts,
     categories,
     existingRates.map((rate) =>
-      [rate.baseCurrency, rate.quoteCurrency, rate.effectiveDate, rate.kind, rate.movement].join(":"),
+      [
+        rate.baseCurrency,
+        rate.quoteCurrency,
+        rate.effectiveDate,
+        rate.kind,
+        rate.movement,
+      ].join(":"),
     ),
   );
-  canCommit(preview);
+  canCommit(preview, context);
   const result = await importRepository.commitCoreCashFlow({
     householdId: context.membership.householdId,
     actorUserId: context.user.id,

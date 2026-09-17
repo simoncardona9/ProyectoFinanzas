@@ -132,6 +132,21 @@ Until Slice 8.6 completes, either workbook may be parsed and previewed with
 synthetic or disposable data, but no August or September batch may be committed
 to a household used for real financial tracking.
 
+On 2026-09-17, the September reference workbook completed a local safe
+conversion/preview check with declared period `2026-09`. That result confirms
+the review path only; it does not correct its source data, approve mappings, or
+authorize a production-like commit.
+
+### Implemented August gate
+
+The application now fail-closes any batch declared as `2026-08`: it needs a
+hash-bound corrected report, accountable reviewer and signature time, one
+recorded correction for each known discrepancy, and exact UYU/USD totals for
+each canonical monetary entity. The preview displays mismatches and commit
+rejects them atomically; only a household owner can commit a matching August
+batch. This control is not a sign-off for the supplied workbook or summary:
+they remain blocked until a real corrected report is retained and approved.
+
 ## Acceptance criteria
 
 The imported totals for each approved month must reconcile to the signed-off source report, and every imported record must retain a source-row reference. A

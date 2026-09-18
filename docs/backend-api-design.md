@@ -352,13 +352,15 @@ replacement dates; import commit checks every dated financial row it will add.
 
 ### 11. `reports.controller`
 
-| Method and path                 | Parameters                                                                                                | Purpose                                                                                                   |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `GET /reports/monthly-close`    | `period`, `baseCurrency`                                                                                  | Return period income, expenses, taxes, debt, and closing balance.                                         |
-| `GET /reports/categories`       | `from`, `to`, `kind`, `groupBy`                                                                           | Return category totals.                                                                                   |
-| `GET /reports/spending-summary` | `from`, `to`, `groupBy` (`month`, `year`, `category`), `currency` or `baseCurrency` with `exchangeRateId` | Return paid-expense totals for any inclusive date range, including two months, a year, or a custom range. |
-| `GET /reports/debts`            | optional `exchangeRateId`                                                                                 | Return current liability and payment report.                                                              |
-| `GET /reports/export`           | `from`, `to`, `format` (`csv` initially)                                                                  | Create household-scoped export.                                                                           |
+| Method and path                   | Parameters                                                                                                | Purpose                                                                                                   |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `GET /reports/monthly-close`      | `period`, `baseCurrency`                                                                                  | Return period income, expenses, taxes, debt, and closing balance.                                         |
+| `GET /reports/categories`         | `from`, `to`, `kind`, `groupBy`                                                                           | Return category totals.                                                                                   |
+| `GET /reports/spending-summary`   | `from`, `to`, `groupBy` (`month`, `year`, `category`), `currency` or `baseCurrency` with `exchangeRateId` | Return paid-expense totals for any inclusive date range, including two months, a year, or a custom range. |
+| `GET /reports/debts`              | optional `exchangeRateId`                                                                                 | Return current liability and payment report.                                                              |
+| `GET /reports/accounts-cash-flow` | required `from`, `to` inclusive ISO dates                                                                 | Return per-account opening, paid movement, and closing balances with separate UYU/USD cash flow.          |
+| `GET /reports/categories-tax`     | required `from`, `to` inclusive ISO dates; `groupBy` (`category`, `month`, `year`)                        | Return paid categorized expenses plus invoice/IVA totals, separated by currency.                          |
+| `GET /reports/export`             | `from`, `to`, `format` (`csv` initially)                                                                  | Create household-scoped export.                                                                           |
 
 Slice 6.5 implements `GET /reports/debts`. It returns every household debt
 with original amount, paid amount, and remaining amount in its original
@@ -367,6 +369,26 @@ an active-household `USD` → `UYU` rate, it also returns each UYU equivalent an
 the combined UYU exposure with the selected rate's metadata. Without that
 selection, no UYU/USD total is combined. The report is read-only and does not
 infer a latest rate or create audit events.
+
+Slice 9.4 implements `GET /reports/accounts-cash-flow`. It accepts a required
+inclusive ISO-date range and returns accounts opened by the range end. A row
+contains its balance before the range, an opening-balance entry when that entry
+falls inside the range, paid income, paid expenses, net paid movement, and
+closing balance. Paid `income` increases cash; paid `expense` and
+`debt_payment` decrease it. Planned, pending, cancelled, transfer, and
+adjustment records do not affect cash-flow totals. Original UYU and USD
+totals are always separate, and included source transactions expose their
+existing detail route for traceability. The endpoint is household-scoped and
+read-only for every active-household role.
+
+Slice 9.5 implements `GET /reports/categories-tax`. Category rows contain only
+paid `expense` transactions with a category, grouped by category, month, or
+year. Debt payments and IVA settlements have no category and are deliberately
+excluded from those totals. Invoice totals use non-cancelled invoices' service
+date; collections, IVA reserves, and IVA settlements use their linked paid
+transaction date. Every source item links to its existing transaction or
+invoice detail. The endpoint is a household-scoped, read-only report for every
+active-household role and never combines UYU with USD.
 
 ### 12. `grocery-plans.controller`
 

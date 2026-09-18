@@ -66,6 +66,16 @@ export default async function SettingsPage() {
             description="Revisar pagos, saldos originales y exposición con cotización explícita."
           />
           <FeatureNavigationCard
+            href="/reports/accounts-cash-flow"
+            title="Cuentas y flujo de efectivo"
+            description="Consultar saldos iniciales, movimientos pagados y cierres por moneda."
+          />
+          <FeatureNavigationCard
+            href="/reports/categories-tax"
+            title="Categorías, facturación e IVA"
+            description="Revisar egresos pagados, facturación, reservas y liquidaciones por moneda."
+          />
+          <FeatureNavigationCard
             href="/imports"
             title="Importación por lote"
             description="Pegar JSON o convertir CSV/Excel para una revisión sin modificar registros."

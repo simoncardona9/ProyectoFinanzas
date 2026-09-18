@@ -290,6 +290,144 @@ paths:
             belongs to another household,
             or is not a USD-purchase rate,
           }
+  /api/v1/reports/accounts-cash-flow:
+    get:
+      operationId: getAccountCashFlowReport
+      summary: Return household-scoped account balances and paid cash flow for an inclusive date range.
+      description: All active-household roles may read this report. It returns every account opened by the end of the requested range, with its balance before the range, any account-opening balance dated inside the range, paid income, paid expenses (including debt-payment transactions), net paid movement, and closing balance. UYU and USD totals are always separate. Each in-range source transaction includes its detail URL for traceability. This read has no financial or audit side effect.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          description: Inclusive calendar start date.
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          description: Inclusive calendar end date; must be on or after from.
+      responses:
+        "200":
+          description: Account and paid cash-flow report, separated by currency.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [range, accounts, totalsByCurrency]
+                    properties:
+                      range:
+                        type: object
+                        required: [from, to]
+                        properties:
+                          from: { type: string, format: date }
+                          to: { type: string, format: date }
+                      accounts:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            [
+                              id,
+                              name,
+                              currency,
+                              openingMinor,
+                              paidIncomeMinor,
+                              paidExpenseMinor,
+                              paidMovementMinor,
+                              closingMinor,
+                              transactions,
+                            ]
+                      totalsByCurrency:
+                        type: object
+                        required: [UYU, USD]
+                        additionalProperties:
+                          type: object
+                          required:
+                            [
+                              openingMinor,
+                              openingEntriesMinor,
+                              paidIncomeMinor,
+                              paidExpenseMinor,
+                              paidMovementMinor,
+                              closingMinor,
+                            ]
+              example:
+                {
+                  data:
+                    {
+                      range: { from: "2026-09-01", to: "2026-09-30" },
+                      accounts: [],
+                      totalsByCurrency:
+                        {
+                          UYU:
+                            {
+                              openingMinor: 10000,
+                              openingEntriesMinor: 0,
+                              paidIncomeMinor: 25000,
+                              paidExpenseMinor: 9000,
+                              paidMovementMinor: 16000,
+                              closingMinor: 26000,
+                            },
+                          USD:
+                            {
+                              openingMinor: 0,
+                              openingEntriesMinor: 0,
+                              paidIncomeMinor: 0,
+                              paidExpenseMinor: 0,
+                              paidMovementMinor: 0,
+                              closingMinor: 0,
+                            },
+                        },
+                    },
+                }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/reports/categories-tax:
+    get:
+      operationId: getCategoryTaxReport
+      summary: Return paid category and invoice/IVA report totals for an inclusive date range.
+      description: All active-household roles may read this household-scoped report. Category totals include only paid expense transactions with a category and can be grouped by category, month, or year. Debt payments and IVA settlements are excluded from category totals. Non-cancelled invoices use service date; collections, reserves, and settlements use linked paid transaction date. UYU and USD are always separate and every source has its existing detail URL. This read has no financial or audit side effect.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: groupBy
+          in: query
+          required: false
+          schema:
+            { type: string, enum: [category, month, year], default: category }
+      responses:
+        "200":
+          description: Category and invoice/IVA report separated by currency.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      [
+                        range,
+                        categoryGrouping,
+                        categoryRows,
+                        taxTotalsByCurrency,
+                        taxSources,
+                      ]
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/exchange-rates:
     get:
       operationId: listExchangeRates

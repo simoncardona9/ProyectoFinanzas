@@ -644,3 +644,47 @@ Step 8 has been decomposed before implementation into six vertical slices:
   financial record, balance, or audit event can change.
 - Local verification passed: `pnpm test` (75 tests), `pnpm exec tsc --noEmit`,
   `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`, and `pnpm build`.
+
+### Slice 9.4 — Account and cash-flow reporting — implemented, pending local acceptance
+
+- Added a protected, read-only `GET /api/v1/reports/accounts-cash-flow` route
+  and Spanish `/reports/accounts-cash-flow` screen. The inclusive date-range
+  report is scoped solely to the server-selected household and is available to
+  all active-household roles.
+- Each account shows its balance before the range, any account-opening balance
+  dated inside the range, paid income, paid expenses, net paid movement, and
+  closing balance. Paid debt-payment transactions are cash expenses; planned,
+  pending, cancelled, transfer, and adjustment records are excluded from the
+  cash-flow totals. An in-range source list links each included movement to its
+  existing transaction detail.
+- UYU and USD account and cash-flow totals are calculated and displayed
+  separately. The report neither combines currencies nor creates financial or
+  audit records.
+- Local verification passed: `pnpm test` (76 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, and `pnpm build`.
+
+### Slice 9.5 — Category and IVA/tax reporting — implemented, pending local acceptance
+
+- Added the protected, read-only `GET /api/v1/reports/categories-tax` route
+  and Spanish `/reports/categories-tax` screen. All active-household roles can
+  choose an inclusive date range and group paid categorized expenses by
+  category, month, or year; every row links to its paid transaction detail.
+- Category totals include only paid `expense` transactions that have a
+  category. Debt payments and IVA settlements are intentionally excluded from
+  this category view and are represented only in their dedicated report totals.
+- The tax section reports, separately per UYU and USD, non-cancelled invoices'
+  gross/net/IVA amounts by service date; invoice collections, IVA reserve
+  allocations, and IVA settlements by their linked paid date. Every source
+  links to its existing invoice detail. The report is household-scoped and
+  creates no financial or audit records.
+- Local verification passed: `pnpm test` (78 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, and `pnpm build`.
+
+### Local acceptance — Slices 9.4 and 9.5 — completed
+
+- On 2026-09-18, the household completed the linked synthetic-data review using
+  the JSON import path and the IVA-settlement UI. It confirmed account opening,
+  paid movement, and closing figures; debt-payment cash-flow treatment; UYU/USD
+  isolation; category/month/year expense grouping; invoice/collection/reserve/
+  settlement totals; and source-detail links. The review found all figures and
+  behavior working as expected.

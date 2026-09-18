@@ -294,10 +294,10 @@ amount; the payment transaction and reserve mutation both receive audit events.
 
 ### 9. `exchange-rates.controller`
 
-| Method and path              | Parameters                                                                       | Purpose                                  |
-| ---------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
-| `GET /exchange-rates`        | `baseCurrency`, `quoteCurrency`, `from`, `to`, `movement`                        | List rates.                              |
-| `POST /exchange-rates`       | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind`, `movement` | Add a movement-specific exchange rate. |
+| Method and path        | Parameters                                                                                   | Purpose                                |
+| ---------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `GET /exchange-rates`  | `baseCurrency`, `quoteCurrency`, `from`, `to`, `movement`                                    | List rates.                            |
+| `POST /exchange-rates` | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind`, `movement` | Add a movement-specific exchange rate. |
 
 Slice 6.3 implements the list and create endpoints only. Each rate belongs to
 the server-selected active household and has a UYU/USD base/quote pair, a
@@ -318,13 +318,37 @@ neither selection nor calculation writes financial data.
 
 ### 10. `dashboard.controller`
 
-| Method and path            | Parameters                   | Purpose                                                                                                                                                                                                                        |
-| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Method and path            | Parameters                   | Purpose                                                                                                                                                                                                                                 |
+| -------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /dashboard`           | `period` (`YYYY-MM`)         | Return separate-currency spendable cash, protected IVA reserves, paid, one-off, and expected income for the period, pending obligations, and projected cash. Protected reserve balances are deducted from spendable and projected cash. |
-| `GET /dashboard/cash-flow` | `from`, `to`, `baseCurrency` | Return grouped cash-flow timeline.                                                                                                                                                                                             |
-| `GET /dashboard/alerts`    | `period`                     | Return overdue, low-buffer, due-soon, and USD-exposure alerts.                                                                                                                                                                 |
+| `GET /dashboard/cash-flow` | `from`, `to`, `baseCurrency` | Return grouped cash-flow timeline.                                                                                                                                                                                                      |
+| `GET /dashboard/alerts`    | `period`                     | Return overdue, low-buffer, due-soon, and USD-exposure alerts.                                                                                                                                                                          |
 
 This controller is read-only. It delegates all calculations to reporting/forecast services.
+
+### 10.1 `financial-periods.controller`
+
+| Method and path                  | Parameters                         | Purpose                                                                 |
+| -------------------------------- | ---------------------------------- | ----------------------------------------------------------------------- |
+| `GET /financial-periods`         | `period` (`YYYY-MM`)               | Return the active household's calendar-month close status and evidence. |
+| `POST /financial-periods/close`  | body: `period` (`YYYY-MM`)         | Owner-only atomic close with a household-scoped audit event.            |
+| `POST /financial-periods/reopen` | body: `period`, non-empty `reason` | Owner-only atomic reopen and auditable reason.                          |
+
+Slice 9.3 adds the owner-only state transitions after Slice 9.2's full writer
+guard. A period is identified by the first calendar day of the supplied month
+but financial records keep their own actual dates. In the absence of a
+household-local period row, the read endpoint returns `open`. Closing inserts
+or transitions the row to `closed` and its audit event atomically. Reopening
+only transitions an already closed row, requires a trimmed non-empty reason,
+and records that reason atomically. Duplicate close/reopen attempts return
+`409`; viewer, accountant, and editor attempts return `403`. All
+active-household roles may read only their selected household's status and
+close/reopen evidence.
+Slice 9.2 applies this status to every existing dated financial mutation. A
+closed affected month produces `422 CLOSED_PERIOD` before its repository
+transaction starts, so no financial record, balance, or audit event is
+partially changed. Corrections and deferrals check both their prior and
+replacement dates; import commit checks every dated financial row it will add.
 
 ### 11. `reports.controller`
 

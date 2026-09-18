@@ -101,6 +101,11 @@ export const importStatus = pgEnum("import_status", [
   "committed",
 ]);
 
+export const financialPeriodStatus = pgEnum("financial_period_status", [
+  "open",
+  "closed",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
@@ -533,6 +538,39 @@ export const exchangeRates = pgTable(
     index("exchange_rates_household_date_idx").on(
       table.householdId,
       table.effectiveDate,
+    ),
+  ],
+);
+
+/**
+ * A financial period is a calendar month identified by its first day. Financial
+ * records retain their own actual dates; later close/reopen slices use this
+ * table only to protect the month those dates belong to.
+ */
+export const financialPeriods = pgTable(
+  "financial_periods",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    periodStart: date("period_start").notNull(),
+    status: financialPeriodStatus("status").notNull().default("open"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("financial_periods_household_period_unique").on(
+      table.householdId,
+      table.periodStart,
+    ),
+    index("financial_periods_household_status_idx").on(
+      table.householdId,
+      table.status,
     ),
   ],
 );

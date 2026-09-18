@@ -1,6 +1,11 @@
 import type { AuthContext } from "@/shared/auth/auth.types";
 import { structureRepository } from "@/modules/structure/structure.repository";
 import { ApiError } from "@/shared/errors/api-error";
+import { financialPeriodRepository } from "@/modules/financial-periods/financial-period.repository";
+import {
+  assertFinancialPeriodOpen,
+  assertFinancialPeriodsOpen,
+} from "@/modules/financial-periods/financial-period.service";
 import { obligationRepository } from "./obligation.repository";
 import {
   validateDeferral,
@@ -21,6 +26,11 @@ export async function createObligation(
     values.categoryId,
   );
   validateObligationCategory(category);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.dueDate,
+  );
   return obligationRepository.create(
     context.membership.householdId,
     context.user.id,
@@ -44,6 +54,11 @@ export async function payObligation(
     values.accountId,
   );
   validatePayment(obligation, account, values.amountMinor);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.paidDate,
+  );
   try {
     return await obligationRepository.pay(
       context.membership.householdId,
@@ -78,6 +93,11 @@ export async function deferObligation(
   if (!obligation)
     throw new ApiError(404, "NOT_FOUND", "Obligation not found.");
   validateDeferral(obligation, newDueDate);
+  await assertFinancialPeriodsOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    [obligation.dueDate, newDueDate],
+  );
   const updated = await obligationRepository.defer(
     context.membership.householdId,
     context.user.id,

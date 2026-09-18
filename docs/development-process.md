@@ -267,6 +267,58 @@ reconciliation gate is satisfied.
 
 **Acceptance:** A closed month cannot be silently changed; an authorized correction is audited; household data can be exported and a backup restore has been tested.
 
+**Planned slices (7):**
+
+1. **9.1 — Financial-period foundation:** add the household-scoped calendar-month
+   model, a shared closed-period guard, and read-only period status. A period is
+   derived from a record's actual date; it does not duplicate reporting dates on
+   financial records. This slice does not expose a close action.
+2. **9.2 — Closed-period enforcement:** apply the shared guard to every current
+   financial mutation before any period can be closed: transaction and expected-
+   income creation, correction and void; obligation creation, payment and
+   deferral; invoice lifecycle and collection; debt creation/payment; tax-reserve
+   settlement; and import commit. Define and test the affected date for each
+   operation. A rejected write must leave all records and balances unchanged.
+
+   Affected dates are: transaction/expected-income creation (record date);
+   transaction correction (both prior and replacement dates); transaction void
+   (record date); obligation creation (due date); obligation payment (paid
+   date); obligation deferral (both prior and replacement due dates); invoice
+   creation/cancellation (service date), sending (sent date), and collection
+   (paid date); debt creation (incurred date) and payment (paid date); tax
+   settlement (paid date); and every matching dated row in an import commit.
+3. **9.3 — Owner close and controlled reopen:** allow only an owner to close a
+   month once the complete guard is active, then to reopen it only with a
+   non-empty reason. Both state transitions write household-scoped audit events;
+   viewer, accountant, and editor attempts are rejected. The period screen makes
+   closed status and reopen evidence visible without offering silent edits.
+4. **9.4 — Account and cash-flow reporting:** add a read-only, household-scoped
+   date-range report with per-account opening, movement, and closing figures,
+   plus paid-income and paid-expense cash-flow totals. Keep UYU and USD separate
+   and make report rows traceable to the transaction register.
+5. **9.5 — Category and IVA/tax reporting:** add date-range category summaries
+   (including month, year, and category grouping) and invoice/collection/IVA-
+   reserve/settlement totals. Define explicitly which paid transaction types are
+   included, preserve currency separation, and link every figure to its source
+   register. The completed Step 6.5 debt report remains the debt-report portion
+   of Step 9; do not recreate it.
+6. **9.6 — Audit report and household CSV export:** provide role-appropriate,
+   household-scoped audit filtering and a documented CSV export contract for the
+   household's financial records. Export reads must be authorized, auditable,
+   safe for spreadsheet import, and must not expose another household or raw
+   sensitive staging data.
+7. **9.7 — Local backup and restore acceptance:** add a documented, access-
+   controlled PostgreSQL backup procedure for the Docker local runtime and test
+   restore into an isolated disposable database. Verify schema, household data,
+   linked records, and audit history after restore; never commit backup files or
+   real financial data. A CSV export is not a database-recovery substitute.
+
+**Scope boundary:** This step protects and reports the current financial model.
+It does not add budgets, accountant-specific formats beyond CSV, cloud backup
+hosting, retention automation, account deletion, or a new debt-report
+calculation. Any new dated financial writer added later must use the same
+closed-period guard before it can be enabled.
+
 ### Step 10 — Grocery plans and price suggestions
 
 **Goal:** Help a household plan grocery purchases without treating estimates as actual financial events.

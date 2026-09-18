@@ -4,9 +4,16 @@ import { structureRepository } from "@/modules/structure/structure.repository";
 import { ApiError } from "@/shared/errors/api-error";
 import { validateDebt, validateDebtPayment } from "./debt.rules";
 import type { CreateDebt, CreateDebtPayment } from "./debt.schemas";
+import { financialPeriodRepository } from "@/modules/financial-periods/financial-period.repository";
+import { assertFinancialPeriodOpen } from "@/modules/financial-periods/financial-period.service";
 
 export async function createDebt(context: AuthContext, values: CreateDebt) {
   validateDebt(values);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.incurredDate,
+  );
   return debtRepository.create(
     context.membership.householdId,
     context.user.id,
@@ -26,6 +33,11 @@ export async function payDebt(
     values.accountId,
   );
   validateDebtPayment(debt, account, values);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.paidDate,
+  );
   try {
     return await debtRepository.pay(
       context.membership.householdId,

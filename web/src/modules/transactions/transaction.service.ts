@@ -11,6 +11,11 @@ import {
   validatePaidTransactionReferences,
 } from "./transaction.rules";
 import { ApiError } from "@/shared/errors/api-error";
+import { financialPeriodRepository } from "@/modules/financial-periods/financial-period.repository";
+import {
+  assertFinancialPeriodOpen,
+  assertFinancialPeriodsOpen,
+} from "@/modules/financial-periods/financial-period.service";
 
 export async function createPaidTransaction(
   context: AuthContext,
@@ -31,6 +36,11 @@ export async function createPaidTransaction(
     values.currency,
     account,
     category,
+  );
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.date,
   );
   const transaction = await transactionRepository.createPaid(
     context.membership.householdId,
@@ -70,6 +80,11 @@ export async function createExpectedIncome(
     values.currency,
     account,
     category,
+  );
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.date,
   );
   const transaction = await transactionRepository.createPaid(
     context.membership.householdId,
@@ -130,6 +145,11 @@ export async function updatePaidTransaction(
     account,
     category,
   );
+  await assertFinancialPeriodsOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    [existing.transaction.date, values.date],
+  );
   const transaction = await transactionRepository.updatePaid(
     context.membership.householdId,
     context.user.id,
@@ -157,6 +177,11 @@ export async function voidPaidTransaction(
   );
   if (!existing) throw new ApiError(404, "NOT_FOUND", "Transaction not found.");
   ensurePaidTransactionCanChange(existing.transaction);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    existing.transaction.date,
+  );
   const transaction = await transactionRepository.voidPaid(
     context.membership.householdId,
     context.user.id,

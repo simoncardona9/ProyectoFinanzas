@@ -4,6 +4,66 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/financial-periods:
+    get:
+      operationId: getFinancialPeriodStatus
+      summary: Get a calendar month's close status and transition history.
+      description: All active-household roles may read the status for a YYYY-MM calendar month. The server derives its first day; financial records retain their actual dates. A missing household-local period row is open. This read has no audit or financial side effect; a present period includes its household-scoped close/reopen evidence.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: period
+          in: query
+          required: true
+          description: Calendar month in YYYY-MM form, resolved as that month's first day.
+          schema: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }
+          example: "2026-09"
+      responses:
+        "200":
+          description: Active-household period status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/FinancialPeriodStatus" }
+              example: { data: { period: "2026-09", status: open, audit: [] } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/financial-periods/close:
+    post:
+      operationId: closeFinancialPeriod
+      summary: Close a calendar month.
+      description: Owner only. Atomically closes the active household's month and records a household-scoped financial_period audit event. A previously closed month returns 409 and creates no extra audit event.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FinancialPeriodCloseWrite" }
+      responses:
+        "200": { description: Month closed with an audit event }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner role required }
+        "409": { description: Month is already closed }
+  /api/v1/financial-periods/reopen:
+    post:
+      operationId: reopenFinancialPeriod
+      summary: Reopen a closed calendar month with a reason.
+      description: Owner only. A non-empty reason is required. The status change and a household-scoped financial_period audit event containing that reason are atomic.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FinancialPeriodReopenWrite" }
+      responses:
+        "200": { description: Month reopened with its reasoned audit event }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner role required }
+        "409": { description: Month is already open or was never closed }
   /api/v1/invoices:
     get:
       operationId: listInvoices
@@ -1171,8 +1231,18 @@ paths:
                       required: [file],
                       properties:
                         {
-                          file: { type: string, format: binary, description: "CSV, XLSX, or XLSM; maximum 10 MB" },
-                          declaredPeriod: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$", example: "2026-09" },
+                          file:
+                            {
+                              type: string,
+                              format: binary,
+                              description: "CSV, XLSX, or XLSM; maximum 10 MB",
+                            },
+                          declaredPeriod:
+                            {
+                              type: string,
+                              pattern: "^\\d{4}-(0[1-9]|1[0-2])$",
+                              example: "2026-09",
+                            },
                         },
                     },
                 },
@@ -1180,11 +1250,20 @@ paths:
         }
       responses:
         {
-          "200": { description: Canonical staged preview and mapping report; no live records before later explicit commit },
+          "200":
+            {
+              description: Canonical staged preview and mapping report; no live records before later explicit commit,
+            },
           "400": { $ref: "#/components/responses/ValidationError" },
           "403": { description: Editor or owner role required },
-          "409": { description: Idempotency key was used with different converted content },
-          "422": { description: Mapping/formula/row conversion errors; response includes review report and no batch was staged },
+          "409":
+            {
+              description: Idempotency key was used with different converted content,
+            },
+          "422":
+            {
+              description: Mapping/formula/row conversion errors; response includes review report and no batch was staged,
+            },
         }
   /api/v1/imports/{importId}/commit:
     post:
@@ -1554,23 +1633,49 @@ components:
                 required: [type],
                 properties:
                   {
-                    type: { type: string, enum: [json_paste, json_upload, csv_upload, excel_upload] },
+                    type:
+                      {
+                        type: string,
+                        enum:
+                          [json_paste, json_upload, csv_upload, excel_upload],
+                      },
                     name: { type: string, minLength: 1, maxLength: 255 },
-                    originalContentHash: { type: string, pattern: "^[a-f0-9]{64}$" },
-                    declaredPeriod: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
+                    originalContentHash:
+                      { type: string, pattern: "^[a-f0-9]{64}$" },
+                    declaredPeriod:
+                      { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
                     reconciliation:
                       {
                         type: object,
                         description: "Required for a 2026-08 commit. The report itself is retained outside the application; its SHA-256, accountable reviewer, correction record, and exact canonical totals are retained in the staged bundle and audit trail.",
-                        required: [reportName, reportContentHash, reviewer, signedAt, corrections, totals],
+                        required:
+                          [
+                            reportName,
+                            reportContentHash,
+                            reviewer,
+                            signedAt,
+                            corrections,
+                            totals,
+                          ],
                         properties:
                           {
                             reportName: { type: string },
-                            reportContentHash: { type: string, pattern: "^[a-f0-9]{64}$" },
+                            reportContentHash:
+                              { type: string, pattern: "^[a-f0-9]{64}$" },
                             reviewer: { type: string },
                             signedAt: { type: string, format: date-time },
-                            corrections: { type: array, minItems: 5, maxItems: 5, items: { type: object } },
-                            totals: { type: object, description: "UYU and USD maps of every canonical monetary entity total in integer minor units." },
+                            corrections:
+                              {
+                                type: array,
+                                minItems: 5,
+                                maxItems: 5,
+                                items: { type: object },
+                              },
+                            totals:
+                              {
+                                type: object,
+                                description: "UYU and USD maps of every canonical monetary entity total in integer minor units.",
+                              },
                           },
                       },
                   },
@@ -1697,13 +1802,25 @@ components:
                 items:
                   {
                     type: object,
-                    required: [reference, creditorName, description, amountMinor, currency, incurredDate],
+                    required:
+                      [
+                        reference,
+                        creditorName,
+                        description,
+                        amountMinor,
+                        currency,
+                        incurredDate,
+                      ],
                     properties:
                       {
-                        reference: { type: string, minLength: 1, maxLength: 120 },
-                        creditorName: { type: string, minLength: 1, maxLength: 200 },
-                        description: { type: string, minLength: 1, maxLength: 500 },
-                        amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+                        reference:
+                          { type: string, minLength: 1, maxLength: 120 },
+                        creditorName:
+                          { type: string, minLength: 1, maxLength: 200 },
+                        description:
+                          { type: string, minLength: 1, maxLength: 500 },
+                        amountMinor:
+                          { type: integer, minimum: 1, maximum: 2000000000 },
                         currency: { type: string, enum: [UYU, USD] },
                         incurredDate: { type: string, format: date },
                       },
@@ -1719,17 +1836,110 @@ components:
                     properties:
                       {
                         debt: { type: string, minLength: 1, maxLength: 120 },
-                        amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+                        amountMinor:
+                          { type: integer, minimum: 1, maximum: 2000000000 },
                         account: { type: string, minLength: 1, maxLength: 120 },
                         paidDate: { type: string, format: date },
-                        description: { type: string, minLength: 1, maxLength: 500 },
+                        description:
+                          { type: string, minLength: 1, maxLength: 500 },
                       },
                   },
               },
-            invoices: { type: array, items: { type: object, required: [reference, clientName, description, serviceDate, dueDate, grossAmountMinor, ivaRateBasisPoints, currency] } },
-            invoiceCollections: { type: array, items: { type: object, required: [reference, invoice, amountMinor, account, paidDate] } },
-            ivaReserves: { type: array, items: { type: object, required: [collection, amountMinor] } },
-            exchangeRates: { type: array, items: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveDate, source, kind, movement] } },
+            invoices:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [
+                        reference,
+                        clientName,
+                        description,
+                        serviceDate,
+                        dueDate,
+                        grossAmountMinor,
+                        ivaRateBasisPoints,
+                        currency,
+                      ],
+                  },
+              },
+            invoiceCollections:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [reference, invoice, amountMinor, account, paidDate],
+                  },
+              },
+            ivaReserves:
+              {
+                type: array,
+                items: { type: object, required: [collection, amountMinor] },
+              },
+            exchangeRates:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [
+                        baseCurrency,
+                        quoteCurrency,
+                        rate,
+                        effectiveDate,
+                        source,
+                        kind,
+                        movement,
+                      ],
+                  },
+              },
+          },
+      }
+    FinancialPeriodStatus:
+      {
+        type: object,
+        required: [period, status, audit],
+        properties:
+          {
+            period: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
+            status: { type: string, enum: [open, closed] },
+            audit:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required: [id, action, createdAt],
+                    properties:
+                      {
+                        id: { type: string, format: uuid },
+                        action: { type: string, enum: [close, reopen] },
+                        details: { type: [object, "null"] },
+                        createdAt: { type: string, format: date-time },
+                      },
+                  },
+              },
+          },
+      }
+    FinancialPeriodCloseWrite:
+      {
+        type: object,
+        required: [period],
+        properties:
+          { period: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } },
+      }
+    FinancialPeriodReopenWrite:
+      {
+        type: object,
+        required: [period, reason],
+        properties:
+          {
+            period: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
+            reason: { type: string, minLength: 1, maxLength: 500 },
           },
       }
     Error:

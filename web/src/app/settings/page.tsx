@@ -75,6 +75,11 @@ export default async function SettingsPage() {
             title="Facturas e IVA"
             description="Registrar facturas y ver el IVA calculado antes de cobrar o reservar fondos."
           />
+          <FeatureNavigationCard
+            href="/financial-periods"
+            title="Cierre mensual"
+            description="Consultar el estado del mes y, si eres propietario, cerrarlo o reabrirlo con evidencia."
+          />
         </nav>
         <dl className="mt-8 divide-y divide-zinc-200">
           <div className="py-3">

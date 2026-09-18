@@ -589,3 +589,58 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - Kubernetes is not configured: this repository contains no Kubernetes
   manifests, Helm chart, cluster, or deployment workflow. It remains outside
   the local-only scope and requires separate approval and implementation.
+
+## Step 9 — in progress
+
+- Planning review on 2026-09-17 confirmed that Step 9 must be delivered as
+  seven ordered slices. Before Slice 9.1, the schema had no financial-period
+  entity or closed-period mutation guard; the only implemented Step 9 report
+  capability was the existing read-only debt report from Step 6.5. No CSV
+  export or backup/restore procedure exists yet.
+- The plan now establishes the period guard before exposing close/reopen,
+  separates report calculations by risk surface, and treats a tested database
+  restore as distinct from a household CSV export. No Step 9 product behavior
+  has been implemented or accepted by this planning update.
+
+### Slice 9.1 — Financial-period foundation — implemented, pending local acceptance
+
+- Added the household-scoped `financial_periods` calendar-month model. The
+  database permits one row per household and first day of month; financial
+  records continue to hold their actual dates.
+- Added the shared, date-derived closed-period guard and its focused unit
+  coverage. It is deliberately not yet applied to existing writers: that
+  complete enforcement work is Slice 9.2, before any close action is exposed.
+- Added protected `GET /api/v1/financial-periods?period=YYYY-MM`. It returns
+  household-local read-only status and treats an absent row as `open`; it has
+  no financial or audit side effects.
+- Local verification passed: `pnpm test` (69 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`, and `pnpm build`.
+
+### Slice 9.2 — Closed-period enforcement — implemented, pending local acceptance
+
+- Applied the shared period guard before all current dated financial writes:
+  transaction and expected-income creation/correction/void, obligation
+  creation/payment/deferral, invoice creation/lifecycle/collection, debt
+  creation/payment, tax-reserve settlement, and core/historical import commit.
+- Corrections and deferrals protect both periods they change. All other writes
+  use their actual financial date; import commit checks every imported dated
+  financial row before its atomic repository write begins. A closed period is
+  rejected as `CLOSED_PERIOD` (422), before financial records, balances, or
+  audit events can change.
+- Local verification passed: `pnpm test` (71 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, and `pnpm build`.
+
+### Slice 9.3 — Owner close and controlled reopen — implemented, pending local acceptance
+
+- Added owner-only close and reopen endpoints and a Spanish `/financial-periods`
+  screen. A close atomically changes the household-local month to `closed` and
+  writes its audit event; a reopen is allowed only from `closed`, requires a
+  non-empty reason, and atomically records that reason as audit evidence.
+- Viewer, accountant, and editor roles can consult a month's status and close/
+  reopen evidence but cannot transition it. Repeated close or reopen attempts
+  are rejected with a conflict instead of producing silent or duplicate state.
+- A closed period is now actionable only after Slice 9.2's complete writer
+  guard, so every existing dated financial mutation remains rejected before a
+  financial record, balance, or audit event can change.
+- Local verification passed: `pnpm test` (75 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`, and `pnpm build`.

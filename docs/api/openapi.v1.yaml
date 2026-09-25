@@ -428,6 +428,41 @@ paths:
                       ]
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/reports/audit:
+    get:
+      operationId: getAuditReport
+      summary: Filter the active household's audit history.
+      description: Owner and accountant only. Filters apply only to the server-selected household; events are returned newest first with bounded pagination. This is read-only and does not create an audit event.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: action, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: entityType, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Household-scoped paginated audit events. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or accountant role required }
+  /api/v1/reports/export:
+    get:
+      operationId: exportFinancialRecordsCsv
+      summary: Download dated household financial records as a CSV file.
+      description: Owner, editor, or accountant only. The required inclusive range applies to each record's own financial date. The response excludes import staging data and emits one export audit event containing only range, format, and row count. CSV cells are quoted and formula-like values are neutralized for spreadsheet safety; this download is not a database backup or restore mechanism.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - { name: format, in: query, required: false, schema: { type: string, enum: [csv], default: csv } }
+      responses:
+        "200":
+          description: UTF-8 CSV attachment with an RFC 4180-compatible quoted header and rows.
+          content: { text/csv: { schema: { type: string, format: binary } } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner, editor, or accountant role required }
   /api/v1/exchange-rates:
     get:
       operationId: listExchangeRates

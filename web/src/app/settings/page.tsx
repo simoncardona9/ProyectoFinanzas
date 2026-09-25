@@ -90,6 +90,21 @@ export default async function SettingsPage() {
             title="Cierre mensual"
             description="Consultar el estado del mes y, si eres propietario, cerrarlo o reabrirlo con evidencia."
           />
+          {(context.membership.role === "owner" ||
+            context.membership.role === "accountant") && (
+            <FeatureNavigationCard
+              href="/reports/audit-export"
+              title="Auditoría y exportación"
+              description="Revisar eventos del hogar y descargar registros financieros en CSV."
+            />
+          )}
+          {context.membership.role === "editor" && (
+            <FeatureNavigationCard
+              href="/reports/export"
+              title="Exportar registros financieros"
+              description="Descargar los registros del hogar en CSV para el rango elegido."
+            />
+          )}
         </nav>
         <dl className="mt-8 divide-y divide-zinc-200">
           <div className="py-3">

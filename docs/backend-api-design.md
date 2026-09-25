@@ -360,6 +360,7 @@ replacement dates; import commit checks every dated financial row it will add.
 | `GET /reports/debts`              | optional `exchangeRateId`                                                                                 | Return current liability and payment report.                                                              |
 | `GET /reports/accounts-cash-flow` | required `from`, `to` inclusive ISO dates                                                                 | Return per-account opening, paid movement, and closing balances with separate UYU/USD cash flow.          |
 | `GET /reports/categories-tax`     | required `from`, `to` inclusive ISO dates; `groupBy` (`category`, `month`, `year`)                        | Return paid categorized expenses plus invoice/IVA totals, separated by currency.                          |
+| `GET /reports/audit`              | optional `from`, `to`, `action`, `entityType`, bounded `page`, `pageSize`                                 | Filter household-scoped audit events.                                                                     |
 | `GET /reports/export`             | `from`, `to`, `format` (`csv` initially)                                                                  | Create household-scoped export.                                                                           |
 
 Slice 6.5 implements `GET /reports/debts`. It returns every household debt
@@ -389,6 +390,14 @@ date; collections, IVA reserves, and IVA settlements use their linked paid
 transaction date. Every source item links to its existing transaction or
 invoice detail. The endpoint is a household-scoped, read-only report for every
 active-household role and never combines UYU with USD.
+
+Slice 9.6 implements `GET /reports/audit` for owners and accountants only. It
+filters only the active household's persistent audit events by optional UTC date
+range, action, and entity type, newest first with a maximum page size of 100.
+`GET /reports/export` is available to owners, editors, and accountants and
+downloads the documented CSV contract for dated financial records. A successful
+export writes one `financial_export` audit event containing only the requested
+range, format, and row count; it never copies output rows into audit metadata.
 
 ### 12. `grocery-plans.controller`
 

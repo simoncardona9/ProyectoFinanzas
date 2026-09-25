@@ -688,3 +688,25 @@ Step 8 has been decomposed before implementation into six vertical slices:
   isolation; category/month/year expense grouping; invoice/collection/reserve/
   settlement totals; and source-detail links. The review found all figures and
   behavior working as expected.
+
+### Slice 9.6 — Audit report and household CSV export — completed
+
+- Added owner/accountant-only audit filtering at `GET /api/v1/reports/audit`
+  and the Spanish `/reports/audit-export` screen. Results are always scoped to
+  the active household and support bounded pagination plus optional date,
+  action, and entity-type filters.
+- Added owner/editor/accountant-authorized `GET /api/v1/reports/export` with a
+  documented CSV contract. It exports dated transaction, obligation, invoice,
+  debt, and exchange-rate records without staged imports or raw source files;
+  it keeps original currencies separate and protects spreadsheet consumers from
+  formula-like cell values.
+- A successful download records a minimal household-scoped `financial_export`
+  audit event with range, format, and row count only. It is explicitly not a
+  backup or restore mechanism; that validation remains Slice 9.7.
+
+### Local acceptance — Slice 9.6 — completed
+
+- On 2026-09-25, the household completed the synthetic JSON-import UI review.
+  It confirmed household-scoped audit filtering, the six expected dated CSV
+  rows without staged source data, spreadsheet-formula neutralization, and the
+  minimal export audit event containing only range, format, and row count.

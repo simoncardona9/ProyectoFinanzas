@@ -3,6 +3,14 @@
 This log records completed development steps, their scope, and verification.
 It intentionally contains no real financial or personal data.
 
+## Step 10 — planned
+
+- Step 10 is intentionally not implemented yet. Its four-slice plan in
+  `docs/development-process.md` ends with Slice 10.4, a disposable synthetic
+  local acceptance run covering estimated-versus-actual grocery behavior,
+  privacy, authorization, and cleanup. That final acceptance is required
+  before Step 10 can be marked completed.
+
 ## Step 0 — Project foundation — completed
 
 - Created the local Next.js/TypeScript application with PostgreSQL and Drizzle.
@@ -589,3 +597,154 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - Kubernetes is not configured: this repository contains no Kubernetes
   manifests, Helm chart, cluster, or deployment workflow. It remains outside
   the local-only scope and requires separate approval and implementation.
+
+## Step 9 — completed
+
+- Planning review on 2026-09-17 confirmed that Step 9 must be delivered as
+  seven ordered slices. Before Slice 9.1, the schema had no financial-period
+  entity or closed-period mutation guard; the only implemented Step 9 report
+  capability was the existing read-only debt report from Step 6.5. No CSV
+  export or backup/restore procedure exists yet.
+- The plan now establishes the period guard before exposing close/reopen,
+  separates report calculations by risk surface, and treats a tested database
+  restore as distinct from a household CSV export. No Step 9 product behavior
+  has been implemented or accepted by this planning update.
+
+### Slice 9.1 — Financial-period foundation — completed
+
+- Added the household-scoped `financial_periods` calendar-month model. The
+  database permits one row per household and first day of month; financial
+  records continue to hold their actual dates.
+- Added the shared, date-derived closed-period guard and its focused unit
+  coverage. It is deliberately not yet applied to existing writers: that
+  complete enforcement work is Slice 9.2, before any close action is exposed.
+- Added protected `GET /api/v1/financial-periods?period=YYYY-MM`. It returns
+  household-local read-only status and treats an absent row as `open`; it has
+  no financial or audit side effects.
+- Local verification passed: `pnpm test` (69 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`, and `pnpm build`.
+
+### Slice 9.2 — Closed-period enforcement — completed
+
+- Applied the shared period guard before all current dated financial writes:
+  transaction and expected-income creation/correction/void, obligation
+  creation/payment/deferral, invoice creation/lifecycle/collection, debt
+  creation/payment, tax-reserve settlement, and core/historical import commit.
+- Corrections and deferrals protect both periods they change. All other writes
+  use their actual financial date; import commit checks every imported dated
+  financial row before its atomic repository write begins. A closed period is
+  rejected as `CLOSED_PERIOD` (422), before financial records, balances, or
+  audit events can change.
+- Local verification passed: `pnpm test` (71 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, and `pnpm build`.
+
+### Slice 9.3 — Owner close and controlled reopen — completed
+
+- Added owner-only close and reopen endpoints and a Spanish `/financial-periods`
+  screen. A close atomically changes the household-local month to `closed` and
+  writes its audit event; a reopen is allowed only from `closed`, requires a
+  non-empty reason, and atomically records that reason as audit evidence.
+- Viewer, accountant, and editor roles can consult a month's status and close/
+  reopen evidence but cannot transition it. Repeated close or reopen attempts
+  are rejected with a conflict instead of producing silent or duplicate state.
+- A closed period is now actionable only after Slice 9.2's complete writer
+  guard, so every existing dated financial mutation remains rejected before a
+  financial record, balance, or audit event can change.
+- Local verification passed: `pnpm test` (75 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`, and `pnpm build`.
+
+### Slice 9.4 — Account and cash-flow reporting — completed
+
+- Added a protected, read-only `GET /api/v1/reports/accounts-cash-flow` route
+  and Spanish `/reports/accounts-cash-flow` screen. The inclusive date-range
+  report is scoped solely to the server-selected household and is available to
+  all active-household roles.
+- Each account shows its balance before the range, any account-opening balance
+  dated inside the range, paid income, paid expenses, net paid movement, and
+  closing balance. Paid debt-payment transactions are cash expenses; planned,
+  pending, cancelled, transfer, and adjustment records are excluded from the
+  cash-flow totals. An in-range source list links each included movement to its
+  existing transaction detail.
+- UYU and USD account and cash-flow totals are calculated and displayed
+  separately. The report neither combines currencies nor creates financial or
+  audit records.
+- Local verification passed: `pnpm test` (76 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, and `pnpm build`.
+
+### Slice 9.5 — Category and IVA/tax reporting — completed
+
+- Added the protected, read-only `GET /api/v1/reports/categories-tax` route
+  and Spanish `/reports/categories-tax` screen. All active-household roles can
+  choose an inclusive date range and group paid categorized expenses by
+  category, month, or year; every row links to its paid transaction detail.
+- Category totals include only paid `expense` transactions that have a
+  category. Debt payments and IVA settlements are intentionally excluded from
+  this category view and are represented only in their dedicated report totals.
+- The tax section reports, separately per UYU and USD, non-cancelled invoices'
+  gross/net/IVA amounts by service date; invoice collections, IVA reserve
+  allocations, and IVA settlements by their linked paid date. Every source
+  links to its existing invoice detail. The report is household-scoped and
+  creates no financial or audit records.
+- Local verification passed: `pnpm test` (78 tests), `pnpm exec tsc --noEmit`,
+  `pnpm lint`, `pnpm db:check`, and `pnpm build`.
+
+### Local acceptance — Slices 9.4 and 9.5 — completed
+
+- On 2026-09-18, the household completed the linked synthetic-data review using
+  the JSON import path and the IVA-settlement UI. It confirmed account opening,
+  paid movement, and closing figures; debt-payment cash-flow treatment; UYU/USD
+  isolation; category/month/year expense grouping; invoice/collection/reserve/
+  settlement totals; and source-detail links. The review found all figures and
+  behavior working as expected.
+
+### Slice 9.6 — Audit report and household CSV export — completed
+
+- Added owner/accountant-only audit filtering at `GET /api/v1/reports/audit`
+  and the Spanish `/reports/audit-export` screen. Results are always scoped to
+  the active household and support bounded pagination plus optional date,
+  action, and entity-type filters.
+- Added owner/editor/accountant-authorized `GET /api/v1/reports/export` with a
+  documented CSV contract. It exports dated transaction, obligation, invoice,
+  debt, and exchange-rate records without staged imports or raw source files;
+  it keeps original currencies separate and protects spreadsheet consumers from
+  formula-like cell values.
+- A successful download records a minimal household-scoped `financial_export`
+  audit event with range, format, and row count only. It is explicitly not a
+  backup or restore mechanism; that validation remains Slice 9.7.
+
+### Local acceptance — Slice 9.6 — completed
+
+- On 2026-09-25, the household completed the synthetic JSON-import UI review.
+  It confirmed household-scoped audit filtering, the six expected dated CSV
+  rows without staged source data, spreadsheet-formula neutralization, and the
+  minimal export audit event containing only range, format, and row count.
+
+### Slice 9.7 — Local backup and restore acceptance — completed
+
+- Added the documented, access-controlled Docker Compose PostgreSQL recovery
+  procedure in `docs/docker-compose.md` and its repeatable helper at
+  `scripts/verify-compose-backup-restore.sh`.
+- The helper creates a private temporary custom-format dump from the running
+  Compose database, restores it into an isolated disposable PostgreSQL 17
+  container with no published ports, checks ten core schema tables plus
+  household, membership, financial-record, and audit-record counts, then
+  removes the restore container and dump. It neither exposes credentials nor
+  retains backups in the repository; `/backups/` is ignored as an additional
+  guardrail.
+
+### Local acceptance — Step 9 — completed
+
+- On 2026-09-25, a disposable Docker Compose household was created with only
+  synthetic credentials and records. The owner successfully closed September
+  2026; a paid transaction dated in that month was rejected as
+  `CLOSED_PERIOD` (422); and the owner reopened the period with the recorded
+  synthetic reason. The period status returned to `open` with two transition
+  audit events.
+- The account/cash-flow report returned the expected UYU paid-income amount of
+  12,345 minor units. The category/tax report returned no category rows for
+  the income-only dataset, consistent with its expense-only category scope.
+- The Slice 9.7 helper backed up the same synthetic database and restored it
+  into an isolated disposable PostgreSQL 17 container. It validated ten core
+  tables, one household, one membership, one transaction, zero obligations,
+  invoices, and debts, and five audit events. The temporary dump and restore
+  container were confirmed removed afterward.

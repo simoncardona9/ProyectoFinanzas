@@ -4,6 +4,8 @@ import { structureRepository } from "@/modules/structure/structure.repository";
 import { validateTaxReserveSettlement } from "./tax-reserve.rules";
 import { taxReserveRepository } from "./tax-reserve.repository";
 import type { SettleTaxReserve } from "./tax-reserve.schemas";
+import { financialPeriodRepository } from "@/modules/financial-periods/financial-period.repository";
+import { assertFinancialPeriodOpen } from "@/modules/financial-periods/financial-period.service";
 
 export async function settleTaxReserve(
   context: AuthContext,
@@ -19,6 +21,11 @@ export async function settleTaxReserve(
   ]);
   if (!reserve) throw new ApiError(404, "NOT_FOUND", "Tax reserve not found.");
   validateTaxReserveSettlement(reserve, account, values);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.paidDate,
+  );
   try {
     return await taxReserveRepository.settle(
       context.membership.householdId,

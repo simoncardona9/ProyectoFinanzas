@@ -28,6 +28,26 @@ later slice merely because its foundations are nearby. If a discovery changes a
 future plan, record it as a decision or follow-up rather than silently expanding
 the active slice.
 
+## Change handling
+
+Treat a development step as a planning boundary, not a single indivisible
+implementation task. Before accepting a newly discovered requirement, defect,
+or technical constraint into an active slice, compare it with that slice's
+user outcome, acceptance conditions, and risk surface.
+
+Keep it in the active slice only when it is necessary to make the already
+approved outcome correct, safe, or usable. Create or revise a separate slice
+when it introduces another user outcome, independently reviewable behavior,
+new financial or authorization risk, a distinct migration concern, or a
+meaningful alternative in product decisions. State the dependency and order of
+the slices in the development-process document; retain the factual decision,
+scope change, and verification evidence in the development-progress document.
+
+When a defect threatens data integrity, authorization, or financial
+calculations, prioritize its correction before convenience work. Otherwise,
+record adjacent ideas as follow-up work and continue only with the approved
+slice. Do not describe an unsliced expansion as a minor implementation detail.
+
 Trace the whole path needed for the outcome: user interaction, input contract,
 authorization, domain behavior, persistence, observability or audit needs, and
 the way the result is presented. Change only the layers actually needed. Do

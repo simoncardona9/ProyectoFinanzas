@@ -4,6 +4,9 @@ import { ApiError } from "@/shared/errors/api-error";
 import type { FinanceImportBundle } from "./import.schemas";
 import { importRepository } from "./import.repository";
 import { buildImportPreview, type ImportPreview } from "./import.rules";
+import { financialPeriodRepository } from "@/modules/financial-periods/financial-period.repository";
+import { assertFinancialPeriodsOpen } from "@/modules/financial-periods/financial-period.service";
+import { importAffectedFinancialDates } from "./import-periods";
 
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
@@ -236,6 +239,11 @@ export async function commitCoreCashFlowImport(
     ),
   );
   canCommit(preview, context);
+  await assertFinancialPeriodsOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    importAffectedFinancialDates(bundle),
+  );
   const result = await importRepository.commitCoreCashFlow({
     householdId: context.membership.householdId,
     actorUserId: context.user.id,

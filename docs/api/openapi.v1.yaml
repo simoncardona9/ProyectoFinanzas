@@ -4,6 +4,66 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/financial-periods:
+    get:
+      operationId: getFinancialPeriodStatus
+      summary: Get a calendar month's close status and transition history.
+      description: All active-household roles may read the status for a YYYY-MM calendar month. The server derives its first day; financial records retain their actual dates. A missing household-local period row is open. This read has no audit or financial side effect; a present period includes its household-scoped close/reopen evidence.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: period
+          in: query
+          required: true
+          description: Calendar month in YYYY-MM form, resolved as that month's first day.
+          schema: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }
+          example: "2026-09"
+      responses:
+        "200":
+          description: Active-household period status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/FinancialPeriodStatus" }
+              example: { data: { period: "2026-09", status: open, audit: [] } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/financial-periods/close:
+    post:
+      operationId: closeFinancialPeriod
+      summary: Close a calendar month.
+      description: Owner only. Atomically closes the active household's month and records a household-scoped financial_period audit event. A previously closed month returns 409 and creates no extra audit event.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FinancialPeriodCloseWrite" }
+      responses:
+        "200": { description: Month closed with an audit event }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner role required }
+        "409": { description: Month is already closed }
+  /api/v1/financial-periods/reopen:
+    post:
+      operationId: reopenFinancialPeriod
+      summary: Reopen a closed calendar month with a reason.
+      description: Owner only. A non-empty reason is required. The status change and a household-scoped financial_period audit event containing that reason are atomic.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FinancialPeriodReopenWrite" }
+      responses:
+        "200": { description: Month reopened with its reasoned audit event }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner role required }
+        "409": { description: Month is already open or was never closed }
   /api/v1/invoices:
     get:
       operationId: listInvoices
@@ -230,6 +290,179 @@ paths:
             belongs to another household,
             or is not a USD-purchase rate,
           }
+  /api/v1/reports/accounts-cash-flow:
+    get:
+      operationId: getAccountCashFlowReport
+      summary: Return household-scoped account balances and paid cash flow for an inclusive date range.
+      description: All active-household roles may read this report. It returns every account opened by the end of the requested range, with its balance before the range, any account-opening balance dated inside the range, paid income, paid expenses (including debt-payment transactions), net paid movement, and closing balance. UYU and USD totals are always separate. Each in-range source transaction includes its detail URL for traceability. This read has no financial or audit side effect.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          description: Inclusive calendar start date.
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+          description: Inclusive calendar end date; must be on or after from.
+      responses:
+        "200":
+          description: Account and paid cash-flow report, separated by currency.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [range, accounts, totalsByCurrency]
+                    properties:
+                      range:
+                        type: object
+                        required: [from, to]
+                        properties:
+                          from: { type: string, format: date }
+                          to: { type: string, format: date }
+                      accounts:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            [
+                              id,
+                              name,
+                              currency,
+                              openingMinor,
+                              paidIncomeMinor,
+                              paidExpenseMinor,
+                              paidMovementMinor,
+                              closingMinor,
+                              transactions,
+                            ]
+                      totalsByCurrency:
+                        type: object
+                        required: [UYU, USD]
+                        additionalProperties:
+                          type: object
+                          required:
+                            [
+                              openingMinor,
+                              openingEntriesMinor,
+                              paidIncomeMinor,
+                              paidExpenseMinor,
+                              paidMovementMinor,
+                              closingMinor,
+                            ]
+              example:
+                {
+                  data:
+                    {
+                      range: { from: "2026-09-01", to: "2026-09-30" },
+                      accounts: [],
+                      totalsByCurrency:
+                        {
+                          UYU:
+                            {
+                              openingMinor: 10000,
+                              openingEntriesMinor: 0,
+                              paidIncomeMinor: 25000,
+                              paidExpenseMinor: 9000,
+                              paidMovementMinor: 16000,
+                              closingMinor: 26000,
+                            },
+                          USD:
+                            {
+                              openingMinor: 0,
+                              openingEntriesMinor: 0,
+                              paidIncomeMinor: 0,
+                              paidExpenseMinor: 0,
+                              paidMovementMinor: 0,
+                              closingMinor: 0,
+                            },
+                        },
+                    },
+                }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/reports/categories-tax:
+    get:
+      operationId: getCategoryTaxReport
+      summary: Return paid category and invoice/IVA report totals for an inclusive date range.
+      description: All active-household roles may read this household-scoped report. Category totals include only paid expense transactions with a category and can be grouped by category, month, or year. Debt payments and IVA settlements are excluded from category totals. Non-cancelled invoices use service date; collections, reserves, and settlements use linked paid transaction date. UYU and USD are always separate and every source has its existing detail URL. This read has no financial or audit side effect.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: groupBy
+          in: query
+          required: false
+          schema:
+            { type: string, enum: [category, month, year], default: category }
+      responses:
+        "200":
+          description: Category and invoice/IVA report separated by currency.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      [
+                        range,
+                        categoryGrouping,
+                        categoryRows,
+                        taxTotalsByCurrency,
+                        taxSources,
+                      ]
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/reports/audit:
+    get:
+      operationId: getAuditReport
+      summary: Filter the active household's audit history.
+      description: Owner and accountant only. Filters apply only to the server-selected household; events are returned newest first with bounded pagination. This is read-only and does not create an audit event.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: action, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: entityType, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Household-scoped paginated audit events. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or accountant role required }
+  /api/v1/reports/export:
+    get:
+      operationId: exportFinancialRecordsCsv
+      summary: Download dated household financial records as a CSV file.
+      description: Owner, editor, or accountant only. The required inclusive range applies to each record's own financial date. The response excludes import staging data and emits one export audit event containing only range, format, and row count. CSV cells are quoted and formula-like values are neutralized for spreadsheet safety; this download is not a database backup or restore mechanism.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - { name: format, in: query, required: false, schema: { type: string, enum: [csv], default: csv } }
+      responses:
+        "200":
+          description: UTF-8 CSV attachment with an RFC 4180-compatible quoted header and rows.
+          content: { text/csv: { schema: { type: string, format: binary } } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner, editor, or accountant role required }
   /api/v1/exchange-rates:
     get:
       operationId: listExchangeRates
@@ -1171,8 +1404,18 @@ paths:
                       required: [file],
                       properties:
                         {
-                          file: { type: string, format: binary, description: "CSV, XLSX, or XLSM; maximum 10 MB" },
-                          declaredPeriod: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$", example: "2026-09" },
+                          file:
+                            {
+                              type: string,
+                              format: binary,
+                              description: "CSV, XLSX, or XLSM; maximum 10 MB",
+                            },
+                          declaredPeriod:
+                            {
+                              type: string,
+                              pattern: "^\\d{4}-(0[1-9]|1[0-2])$",
+                              example: "2026-09",
+                            },
                         },
                     },
                 },
@@ -1180,11 +1423,20 @@ paths:
         }
       responses:
         {
-          "200": { description: Canonical staged preview and mapping report; no live records before later explicit commit },
+          "200":
+            {
+              description: Canonical staged preview and mapping report; no live records before later explicit commit,
+            },
           "400": { $ref: "#/components/responses/ValidationError" },
           "403": { description: Editor or owner role required },
-          "409": { description: Idempotency key was used with different converted content },
-          "422": { description: Mapping/formula/row conversion errors; response includes review report and no batch was staged },
+          "409":
+            {
+              description: Idempotency key was used with different converted content,
+            },
+          "422":
+            {
+              description: Mapping/formula/row conversion errors; response includes review report and no batch was staged,
+            },
         }
   /api/v1/imports/{importId}/commit:
     post:
@@ -1554,23 +1806,49 @@ components:
                 required: [type],
                 properties:
                   {
-                    type: { type: string, enum: [json_paste, json_upload, csv_upload, excel_upload] },
+                    type:
+                      {
+                        type: string,
+                        enum:
+                          [json_paste, json_upload, csv_upload, excel_upload],
+                      },
                     name: { type: string, minLength: 1, maxLength: 255 },
-                    originalContentHash: { type: string, pattern: "^[a-f0-9]{64}$" },
-                    declaredPeriod: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
+                    originalContentHash:
+                      { type: string, pattern: "^[a-f0-9]{64}$" },
+                    declaredPeriod:
+                      { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
                     reconciliation:
                       {
                         type: object,
                         description: "Required for a 2026-08 commit. The report itself is retained outside the application; its SHA-256, accountable reviewer, correction record, and exact canonical totals are retained in the staged bundle and audit trail.",
-                        required: [reportName, reportContentHash, reviewer, signedAt, corrections, totals],
+                        required:
+                          [
+                            reportName,
+                            reportContentHash,
+                            reviewer,
+                            signedAt,
+                            corrections,
+                            totals,
+                          ],
                         properties:
                           {
                             reportName: { type: string },
-                            reportContentHash: { type: string, pattern: "^[a-f0-9]{64}$" },
+                            reportContentHash:
+                              { type: string, pattern: "^[a-f0-9]{64}$" },
                             reviewer: { type: string },
                             signedAt: { type: string, format: date-time },
-                            corrections: { type: array, minItems: 5, maxItems: 5, items: { type: object } },
-                            totals: { type: object, description: "UYU and USD maps of every canonical monetary entity total in integer minor units." },
+                            corrections:
+                              {
+                                type: array,
+                                minItems: 5,
+                                maxItems: 5,
+                                items: { type: object },
+                              },
+                            totals:
+                              {
+                                type: object,
+                                description: "UYU and USD maps of every canonical monetary entity total in integer minor units.",
+                              },
                           },
                       },
                   },
@@ -1697,13 +1975,25 @@ components:
                 items:
                   {
                     type: object,
-                    required: [reference, creditorName, description, amountMinor, currency, incurredDate],
+                    required:
+                      [
+                        reference,
+                        creditorName,
+                        description,
+                        amountMinor,
+                        currency,
+                        incurredDate,
+                      ],
                     properties:
                       {
-                        reference: { type: string, minLength: 1, maxLength: 120 },
-                        creditorName: { type: string, minLength: 1, maxLength: 200 },
-                        description: { type: string, minLength: 1, maxLength: 500 },
-                        amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+                        reference:
+                          { type: string, minLength: 1, maxLength: 120 },
+                        creditorName:
+                          { type: string, minLength: 1, maxLength: 200 },
+                        description:
+                          { type: string, minLength: 1, maxLength: 500 },
+                        amountMinor:
+                          { type: integer, minimum: 1, maximum: 2000000000 },
                         currency: { type: string, enum: [UYU, USD] },
                         incurredDate: { type: string, format: date },
                       },
@@ -1719,17 +2009,110 @@ components:
                     properties:
                       {
                         debt: { type: string, minLength: 1, maxLength: 120 },
-                        amountMinor: { type: integer, minimum: 1, maximum: 2000000000 },
+                        amountMinor:
+                          { type: integer, minimum: 1, maximum: 2000000000 },
                         account: { type: string, minLength: 1, maxLength: 120 },
                         paidDate: { type: string, format: date },
-                        description: { type: string, minLength: 1, maxLength: 500 },
+                        description:
+                          { type: string, minLength: 1, maxLength: 500 },
                       },
                   },
               },
-            invoices: { type: array, items: { type: object, required: [reference, clientName, description, serviceDate, dueDate, grossAmountMinor, ivaRateBasisPoints, currency] } },
-            invoiceCollections: { type: array, items: { type: object, required: [reference, invoice, amountMinor, account, paidDate] } },
-            ivaReserves: { type: array, items: { type: object, required: [collection, amountMinor] } },
-            exchangeRates: { type: array, items: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveDate, source, kind, movement] } },
+            invoices:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [
+                        reference,
+                        clientName,
+                        description,
+                        serviceDate,
+                        dueDate,
+                        grossAmountMinor,
+                        ivaRateBasisPoints,
+                        currency,
+                      ],
+                  },
+              },
+            invoiceCollections:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [reference, invoice, amountMinor, account, paidDate],
+                  },
+              },
+            ivaReserves:
+              {
+                type: array,
+                items: { type: object, required: [collection, amountMinor] },
+              },
+            exchangeRates:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required:
+                      [
+                        baseCurrency,
+                        quoteCurrency,
+                        rate,
+                        effectiveDate,
+                        source,
+                        kind,
+                        movement,
+                      ],
+                  },
+              },
+          },
+      }
+    FinancialPeriodStatus:
+      {
+        type: object,
+        required: [period, status, audit],
+        properties:
+          {
+            period: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
+            status: { type: string, enum: [open, closed] },
+            audit:
+              {
+                type: array,
+                items:
+                  {
+                    type: object,
+                    required: [id, action, createdAt],
+                    properties:
+                      {
+                        id: { type: string, format: uuid },
+                        action: { type: string, enum: [close, reopen] },
+                        details: { type: [object, "null"] },
+                        createdAt: { type: string, format: date-time },
+                      },
+                  },
+              },
+          },
+      }
+    FinancialPeriodCloseWrite:
+      {
+        type: object,
+        required: [period],
+        properties:
+          { period: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } },
+      }
+    FinancialPeriodReopenWrite:
+      {
+        type: object,
+        required: [period, reason],
+        properties:
+          {
+            period: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
+            reason: { type: string, minLength: 1, maxLength: 500 },
           },
       }
     Error:

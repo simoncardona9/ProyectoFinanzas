@@ -10,16 +10,24 @@ import {
 } from "./invoice.rules";
 import { ApiError } from "@/shared/errors/api-error";
 import { structureRepository } from "@/modules/structure/structure.repository";
+import { financialPeriodRepository } from "@/modules/financial-periods/financial-period.repository";
+import { assertFinancialPeriodOpen } from "@/modules/financial-periods/financial-period.service";
 
 export async function createInvoice(
   context: AuthContext,
   values: CreateInvoice,
 ) {
+  const breakdown = validateInvoice(values);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.serviceDate,
+  );
   return invoiceRepository.create(
     context.membership.householdId,
     context.user.id,
     values,
-    validateInvoice(values),
+    breakdown,
   );
 }
 
@@ -34,6 +42,11 @@ export async function sendInvoice(
   );
   if (!invoice) throw new ApiError(404, "NOT_FOUND", "Invoice not found.");
   validateInvoiceSend(invoice);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    sentDate,
+  );
   const updated = await invoiceRepository.send(
     context.membership.householdId,
     context.user.id,
@@ -63,6 +76,11 @@ export async function collectInvoice(
   ]);
   if (!invoice) throw new ApiError(404, "NOT_FOUND", "Invoice not found.");
   validateInvoiceCollection(invoice, account, values);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.paidDate,
+  );
   const reserveAmountMinor = calculateCollectionIvaReserve(
     invoice,
     values.amountMinor,
@@ -100,6 +118,11 @@ export async function cancelInvoice(
   );
   if (!invoice) throw new ApiError(404, "NOT_FOUND", "Invoice not found.");
   validateInvoiceCancellation(invoice);
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    invoice.serviceDate,
+  );
   const updated = await invoiceRepository.cancel(
     context.membership.householdId,
     context.user.id,

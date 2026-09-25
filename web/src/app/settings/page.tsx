@@ -6,6 +6,7 @@ import { LogoutButton } from "./logout-button";
 import { LowBufferSettings } from "./low-buffer-settings";
 import { ResetTestData } from "./reset-test-data";
 export default async function SettingsPage() {
+  const canResetTestData = process.env.NODE_ENV !== "production";
   let context;
   try {
     context = await requireAuth();
@@ -66,6 +67,16 @@ export default async function SettingsPage() {
             description="Revisar pagos, saldos originales y exposición con cotización explícita."
           />
           <FeatureNavigationCard
+            href="/reports/accounts-cash-flow"
+            title="Cuentas y flujo de efectivo"
+            description="Consultar saldos iniciales, movimientos pagados y cierres por moneda."
+          />
+          <FeatureNavigationCard
+            href="/reports/categories-tax"
+            title="Categorías, facturación e IVA"
+            description="Revisar egresos pagados, facturación, reservas y liquidaciones por moneda."
+          />
+          <FeatureNavigationCard
             href="/imports"
             title="Importación por lote"
             description="Pegar JSON o convertir CSV/Excel para una revisión sin modificar registros."
@@ -75,6 +86,26 @@ export default async function SettingsPage() {
             title="Facturas e IVA"
             description="Registrar facturas y ver el IVA calculado antes de cobrar o reservar fondos."
           />
+          <FeatureNavigationCard
+            href="/financial-periods"
+            title="Cierre mensual"
+            description="Consultar el estado del mes y, si eres propietario, cerrarlo o reabrirlo con evidencia."
+          />
+          {(context.membership.role === "owner" ||
+            context.membership.role === "accountant") && (
+            <FeatureNavigationCard
+              href="/reports/audit-export"
+              title="Auditoría y exportación"
+              description="Revisar eventos del hogar y descargar registros financieros en CSV."
+            />
+          )}
+          {context.membership.role === "editor" && (
+            <FeatureNavigationCard
+              href="/reports/export"
+              title="Exportar registros financieros"
+              description="Descargar los registros del hogar en CSV para el rango elegido."
+            />
+          )}
         </nav>
         <dl className="mt-8 divide-y divide-zinc-200">
           <div className="py-3">
@@ -97,7 +128,7 @@ export default async function SettingsPage() {
         {household && context.membership.role === "owner" && (
           <>
             <LowBufferSettings household={household} />
-            <ResetTestData />
+            {canResetTestData && <ResetTestData />}
           </>
         )}
       </section>

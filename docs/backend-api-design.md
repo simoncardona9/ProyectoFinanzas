@@ -294,10 +294,10 @@ amount; the payment transaction and reserve mutation both receive audit events.
 
 ### 9. `exchange-rates.controller`
 
-| Method and path              | Parameters                                                                       | Purpose                                  |
-| ---------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
-| `GET /exchange-rates`        | `baseCurrency`, `quoteCurrency`, `from`, `to`, `movement`                        | List rates.                              |
-| `POST /exchange-rates`       | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind`, `movement` | Add a movement-specific exchange rate. |
+| Method and path        | Parameters                                                                                   | Purpose                                |
+| ---------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `GET /exchange-rates`  | `baseCurrency`, `quoteCurrency`, `from`, `to`, `movement`                                    | List rates.                            |
+| `POST /exchange-rates` | body: `baseCurrency`, `quoteCurrency`, `rate`, `effectiveDate`, `source`, `kind`, `movement` | Add a movement-specific exchange rate. |
 
 Slice 6.3 implements the list and create endpoints only. Each rate belongs to
 the server-selected active household and has a UYU/USD base/quote pair, a
@@ -318,23 +318,50 @@ neither selection nor calculation writes financial data.
 
 ### 10. `dashboard.controller`
 
-| Method and path            | Parameters                   | Purpose                                                                                                                                                                                                                        |
-| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Method and path            | Parameters                   | Purpose                                                                                                                                                                                                                                 |
+| -------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /dashboard`           | `period` (`YYYY-MM`)         | Return separate-currency spendable cash, protected IVA reserves, paid, one-off, and expected income for the period, pending obligations, and projected cash. Protected reserve balances are deducted from spendable and projected cash. |
-| `GET /dashboard/cash-flow` | `from`, `to`, `baseCurrency` | Return grouped cash-flow timeline.                                                                                                                                                                                             |
-| `GET /dashboard/alerts`    | `period`                     | Return overdue, low-buffer, due-soon, and USD-exposure alerts.                                                                                                                                                                 |
+| `GET /dashboard/cash-flow` | `from`, `to`, `baseCurrency` | Return grouped cash-flow timeline.                                                                                                                                                                                                      |
+| `GET /dashboard/alerts`    | `period`                     | Return overdue, low-buffer, due-soon, and USD-exposure alerts.                                                                                                                                                                          |
 
 This controller is read-only. It delegates all calculations to reporting/forecast services.
 
+### 10.1 `financial-periods.controller`
+
+| Method and path                  | Parameters                         | Purpose                                                                 |
+| -------------------------------- | ---------------------------------- | ----------------------------------------------------------------------- |
+| `GET /financial-periods`         | `period` (`YYYY-MM`)               | Return the active household's calendar-month close status and evidence. |
+| `POST /financial-periods/close`  | body: `period` (`YYYY-MM`)         | Owner-only atomic close with a household-scoped audit event.            |
+| `POST /financial-periods/reopen` | body: `period`, non-empty `reason` | Owner-only atomic reopen and auditable reason.                          |
+
+Slice 9.3 adds the owner-only state transitions after Slice 9.2's full writer
+guard. A period is identified by the first calendar day of the supplied month
+but financial records keep their own actual dates. In the absence of a
+household-local period row, the read endpoint returns `open`. Closing inserts
+or transitions the row to `closed` and its audit event atomically. Reopening
+only transitions an already closed row, requires a trimmed non-empty reason,
+and records that reason atomically. Duplicate close/reopen attempts return
+`409`; viewer, accountant, and editor attempts return `403`. All
+active-household roles may read only their selected household's status and
+close/reopen evidence.
+Slice 9.2 applies this status to every existing dated financial mutation. A
+closed affected month produces `422 CLOSED_PERIOD` before its repository
+transaction starts, so no financial record, balance, or audit event is
+partially changed. Corrections and deferrals check both their prior and
+replacement dates; import commit checks every dated financial row it will add.
+
 ### 11. `reports.controller`
 
-| Method and path                 | Parameters                                                                                                | Purpose                                                                                                   |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `GET /reports/monthly-close`    | `period`, `baseCurrency`                                                                                  | Return period income, expenses, taxes, debt, and closing balance.                                         |
-| `GET /reports/categories`       | `from`, `to`, `kind`, `groupBy`                                                                           | Return category totals.                                                                                   |
-| `GET /reports/spending-summary` | `from`, `to`, `groupBy` (`month`, `year`, `category`), `currency` or `baseCurrency` with `exchangeRateId` | Return paid-expense totals for any inclusive date range, including two months, a year, or a custom range. |
-| `GET /reports/debts`            | optional `exchangeRateId`                                                                                 | Return current liability and payment report.                                                              |
-| `GET /reports/export`           | `from`, `to`, `format` (`csv` initially)                                                                  | Create household-scoped export.                                                                           |
+| Method and path                   | Parameters                                                                                                | Purpose                                                                                                   |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `GET /reports/monthly-close`      | `period`, `baseCurrency`                                                                                  | Return period income, expenses, taxes, debt, and closing balance.                                         |
+| `GET /reports/categories`         | `from`, `to`, `kind`, `groupBy`                                                                           | Return category totals.                                                                                   |
+| `GET /reports/spending-summary`   | `from`, `to`, `groupBy` (`month`, `year`, `category`), `currency` or `baseCurrency` with `exchangeRateId` | Return paid-expense totals for any inclusive date range, including two months, a year, or a custom range. |
+| `GET /reports/debts`              | optional `exchangeRateId`                                                                                 | Return current liability and payment report.                                                              |
+| `GET /reports/accounts-cash-flow` | required `from`, `to` inclusive ISO dates                                                                 | Return per-account opening, paid movement, and closing balances with separate UYU/USD cash flow.          |
+| `GET /reports/categories-tax`     | required `from`, `to` inclusive ISO dates; `groupBy` (`category`, `month`, `year`)                        | Return paid categorized expenses plus invoice/IVA totals, separated by currency.                          |
+| `GET /reports/audit`              | optional `from`, `to`, `action`, `entityType`, bounded `page`, `pageSize`                                 | Filter household-scoped audit events.                                                                     |
+| `GET /reports/export`             | `from`, `to`, `format` (`csv` initially)                                                                  | Create household-scoped export.                                                                           |
 
 Slice 6.5 implements `GET /reports/debts`. It returns every household debt
 with original amount, paid amount, and remaining amount in its original
@@ -343,6 +370,34 @@ an active-household `USD` → `UYU` rate, it also returns each UYU equivalent an
 the combined UYU exposure with the selected rate's metadata. Without that
 selection, no UYU/USD total is combined. The report is read-only and does not
 infer a latest rate or create audit events.
+
+Slice 9.4 implements `GET /reports/accounts-cash-flow`. It accepts a required
+inclusive ISO-date range and returns accounts opened by the range end. A row
+contains its balance before the range, an opening-balance entry when that entry
+falls inside the range, paid income, paid expenses, net paid movement, and
+closing balance. Paid `income` increases cash; paid `expense` and
+`debt_payment` decrease it. Planned, pending, cancelled, transfer, and
+adjustment records do not affect cash-flow totals. Original UYU and USD
+totals are always separate, and included source transactions expose their
+existing detail route for traceability. The endpoint is household-scoped and
+read-only for every active-household role.
+
+Slice 9.5 implements `GET /reports/categories-tax`. Category rows contain only
+paid `expense` transactions with a category, grouped by category, month, or
+year. Debt payments and IVA settlements have no category and are deliberately
+excluded from those totals. Invoice totals use non-cancelled invoices' service
+date; collections, IVA reserves, and IVA settlements use their linked paid
+transaction date. Every source item links to its existing transaction or
+invoice detail. The endpoint is a household-scoped, read-only report for every
+active-household role and never combines UYU with USD.
+
+Slice 9.6 implements `GET /reports/audit` for owners and accountants only. It
+filters only the active household's persistent audit events by optional UTC date
+range, action, and entity type, newest first with a maximum page size of 100.
+`GET /reports/export` is available to owners, editors, and accountants and
+downloads the documented CSV contract for dated financial records. A successful
+export writes one `financial_export` audit event containing only the requested
+range, format, and row count; it never copies output rows into audit metadata.
 
 ### 12. `grocery-plans.controller`
 

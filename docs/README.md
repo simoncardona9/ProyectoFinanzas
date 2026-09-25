@@ -11,7 +11,7 @@ This folder is the product and technical foundation for replacing the family-fin
 | [business-rules.md](business-rules.md) | Financial calculation and classification rules. |
 | [architecture.md](architecture.md) | Proposed cloud architecture and engineering principles. |
 | [technology-stack.md](technology-stack.md) | Chosen languages, frameworks, and database direction. |
-| [docker-compose.md](docker-compose.md) | Local Docker Compose runtime, GitHub checkout, and operations. |
+| [docker-compose.md](docker-compose.md) | Local Docker Compose runtime, GitHub checkout, operations, and the Slice 9.7 backup/restore acceptance procedure. |
 | [backend-api-design.md](backend-api-design.md) | Backend layers, controllers, endpoint contracts, and module boundaries. |
 | [api-documentation-policy.md](api-documentation-policy.md) | Mandatory endpoint-contract and OpenAPI documentation rules. |
 | [logging-error-policy.md](logging-error-policy.md) | Structured logging, error handling, and domain-exception rules. |
@@ -24,6 +24,7 @@ This folder is the product and technical foundation for replacing the family-fin
 | [import-historical-acceptance.md](import-historical-acceptance.md) | Synthetic local UI checklist for the Slice 8.4 linked historical import. |
 | [import-file-conversion-acceptance.md](import-file-conversion-acceptance.md) | Synthetic local UI checklist for Slice 8.5 CSV/Excel conversion. |
 | [import-august-reconciliation-acceptance.md](import-august-reconciliation-acceptance.md) | Slice 8.6 synthetic reconciliation, retry, and rollback checklist. |
+| [audit-export-acceptance.md](audit-export-acceptance.md) | Slice 9.6 synthetic UI checklist for audit filtering and CSV export. |
 | [roadmap.md](roadmap.md) | Phased implementation plan. |
 | [development-process.md](development-process.md) | Incremental delivery, validation, release, and feedback process. |
 | [git-workflow.md](git-workflow.md) | Branches, pull requests, local testing, and GitHub ownership rules. |

@@ -6,6 +6,7 @@ import { LogoutButton } from "./logout-button";
 import { LowBufferSettings } from "./low-buffer-settings";
 import { ResetTestData } from "./reset-test-data";
 export default async function SettingsPage() {
+  const canResetTestData = process.env.NODE_ENV !== "production";
   let context;
   try {
     context = await requireAuth();
@@ -127,7 +128,7 @@ export default async function SettingsPage() {
         {household && context.membership.role === "owner" && (
           <>
             <LowBufferSettings household={household} />
-            <ResetTestData />
+            {canResetTestData && <ResetTestData />}
           </>
         )}
       </section>

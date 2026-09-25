@@ -590,7 +590,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
   manifests, Helm chart, cluster, or deployment workflow. It remains outside
   the local-only scope and requires separate approval and implementation.
 
-## Step 9 — in progress
+## Step 9 — completed
 
 - Planning review on 2026-09-17 confirmed that Step 9 must be delivered as
   seven ordered slices. Before Slice 9.1, the schema had no financial-period
@@ -602,7 +602,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
   restore as distinct from a household CSV export. No Step 9 product behavior
   has been implemented or accepted by this planning update.
 
-### Slice 9.1 — Financial-period foundation — implemented, pending local acceptance
+### Slice 9.1 — Financial-period foundation — completed
 
 - Added the household-scoped `financial_periods` calendar-month model. The
   database permits one row per household and first day of month; financial
@@ -616,7 +616,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - Local verification passed: `pnpm test` (69 tests), `pnpm exec tsc --noEmit`,
   `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`, and `pnpm build`.
 
-### Slice 9.2 — Closed-period enforcement — implemented, pending local acceptance
+### Slice 9.2 — Closed-period enforcement — completed
 
 - Applied the shared period guard before all current dated financial writes:
   transaction and expected-income creation/correction/void, obligation
@@ -630,7 +630,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - Local verification passed: `pnpm test` (71 tests), `pnpm exec tsc --noEmit`,
   `pnpm lint`, `pnpm db:check`, and `pnpm build`.
 
-### Slice 9.3 — Owner close and controlled reopen — implemented, pending local acceptance
+### Slice 9.3 — Owner close and controlled reopen — completed
 
 - Added owner-only close and reopen endpoints and a Spanish `/financial-periods`
   screen. A close atomically changes the household-local month to `closed` and
@@ -645,7 +645,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - Local verification passed: `pnpm test` (75 tests), `pnpm exec tsc --noEmit`,
   `pnpm lint`, `pnpm db:check`, `pnpm db:migrate`, and `pnpm build`.
 
-### Slice 9.4 — Account and cash-flow reporting — implemented, pending local acceptance
+### Slice 9.4 — Account and cash-flow reporting — completed
 
 - Added a protected, read-only `GET /api/v1/reports/accounts-cash-flow` route
   and Spanish `/reports/accounts-cash-flow` screen. The inclusive date-range
@@ -663,7 +663,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - Local verification passed: `pnpm test` (76 tests), `pnpm exec tsc --noEmit`,
   `pnpm lint`, `pnpm db:check`, and `pnpm build`.
 
-### Slice 9.5 — Category and IVA/tax reporting — implemented, pending local acceptance
+### Slice 9.5 — Category and IVA/tax reporting — completed
 
 - Added the protected, read-only `GET /api/v1/reports/categories-tax` route
   and Spanish `/reports/categories-tax` screen. All active-household roles can
@@ -710,3 +710,33 @@ Step 8 has been decomposed before implementation into six vertical slices:
   It confirmed household-scoped audit filtering, the six expected dated CSV
   rows without staged source data, spreadsheet-formula neutralization, and the
   minimal export audit event containing only range, format, and row count.
+
+### Slice 9.7 — Local backup and restore acceptance — completed
+
+- Added the documented, access-controlled Docker Compose PostgreSQL recovery
+  procedure in `docs/docker-compose.md` and its repeatable helper at
+  `scripts/verify-compose-backup-restore.sh`.
+- The helper creates a private temporary custom-format dump from the running
+  Compose database, restores it into an isolated disposable PostgreSQL 17
+  container with no published ports, checks ten core schema tables plus
+  household, membership, financial-record, and audit-record counts, then
+  removes the restore container and dump. It neither exposes credentials nor
+  retains backups in the repository; `/backups/` is ignored as an additional
+  guardrail.
+
+### Local acceptance — Step 9 — completed
+
+- On 2026-09-25, a disposable Docker Compose household was created with only
+  synthetic credentials and records. The owner successfully closed September
+  2026; a paid transaction dated in that month was rejected as
+  `CLOSED_PERIOD` (422); and the owner reopened the period with the recorded
+  synthetic reason. The period status returned to `open` with two transition
+  audit events.
+- The account/cash-flow report returned the expected UYU paid-income amount of
+  12,345 minor units. The category/tax report returned no category rows for
+  the income-only dataset, consistent with its expense-only category scope.
+- The Slice 9.7 helper backed up the same synthetic database and restored it
+  into an isolated disposable PostgreSQL 17 container. It validated ten core
+  tables, one household, one membership, one transaction, zero obligations,
+  invoices, and debts, and five audit events. The temporary dump and restore
+  container were confirmed removed afterward.

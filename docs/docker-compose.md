@@ -89,3 +89,48 @@ ingress/TLS, backup, and operating procedures.
   or financial exports.
 - The seed is idempotent: each `docker compose up` re-enables the configured
   user and applies its configured password. It does not add financial data.
+
+## Backup and restore acceptance (Slice 9.7)
+
+This is an access-controlled **local recovery check**, not a cloud backup
+service. It may be run only by the person who controls the local Docker host
+and its `.env` file. Use synthetic data only. Do not run it against real
+financial data until a separate backup-retention and storage decision exists.
+
+The checked-in helper creates its custom-format PostgreSQL dump in a private
+temporary directory, restores it into a separate disposable PostgreSQL 17
+container with no published ports, checks the core schema plus household,
+membership, financial-record, and audit counts, and then removes both the
+container and dump. It never prints the database password or writes a backup
+into the repository.
+
+1. Start the normal local stack with synthetic credentials and create at least
+   one synthetic financial record with its normal linked audit event. Sign in
+   as the seeded owner and retain only the displayed counts needed for the
+   review; do not copy record contents into this repository.
+2. From the repository root, run:
+
+   ```bash
+   ./scripts/verify-compose-backup-restore.sh
+   ```
+
+   On Windows, run it from Git Bash or WSL with Docker Desktop available.
+   The first run may pull `postgres:17-alpine` for the isolated restore
+   container.
+3. Record the script's success line in the local acceptance note. It must show
+   all ten core tables and non-zero household, membership, transaction, and
+   audit counts. The helper fails if those mandatory records are absent; its
+   printed transaction, obligation, invoice, and debt counts provide the
+   source-versus-restored comparison. Do not accept a mismatch.
+4. Confirm the command's cleanup message appeared and that neither a
+   `finanzas-restore-check-*` container nor a dump file remains. If a command
+   is interrupted, remove only its exact named container and the exact
+   temporary directory reported by the script; do not use `docker compose down
+   --volumes` as part of this procedure.
+
+For a manually retained emergency copy (outside this acceptance test), use a
+directory owned only by the local operator, keep it outside the repository and
+encrypted by the host's storage protection, and restrict read permission to
+that operator. Its location, retention, and destruction schedule are outside
+the current local-only scope. CSV export remains a reporting feature and is
+not a recovery substitute.

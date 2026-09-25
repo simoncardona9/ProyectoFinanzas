@@ -3,6 +3,14 @@
 This log records completed development steps, their scope, and verification.
 It intentionally contains no real financial or personal data.
 
+## Step 10 — planned
+
+- Step 10 is intentionally not implemented yet. Its four-slice plan in
+  `docs/development-process.md` ends with Slice 10.4, a disposable synthetic
+  local acceptance run covering estimated-versus-actual grocery behavior,
+  privacy, authorization, and cleanup. That final acceptance is required
+  before Step 10 can be marked completed.
+
 ## Step 0 — Project foundation — completed
 
 - Created the local Next.js/TypeScript application with PostgreSQL and Drizzle.

@@ -330,6 +330,30 @@ closed-period guard before it can be enabled.
 
 **Acceptance:** An editor can create a monthly grocery plan, choose or override a suggested price, record an actual purchase, and see an accurate planned-versus-actual result without changing balances before the purchase is paid.
 
+**Planned slices (4):**
+
+1. **10.1 — Private grocery catalog and price observations:** household-scoped
+   markets, products, normalized-name duplicate suggestions, and dated price
+   observations. Estimates remain private and do not create transactions,
+   balances, or audit events intended for a shared catalog.
+2. **10.2 — Grocery plans and estimated totals:** target-period plans with
+   items, optional quantities/units, manual price entry or selection of a
+   household price suggestion, and separately calculated estimated totals.
+   Creating or editing a plan must never alter account balances.
+3. **10.3 — Actual-purchase and receipt reconciliation:** link an existing
+   paid grocery transaction and optional receipt lines to plan items, then show
+   planned-versus-actual differences while preserving the paid transaction as
+   the sole source of balance movement. All links, writes, and reads remain
+   household-scoped and apply the closed-period guard to any newly dated
+   financial write.
+4. **10.4 — Synthetic local acceptance:** in a disposable local household,
+   create a private market/product/price observation, make a period plan,
+   select and override suggested prices, and reconcile a paid purchase with a
+   receipt line. Verify estimated plans have no balance effect before payment,
+   planned-versus-actual totals are traceable and currency-safe, unauthorized
+   or other-household access is rejected, and reset the synthetic household
+   afterward. Record the successful run before marking Step 10 complete.
+
 ### Step 11 — Shared catalog (future)
 
 **Goal:** Offer opt-in shared market, product, and price suggestions without exposing household financial data.
@@ -340,10 +364,30 @@ closed-period guard before it can be enabled.
 
 **Acceptance:** A household can explicitly publish a price suggestion and another household can use it without either household seeing the other's financial records.
 
+**Planned slices (3):**
+
+1. **11.1 — Deliberate publication boundary:** allow a household to opt in an
+   eligible market, product, or price suggestion using a public catalog record
+   that contains no household identity, purchase, plan, quantity, or budget
+   data.
+2. **11.2 — Shared search and local adoption:** search normalized public names
+   and aliases, present duplicate suggestions, preserve legitimate distinct
+   products/branches, and let a household copy a suggestion into its private
+   catalog without exposing its plans or transactions.
+3. **11.3 — Synthetic local acceptance:** use two disposable households to
+   prove deliberate publication and adoption, verify non-public records and
+   all financial/plan data remain invisible across households, test duplicate
+   handling and authorization, then reset both households before marking Step
+   11 complete.
+
 ## Rules for scope control
 
 - Do not begin a later step until the current step meets its acceptance criteria.
 - A step may be split further if it cannot be reviewed in one short development cycle.
+- Every future multi-slice product step reserves a final synthetic local-
+  acceptance slice. It exercises the completed step as a household outcome,
+  records relevant authorization and financial/privacy checks, cleans up its
+  disposable data, and is required before the step is marked complete.
 - New ideas are recorded in the backlog; they do not expand a slice already under review.
 - Real financial data is entered or imported only after Steps 1–5 are stable and backup procedures exist. It must remain local until a separate cloud-deployment decision is approved.
 - Fix data integrity, authorization, or calculation defects before adding convenience features.

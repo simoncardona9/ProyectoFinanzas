@@ -39,7 +39,17 @@ fs.writeFileSync(
 
 writeWorkbook(
   "slice-8.5-formula.xlsx",
-  [["10/09/2026", "Gasto", 125, "UYU", "Caja prueba CSV", "Gastos prueba CSV", "Prueba de fórmula"]],
+  [
+    [
+      "10/09/2026",
+      "Gasto",
+      125,
+      "UYU",
+      "Caja prueba CSV",
+      "Gastos prueba CSV",
+      "Prueba de fórmula",
+    ],
+  ],
   (sheet) => {
     sheet.C2 = { t: "n", f: "100+25", v: 125 };
   },
@@ -48,8 +58,24 @@ writeWorkbook(
 writeWorkbook(
   "slice-8.5-hidden-row.xlsx",
   [
-    ["10/09/2026", "Ingreso", 100, "UYU", "Caja prueba CSV", "Ingresos prueba CSV", "Fila visible"],
-    ["11/09/2026", "Gasto", 50, "UYU", "Caja prueba CSV", "Gastos prueba CSV", "Fila oculta"],
+    [
+      "10/09/2026",
+      "Ingreso",
+      100,
+      "UYU",
+      "Caja prueba CSV",
+      "Ingresos prueba CSV",
+      "Fila visible",
+    ],
+    [
+      "11/09/2026",
+      "Gasto",
+      50,
+      "UYU",
+      "Caja prueba CSV",
+      "Gastos prueba CSV",
+      "Fila oculta",
+    ],
     [],
     [],
   ],

@@ -424,20 +424,18 @@ export const importRepository = {
           remaining: debt.remainingAmountMinor,
           description: debt.description,
         });
-        await tx
-          .insert(auditLogs)
-          .values({
-            householdId: values.householdId,
-            actorUserId: values.actorUserId,
-            action: "create",
-            entityType: "debt",
-            entityId: debt.id,
-            details: {
-              importId: values.importId,
-              entity: "debts",
-              row: index + 1,
-            },
-          });
+        await tx.insert(auditLogs).values({
+          householdId: values.householdId,
+          actorUserId: values.actorUserId,
+          action: "create",
+          entityType: "debt",
+          entityId: debt.id,
+          details: {
+            importId: values.importId,
+            entity: "debts",
+            row: index + 1,
+          },
+        });
       }
       for (let index = 0; index < values.bundle.debtPayments.length; index++) {
         const row = values.bundle.debtPayments[index];
@@ -460,13 +458,11 @@ export const importRepository = {
             isOneOff: false,
           })
           .returning({ id: transactions.id });
-        await tx
-          .insert(debtPayments)
-          .values({
-            debtId: debt.id,
-            transactionId: transaction.id,
-            amountMinor: row.amountMinor,
-          });
+        await tx.insert(debtPayments).values({
+          debtId: debt.id,
+          transactionId: transaction.id,
+          amountMinor: row.amountMinor,
+        });
         debt.remaining -= row.amountMinor;
         await tx
           .update(debts)
@@ -476,21 +472,19 @@ export const importRepository = {
             updatedAt: new Date(),
           })
           .where(eq(debts.id, debt.id));
-        await tx
-          .insert(auditLogs)
-          .values({
-            householdId: values.householdId,
-            actorUserId: values.actorUserId,
-            action: "payment",
-            entityType: "debt",
-            entityId: debt.id,
-            details: {
-              importId: values.importId,
-              entity: "debtPayments",
-              row: index + 1,
-              transactionId: transaction.id,
-            },
-          });
+        await tx.insert(auditLogs).values({
+          householdId: values.householdId,
+          actorUserId: values.actorUserId,
+          action: "payment",
+          entityType: "debt",
+          entityId: debt.id,
+          details: {
+            importId: values.importId,
+            entity: "debtPayments",
+            row: index + 1,
+            transactionId: transaction.id,
+          },
+        });
       }
       const invoiceIds = new Map<
         string,
@@ -536,20 +530,18 @@ export const importRepository = {
           remaining: invoice.remainingAmountMinor,
           description: invoice.description,
         });
-        await tx
-          .insert(auditLogs)
-          .values({
-            householdId: values.householdId,
-            actorUserId: values.actorUserId,
-            action: "create",
-            entityType: "invoice",
-            entityId: invoice.id,
-            details: {
-              importId: values.importId,
-              entity: "invoices",
-              row: index + 1,
-            },
-          });
+        await tx.insert(auditLogs).values({
+          householdId: values.householdId,
+          actorUserId: values.actorUserId,
+          action: "create",
+          entityType: "invoice",
+          entityId: invoice.id,
+          details: {
+            importId: values.importId,
+            entity: "invoices",
+            row: index + 1,
+          },
+        });
       }
       const collectionIds = new Map<
         string,
@@ -618,21 +610,19 @@ export const importRepository = {
           currency: invoice.currency,
           expectedReserve,
         });
-        await tx
-          .insert(auditLogs)
-          .values({
-            householdId: values.householdId,
-            actorUserId: values.actorUserId,
-            action: "collection",
-            entityType: "invoice",
-            entityId: invoice.id,
-            details: {
-              importId: values.importId,
-              entity: "invoiceCollections",
-              row: index + 1,
-              transactionId: transaction.id,
-            },
-          });
+        await tx.insert(auditLogs).values({
+          householdId: values.householdId,
+          actorUserId: values.actorUserId,
+          action: "collection",
+          entityType: "invoice",
+          entityId: invoice.id,
+          details: {
+            importId: values.importId,
+            entity: "invoiceCollections",
+            row: index + 1,
+            transactionId: transaction.id,
+          },
+        });
       }
       for (let index = 0; index < values.bundle.ivaReserves.length; index++) {
         const row = values.bundle.ivaReserves[index];
@@ -652,20 +642,18 @@ export const importRepository = {
             currency: collection.currency,
           })
           .returning({ id: taxReserves.id });
-        await tx
-          .insert(auditLogs)
-          .values({
-            householdId: values.householdId,
-            actorUserId: values.actorUserId,
-            action: "create",
-            entityType: "tax_reserve",
-            entityId: reserve.id,
-            details: {
-              importId: values.importId,
-              entity: "ivaReserves",
-              row: index + 1,
-            },
-          });
+        await tx.insert(auditLogs).values({
+          householdId: values.householdId,
+          actorUserId: values.actorUserId,
+          action: "create",
+          entityType: "tax_reserve",
+          entityId: reserve.id,
+          details: {
+            importId: values.importId,
+            entity: "ivaReserves",
+            row: index + 1,
+          },
+        });
       }
       for (let index = 0; index < values.bundle.exchangeRates.length; index++) {
         const row = values.bundle.exchangeRates[index];
@@ -673,20 +661,18 @@ export const importRepository = {
           .insert(exchangeRates)
           .values({ householdId: values.householdId, ...row })
           .returning({ id: exchangeRates.id });
-        await tx
-          .insert(auditLogs)
-          .values({
-            householdId: values.householdId,
-            actorUserId: values.actorUserId,
-            action: "create",
-            entityType: "exchange_rate",
-            entityId: rate.id,
-            details: {
-              importId: values.importId,
-              entity: "exchangeRates",
-              row: index + 1,
-            },
-          });
+        await tx.insert(auditLogs).values({
+          householdId: values.householdId,
+          actorUserId: values.actorUserId,
+          action: "create",
+          entityType: "exchange_rate",
+          entityId: rate.id,
+          details: {
+            importId: values.importId,
+            entity: "exchangeRates",
+            row: index + 1,
+          },
+        });
       }
       const result = {
         importId: values.importId,

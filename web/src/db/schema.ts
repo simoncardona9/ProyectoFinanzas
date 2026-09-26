@@ -576,6 +576,94 @@ export const financialPeriods = pgTable(
 );
 
 /**
+ * Grocery catalog records are deliberately household-private planning data.
+ * They never represent a financial movement; plans and receipt links arrive
+ * in later Step 10 slices.
+ */
+export const groceryMarkets = pgTable(
+  "grocery_markets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_markets_household_normalized_idx").on(
+      table.householdId,
+      table.normalizedName,
+    ),
+  ],
+);
+
+export const groceryProducts = pgTable(
+  "grocery_products",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_products_household_normalized_idx").on(
+      table.householdId,
+      table.normalizedName,
+    ),
+  ],
+);
+
+export const groceryPriceObservations = pgTable(
+  "grocery_price_observations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    marketId: uuid("market_id")
+      .notNull()
+      .references(() => groceryMarkets.id, { onDelete: "restrict" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => groceryProducts.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    observedDate: date("observed_date").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_prices_household_product_date_idx").on(
+      table.householdId,
+      table.productId,
+      table.observedDate,
+    ),
+    index("grocery_prices_household_market_date_idx").on(
+      table.householdId,
+      table.marketId,
+      table.observedDate,
+    ),
+  ],
+);
+
+/**
  * A staged batch is deliberately separate from financial records. Slice 8.1
  * only writes this review/provenance record; committing is introduced later.
  */

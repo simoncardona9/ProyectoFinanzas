@@ -3,13 +3,13 @@
 This log records completed development steps, their scope, and verification.
 It intentionally contains no real financial or personal data.
 
-## Step 10 — planned
+## Step 10 — in progress
 
-- Step 10 is intentionally not implemented yet. Its four-slice plan in
-  `docs/development-process.md` ends with Slice 10.4, a disposable synthetic
-  local acceptance run covering estimated-versus-actual grocery behavior,
-  privacy, authorization, and cleanup. That final acceptance is required
-  before Step 10 can be marked completed.
+- Slice 10.1 is implemented, pending review: household-private markets,
+  products, normalized-name duplicate suggestions, and dated price
+  observations. These planning records do not create transactions or alter
+  balances. Grocery plans and purchase reconciliation remain in Slices 10.2
+  and 10.3; the synthetic local acceptance remains Slice 10.4.
 
 ## Step 0 — Project foundation — completed
 

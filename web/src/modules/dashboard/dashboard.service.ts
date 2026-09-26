@@ -9,11 +9,11 @@ export async function getDashboard(householdId: string, period: string) {
   const to = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
   const [forecast, income, expectedIncome, protectedReserves, household] =
     await Promise.all([
-    obligationRepository.forecast(householdId, from, to),
-    dashboardRepository.collectedIncome(householdId, from, to),
-    dashboardRepository.expectedIncome(householdId, from, to),
-    dashboardRepository.protectedReserves(householdId),
-    authRepository.getHousehold(householdId),
+      obligationRepository.forecast(householdId, from, to),
+      dashboardRepository.collectedIncome(householdId, from, to),
+      dashboardRepository.expectedIncome(householdId, from, to),
+      dashboardRepository.protectedReserves(householdId),
+      authRepository.getHousehold(householdId),
     ]);
   const currencies = mergeDashboardCurrencies([
     ...forecast,

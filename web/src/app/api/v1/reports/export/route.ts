@@ -5,9 +5,24 @@ import { errorResponse } from "@/shared/errors/api-error";
 
 export async function GET(request: Request) {
   try {
-    const input = financialExportQuerySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams));
-    if (!input.success) return Response.json({ error: { code: "VALIDATION_ERROR", message: "Invalid financial export range.", fields: input.error.flatten().fieldErrors } }, { status: 400 });
-    const result = await createFinancialCsvExport(await requireAuth(), input.data);
+    const input = financialExportQuerySchema.safeParse(
+      Object.fromEntries(new URL(request.url).searchParams),
+    );
+    if (!input.success)
+      return Response.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid financial export range.",
+            fields: input.error.flatten().fieldErrors,
+          },
+        },
+        { status: 400 },
+      );
+    const result = await createFinancialCsvExport(
+      await requireAuth(),
+      input.data,
+    );
     return new Response(`\uFEFF${result.csv}`, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",

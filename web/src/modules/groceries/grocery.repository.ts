@@ -2,6 +2,8 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   groceryMarkets,
+  groceryPlanItems,
+  groceryPlans,
   groceryPriceObservations,
   groceryProducts,
 } from "@/db/schema";
@@ -95,5 +97,110 @@ export const groceryRepository = {
         desc(groceryPriceObservations.observedDate),
         desc(groceryPriceObservations.createdAt),
       );
+  },
+  listPlans(householdId: string) {
+    return db
+      .select({
+        id: groceryPlans.id,
+        periodStart: groceryPlans.targetPeriodStart,
+        name: groceryPlans.name,
+        currency: groceryPlans.currency,
+        status: groceryPlans.status,
+        preferredMarketId: groceryPlans.preferredMarketId,
+        preferredMarketName: groceryMarkets.name,
+        createdAt: groceryPlans.createdAt,
+      })
+      .from(groceryPlans)
+      .leftJoin(
+        groceryMarkets,
+        eq(groceryPlans.preferredMarketId, groceryMarkets.id),
+      )
+      .where(eq(groceryPlans.householdId, householdId))
+      .orderBy(desc(groceryPlans.targetPeriodStart), asc(groceryPlans.name));
+  },
+  findPlan(householdId: string, id: string) {
+    return db.query.groceryPlans.findFirst({
+      where: and(
+        eq(groceryPlans.id, id),
+        eq(groceryPlans.householdId, householdId),
+      ),
+    });
+  },
+  async createPlan(
+    householdId: string,
+    values: Omit<typeof groceryPlans.$inferInsert, "householdId">,
+  ) {
+    const [plan] = await db
+      .insert(groceryPlans)
+      .values({ ...values, householdId })
+      .returning();
+    return plan;
+  },
+  async updatePlan(
+    householdId: string,
+    id: string,
+    values: Partial<Omit<typeof groceryPlans.$inferInsert, "householdId">>,
+  ) {
+    const [plan] = await db
+      .update(groceryPlans)
+      .set({ ...values, updatedAt: new Date() })
+      .where(
+        and(eq(groceryPlans.id, id), eq(groceryPlans.householdId, householdId)),
+      )
+      .returning();
+    return plan;
+  },
+  async createPlanItem(
+    householdId: string,
+    values: Omit<typeof groceryPlanItems.$inferInsert, "householdId">,
+  ) {
+    const [item] = await db
+      .insert(groceryPlanItems)
+      .values({ ...values, householdId })
+      .returning();
+    return item;
+  },
+  findPriceObservation(householdId: string, id: string) {
+    return db.query.groceryPriceObservations.findFirst({
+      where: and(
+        eq(groceryPriceObservations.id, id),
+        eq(groceryPriceObservations.householdId, householdId),
+      ),
+    });
+  },
+  async planDetail(householdId: string, id: string) {
+    const [plan] = await Promise.all([this.findPlan(householdId, id)]);
+    if (!plan) return undefined;
+    const [market, items] = await Promise.all([
+      plan.preferredMarketId
+        ? this.findMarket(householdId, plan.preferredMarketId)
+        : undefined,
+      db
+        .select({
+          id: groceryPlanItems.id,
+          productId: groceryPlanItems.productId,
+          productName: groceryProducts.name,
+          description: groceryPlanItems.description,
+          quantity: groceryPlanItems.quantity,
+          unit: groceryPlanItems.unit,
+          plannedUnitPriceMinor: groceryPlanItems.plannedUnitPriceMinor,
+          suggestedPriceObservationId:
+            groceryPlanItems.suggestedPriceObservationId,
+          createdAt: groceryPlanItems.createdAt,
+        })
+        .from(groceryPlanItems)
+        .leftJoin(
+          groceryProducts,
+          eq(groceryPlanItems.productId, groceryProducts.id),
+        )
+        .where(
+          and(
+            eq(groceryPlanItems.householdId, householdId),
+            eq(groceryPlanItems.groceryPlanId, id),
+          ),
+        )
+        .orderBy(asc(groceryPlanItems.createdAt)),
+    ]);
+    return { plan, preferredMarketName: market?.name ?? null, items };
   },
 };

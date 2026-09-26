@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { BackLink } from "@/shared/ui/navigation";
 import { GroceryCatalogManager } from "./grocery-catalog-manager";
+import { GroceryPlanManager } from "./grocery-plan-manager";
 
 export default async function GroceriesPage() {
   let context;
@@ -18,7 +19,9 @@ export default async function GroceriesPage() {
             <p className="text-sm font-semibold text-emerald-700">
               Finanzas Familiares
             </p>
-            <h1 className="mt-2 text-2xl font-semibold">Catálogo de compras</h1>
+            <h1 className="mt-2 text-2xl font-semibold">
+              Compras y planificación
+            </h1>
           </div>
           <BackLink href="/settings">Volver a configuración</BackLink>
         </div>
@@ -27,6 +30,9 @@ export default async function GroceriesPage() {
           Registrar un precio no crea transacciones ni modifica saldos.
         </p>
         <GroceryCatalogManager
+          canEdit={["owner", "editor"].includes(context.membership.role)}
+        />
+        <GroceryPlanManager
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />
       </section>

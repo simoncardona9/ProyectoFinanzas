@@ -106,6 +106,14 @@ export const financialPeriodStatus = pgEnum("financial_period_status", [
   "closed",
 ]);
 
+/** Grocery plans are planning records only. Their lifecycle must not be
+ * confused with transaction or obligation statuses. */
+export const groceryPlanStatus = pgEnum("grocery_plan_status", [
+  "draft",
+  "active",
+  "cancelled",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
@@ -659,6 +667,83 @@ export const groceryPriceObservations = pgTable(
       table.householdId,
       table.marketId,
       table.observedDate,
+    ),
+  ],
+);
+
+/**
+ * A grocery plan is deliberately independent of a financial-period row: the
+ * target month is useful for planning even when that financial period is
+ * closed, because creating a plan never changes a financial record or cash.
+ */
+export const groceryPlans = pgTable(
+  "grocery_plans",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    targetPeriodStart: date("target_period_start").notNull(),
+    name: text("name").notNull(),
+    currency: text("currency").notNull(),
+    status: groceryPlanStatus("status").notNull().default("draft"),
+    preferredMarketId: uuid("preferred_market_id").references(
+      () => groceryMarkets.id,
+      { onDelete: "restrict" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_plans_household_period_idx").on(
+      table.householdId,
+      table.targetPeriodStart,
+    ),
+  ],
+);
+
+/**
+ * `plannedUnitPriceMinor` is a snapshot, even when it came from an observed
+ * price. This keeps an estimate reproducible if catalog records gain editing
+ * behavior in a later slice. Quantity is optional; an omitted quantity means
+ * one planned unit for estimation purposes.
+ */
+export const groceryPlanItems = pgTable(
+  "grocery_plan_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    groceryPlanId: uuid("grocery_plan_id")
+      .notNull()
+      .references(() => groceryPlans.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").references(() => groceryProducts.id, {
+      onDelete: "restrict",
+    }),
+    description: text("description"),
+    quantity: numeric("quantity", { precision: 12, scale: 3 }),
+    unit: text("unit"),
+    plannedUnitPriceMinor: integer("planned_unit_price_minor").notNull(),
+    suggestedPriceObservationId: uuid(
+      "suggested_price_observation_id",
+    ).references(() => groceryPriceObservations.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_plan_items_plan_idx").on(table.groceryPlanId),
+    index("grocery_plan_items_household_product_idx").on(
+      table.householdId,
+      table.productId,
     ),
   ],
 );

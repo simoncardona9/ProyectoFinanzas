@@ -3,14 +3,6 @@
 This log records completed development steps, their scope, and verification.
 It intentionally contains no real financial or personal data.
 
-## Step 10 — in progress
-
-- Slice 10.1 is implemented, pending review: household-private markets,
-  products, normalized-name duplicate suggestions, and dated price
-  observations. These planning records do not create transactions or alter
-  balances. Grocery plans and purchase reconciliation remain in Slices 10.2
-  and 10.3; the synthetic local acceptance remains Slice 10.4.
-
 ## Step 0 — Project foundation — completed
 
 - Created the local Next.js/TypeScript application with PostgreSQL and Drizzle.
@@ -748,3 +740,47 @@ Step 8 has been decomposed before implementation into six vertical slices:
   tables, one household, one membership, one transaction, zero obligations,
   invoices, and debts, and five audit events. The temporary dump and restore
   container were confirmed removed afterward.
+
+## Step 10 — in progress
+
+- **Current slice: 10.2 — Grocery plans and estimated totals.** Its
+  implementation and automated verification are complete; it awaits local UI
+  review alongside the already implemented Slice 10.1 private catalog.
+- Slice 10.3 actual-purchase and receipt reconciliation has not started.
+  Slice 10.4 remains the final synthetic local acceptance for the whole step.
+
+### Slice 10.1 — Private grocery catalog and price observations — implemented, pending local UI review
+
+- Added household-private markets and products with normalized Spanish names.
+  The catalog shows possible duplicate names after case, accent, punctuation,
+  and whitespace normalization, while preserving legitimate distinct records.
+- Added dated, positive UYU or USD price observations that reference only a
+  market and product in the active household. Catalog and observation reads are
+  household-scoped; owners and editors can create records while viewer and
+  accountant roles remain read-only.
+- Added the Spanish catalog interface at `/groceries`, including private market,
+  product, and observed-price entry. Catalog records and observations are
+  planning data: they create no transaction, do not change account balances,
+  and do not expose data to other households or a shared catalog.
+- Added migration `0019_third_celestials.sql` and unit coverage for name
+  normalization and positive whole-minor-unit price validation.
+
+### Slice 10.2 — Grocery plans and estimated totals — in progress
+
+- Added household-private, single-currency target-month grocery plans with
+  optional preferred market, draft/active/cancelled planning status, and
+  calculated estimate totals. A plan's target period is planning metadata and
+  is deliberately independent from closed financial-period enforcement.
+- Plan items support a catalog product or free-text description, optional
+  quantity/unit, and exactly one manual minor-unit price or matching household
+  price observation. Suggested prices are copied into the item so estimates
+  remain reproducible; fractional quantities use integer-safe half-up rounding.
+- Added protected plan list/detail/create/update/item endpoints and the Spanish
+  grocery-plan UI. All active members can read; only owners/editors can write.
+  No plan or item mutation creates a transaction, modifies an account balance,
+  or records actual purchase/receipt data; reconciliation remains Slice 10.3.
+
+### Verification
+
+- `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:check`, `pnpm exec tsc
+--noEmit`, `pnpm test` (84 tests), `pnpm lint`, and `pnpm build` — passed.

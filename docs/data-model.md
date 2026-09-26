@@ -45,7 +45,17 @@ An optional receipt-level breakdown of one transaction. Required fields: `transa
 
 ### GroceryPlan and GroceryPlanItem
 
-`GroceryPlan` is a household-owned, non-financial shopping plan for a target `FinancialPeriod`. It records status (`draft`, `active`, `partially_fulfilled`, `fulfilled`, or `cancelled`), an optional preferred market, and planned totals. `GroceryPlanItem` records a product or free-text description, quantity, unit, planned price, optional market price suggestion, and actual fulfillment links. A plan may be fulfilled partially or across multiple markets and transactions. It never changes account balances by itself.
+`GroceryPlan` is a household-owned, non-financial shopping plan for a target
+calendar month. Slice 10.2 supports `draft`, `active`, and `cancelled` status,
+an optional preferred private market, one authoritative plan currency, and a
+calculated estimate total. Its target month remains planning metadata: unlike a
+financial record, it neither relies on nor changes a `FinancialPeriod` row.
+`GroceryPlanItem` records a catalog product or free-text description, optional
+quantity/unit, a required snapshotted planned unit price, and an optional source
+price observation. A missing quantity means one unit; totals are calculated
+with half-up minor-unit rounding. Actual fulfillment, receipt lines, and links
+to transactions remain Slice 10.3 work. A plan never changes account balances
+by itself.
 
 ### Market, Product, and MarketPrice
 

@@ -438,9 +438,21 @@ paths:
         - { name: from, in: query, schema: { type: string, format: date } }
         - { name: to, in: query, schema: { type: string, format: date } }
         - { name: action, in: query, schema: { type: string, maxLength: 80 } }
-        - { name: entityType, in: query, schema: { type: string, maxLength: 80 } }
-        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
-        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - {
+            name: entityType,
+            in: query,
+            schema: { type: string, maxLength: 80 },
+          }
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 1, default: 1 },
+          }
+        - {
+            name: pageSize,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 25 },
+          }
       responses:
         "200": { description: Household-scoped paginated audit events. }
         "400": { $ref: "#/components/responses/ValidationError" }
@@ -453,9 +465,24 @@ paths:
       description: Owner, editor, or accountant only. The required inclusive range applies to each record's own financial date. The response excludes import staging data and emits one export audit event containing only range, format, and row count. CSV cells are quoted and formula-like values are neutralized for spreadsheet safety; this download is not a database backup or restore mechanism.
       security: [{ sessionCookie: [] }]
       parameters:
-        - { name: from, in: query, required: true, schema: { type: string, format: date } }
-        - { name: to, in: query, required: true, schema: { type: string, format: date } }
-        - { name: format, in: query, required: false, schema: { type: string, enum: [csv], default: csv } }
+        - {
+            name: from,
+            in: query,
+            required: true,
+            schema: { type: string, format: date },
+          }
+        - {
+            name: to,
+            in: query,
+            required: true,
+            schema: { type: string, format: date },
+          }
+        - {
+            name: format,
+            in: query,
+            required: false,
+            schema: { type: string, enum: [csv], default: csv },
+          }
       responses:
         "200":
           description: UTF-8 CSV attachment with an RFC 4180-compatible quoted header and rows.
@@ -1498,6 +1525,98 @@ paths:
               description: Import has unresolved validation errors; no live records were created,
             },
         }
+  /api/v1/grocery-plans:
+    get:
+      operationId: listGroceryPlans
+      summary: List private grocery plans for the active household.
+      description: Every active-household role may read plans. Results are non-financial planning records and never combine currencies.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Household-scoped grocery plans }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createGroceryPlan
+      summary: Create a private draft grocery plan.
+      description: Owner or editor only. The target month is planning metadata, not a financial write; it may not change balances, transactions, financial-period state, or audit records.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period, name, currency]
+              properties:
+                period: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }
+                name: { type: string, minLength: 1, maxLength: 160 }
+                currency: { type: string, enum: [UYU, USD] }
+                preferredMarketId: { type: string, format: uuid }
+      responses:
+        "201": { description: Private draft plan created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "404":
+          { description: Preferred market not found in the active household }
+  /api/v1/grocery-plans/{planId}:
+    get:
+      operationId: getGroceryPlan
+      summary: Get a private grocery plan and its estimated total.
+      description: The response retains the plan currency. Every item total is calculated from its snapshotted minor-unit price and optional quantity; no actual purchase data is included in this slice.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: planId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        "200": { description: Household-scoped grocery plan detail }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { description: Grocery plan not found }
+    patch:
+      operationId: updateGroceryPlan
+      summary: Update private grocery-plan metadata.
+      description: Owner or editor only. Permits name, status, or preferred market; it cannot create a financial effect.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: planId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        "200": { description: Grocery plan updated }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "404": { description: Grocery plan or preferred market not found }
+  /api/v1/grocery-plans/{planId}/items:
+    post:
+      operationId: addGroceryPlanItem
+      summary: Add a private estimated grocery-plan item.
+      description: Owner or editor only. A product or free-text description is required. Select exactly one manual price or price observation; an observation must belong to the active household and match the item's product and plan currency. This operation never creates a transaction or changes a balance.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - {
+            name: planId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
+      responses:
+        "201": { description: Estimated plan item created }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "404": { description: Plan, product, or price observation not found }
+        "409": { description: Grocery plan is cancelled }
+        "422":
+          {
+            description: Price observation does not match product or plan currency,
+          }
 components:
   securitySchemes:
     { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }

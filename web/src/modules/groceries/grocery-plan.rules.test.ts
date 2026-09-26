@@ -54,8 +54,13 @@ describe("grocery plan rules", () => {
 });
 
 it("requires receipt lines to reconcile to the paid transaction amount", () => {
-  expect(receiptLinesTotalMinor([{ totalMinor: 100 }, { totalMinor: 55 }])).toBe(155);
+  expect(
+    receiptLinesTotalMinor([{ totalMinor: 100 }, { totalMinor: 55 }]),
+  ).toBe(155);
   expect(() =>
-    createGroceryPlanItemSchema.parse({ description: "Pan", manualUnitPriceMinor: 100 }),
+    createGroceryPlanItemSchema.parse({
+      description: "Pan",
+      manualUnitPriceMinor: 100,
+    }),
   ).not.toThrow();
 });

@@ -45,10 +45,32 @@ type PlanDetail = {
   estimatedTotalMinor: number;
   actualTotalMinor: number;
   differenceMinor: number;
-  purchases: Array<{ id: string; transactionId: string; date: string; description: string; amountMinor: number; currency: string }>;
-  receiptLines: Array<{ groceryPurchaseId: string; groceryPlanItemId: string | null; description: string; quantity: number | undefined; unit: string | null; unitPriceMinor: number | null; totalMinor: number }>;
+  purchases: Array<{
+    id: string;
+    transactionId: string;
+    date: string;
+    description: string;
+    amountMinor: number;
+    currency: string;
+  }>;
+  receiptLines: Array<{
+    groceryPurchaseId: string;
+    groceryPlanItemId: string | null;
+    description: string;
+    quantity: number | undefined;
+    unit: string | null;
+    unitPriceMinor: number | null;
+    totalMinor: number;
+  }>;
 };
-type PaidExpense = { id: string; date: string; description: string; amountMinor: number; currency: "UYU" | "USD"; type: string };
+type PaidExpense = {
+  id: string;
+  date: string;
+  description: string;
+  amountMinor: number;
+  currency: "UYU" | "USD";
+  type: string;
+};
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -86,6 +108,7 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [detail, setDetail] = useState<PlanDetail>();
   const [paidExpenses, setPaidExpenses] = useState<PaidExpense[]>([]);
+  const [isLoadingPaidExpenses, setIsLoadingPaidExpenses] = useState(false);
   const [message, setMessage] = useState("");
   const load = useCallback(async () => {
     try {
@@ -111,7 +134,25 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
   const loadDetail = useCallback(async (id: string) => {
     try {
       setSelectedId(id);
-      setDetail(await api<PlanDetail>(`/api/v1/grocery-plans/${id}`));
+      const loadedDetail = await api<PlanDetail>(`/api/v1/grocery-plans/${id}`);
+      setDetail(loadedDetail);
+      setPaidExpenses([]);
+      setIsLoadingPaidExpenses(true);
+      try {
+        setPaidExpenses(
+          await api<PaidExpense[]>(
+            `/api/v1/transactions?type=expense&currency=${loadedDetail.plan.currency}&limit=100`,
+          ),
+        );
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar los gastos pagados.",
+        );
+      } finally {
+        setIsLoadingPaidExpenses(false);
+      }
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "No se pudo cargar el plan.",
@@ -129,9 +170,12 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
   async function addPurchase(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedId || !detail) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const totalMinor = parseMoney(form.get("receiptTotal"));
-    const receiptDescription = String(form.get("receiptDescription") || "").trim();
+    const receiptDescription = String(
+      form.get("receiptDescription") || "",
+    ).trim();
     const planItemId = String(form.get("groceryPlanItemId") || "");
     try {
       await api(`/api/v1/grocery-plans/${selectedId}/purchases`, {
@@ -139,19 +183,27 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
         body: JSON.stringify({
           transactionId: form.get("transactionId"),
           receiptLines: receiptDescription
-            ? [{
-                groceryPlanItemId: planItemId || undefined,
-                description: receiptDescription,
-                totalMinor,
-              }]
+            ? [
+                {
+                  groceryPlanItemId: planItemId || undefined,
+                  description: receiptDescription,
+                  totalMinor,
+                },
+              ]
             : undefined,
         }),
       });
-      event.currentTarget.reset();
-      setMessage("Compra conciliada. El movimiento pagado existente sigue siendo la única fuente del saldo.");
+      formElement.reset();
+      setMessage(
+        "Compra conciliada. El movimiento pagado existente sigue siendo la única fuente del saldo.",
+      );
       await loadDetail(selectedId);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo conciliar la compra.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo conciliar la compra.",
+      );
     }
   }
   const suggestions = useMemo(
@@ -167,7 +219,8 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
   );
   async function createPlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       const plan = await api<Plan>("/api/v1/grocery-plans", {
         method: "POST",
@@ -178,7 +231,7 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
           preferredMarketId: form.get("preferredMarketId") || undefined,
         }),
       });
-      event.currentTarget.reset();
+      formElement.reset();
       setSelectedProductId("");
       setMessage(
         "Plan guardado. Sigue siendo una estimación: no modificó saldos ni transacciones.",
@@ -194,7 +247,8 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
   async function addItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedId || !detail) return;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const suggestedPriceObservationId = String(
       form.get("suggestedPriceObservationId") || "",
     );
@@ -219,7 +273,7 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
           suggestedPriceObservationId: suggestedPriceObservationId || undefined,
         }),
       });
-      event.currentTarget.reset();
+      formElement.reset();
       setSelectedProductId("");
       setMessage(
         "Artículo estimado guardado. No se creó ningún movimiento de dinero.",
@@ -310,7 +364,8 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
               <button
                 type="button"
                 onClick={() => void selectPlan(plan.id)}
-                className="w-full p-4 text-left hover:bg-zinc-50"
+                aria-pressed={selectedId === plan.id}
+                className={`w-full p-4 text-left hover:bg-zinc-50 ${selectedId === plan.id ? "bg-emerald-50 ring-1 ring-inset ring-emerald-700" : ""}`}
               >
                 <b>{plan.name}</b>
                 <span className="block text-sm text-zinc-600">
@@ -319,6 +374,11 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
                   {plan.preferredMarketName
                     ? ` · ${plan.preferredMarketName}`
                     : ""}
+                </span>
+                <span className="mt-2 inline-block text-sm font-medium text-emerald-800">
+                  {selectedId === plan.id
+                    ? "Plan seleccionado"
+                    : "Ver y conciliar →"}
                 </span>
               </button>
             </li>
@@ -339,7 +399,10 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
                   </b>
                 </p>
                 <p className="text-sm text-zinc-600">
-                  Real pagado: <b>{money(detail.actualTotalMinor, detail.plan.currency)}</b> · diferencia: <b>{money(detail.differenceMinor, detail.plan.currency)}</b>
+                  Real pagado:{" "}
+                  <b>{money(detail.actualTotalMinor, detail.plan.currency)}</b>{" "}
+                  · diferencia:{" "}
+                  <b>{money(detail.differenceMinor, detail.plan.currency)}</b>
                 </p>
               </div>
               {canEdit && detail.plan.status !== "cancelled" && (
@@ -375,8 +438,15 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
                     </small>
                   </span>
                   <span className="text-right">
-                    <b className="block">{money(item.estimatedTotalMinor, detail.plan.currency)}</b>
-                    {item.actualTotalMinor > 0 && <small className="text-zinc-500">real: {money(item.actualTotalMinor, detail.plan.currency)}</small>}
+                    <b className="block">
+                      {money(item.estimatedTotalMinor, detail.plan.currency)}
+                    </b>
+                    {item.actualTotalMinor > 0 && (
+                      <small className="text-zinc-500">
+                        real:{" "}
+                        {money(item.actualTotalMinor, detail.plan.currency)}
+                      </small>
+                    )}
                   </span>
                 </li>
               ))}
@@ -391,11 +461,17 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
               <ul className="mt-2 divide-y text-sm">
                 {detail.purchases.map((purchase) => (
                   <li key={purchase.id} className="flex justify-between py-2">
-                    <span>{purchase.date} · {purchase.description}</span>
+                    <span>
+                      {purchase.date} · {purchase.description}
+                    </span>
                     <b>{money(purchase.amountMinor, detail.plan.currency)}</b>
                   </li>
                 ))}
-                {!detail.purchases.length && <li className="py-2 text-zinc-500">Aún no hay compras vinculadas.</li>}
+                {!detail.purchases.length && (
+                  <li className="py-2 text-zinc-500">
+                    Aún no hay compras vinculadas.
+                  </li>
+                )}
               </ul>
             </div>
             {canEdit && detail.plan.status !== "cancelled" && (
@@ -463,17 +539,59 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
               </form>
             )}
             {canEdit && detail.plan.status !== "cancelled" && (
-              <form onSubmit={addPurchase} className="mt-5 grid gap-2 border-t pt-5 md:grid-cols-2">
-                <h4 className="font-semibold md:col-span-2">Conciliar compra pagada</h4>
-                <select name="transactionId" required className="rounded border p-2" onFocus={() => void api<PaidExpense[]>(`/api/v1/transactions?type=expense&currency=${detail.plan.currency}&limit=100`).then(setPaidExpenses).catch((error: unknown) => setMessage(error instanceof Error ? error.message : "No se pudieron cargar gastos."))}>
-                  <option value="">Elegir gasto pagado ({detail.plan.currency})</option>
-                  {paidExpenses.map((expense) => <option key={expense.id} value={expense.id}>{expense.date} · {expense.description} · {money(expense.amountMinor, expense.currency)}</option>)}
+              <form
+                onSubmit={addPurchase}
+                className="mt-5 grid gap-2 border-t pt-5 md:grid-cols-2"
+              >
+                <h4 className="font-semibold md:col-span-2">
+                  Conciliar compra pagada
+                </h4>
+                <select
+                  name="transactionId"
+                  required
+                  disabled={isLoadingPaidExpenses}
+                  className="rounded border p-2 disabled:bg-zinc-100"
+                >
+                  <option value="">
+                    {isLoadingPaidExpenses
+                      ? "Cargando gastos pagados…"
+                      : `Elegir gasto pagado (${detail.plan.currency})`}
+                  </option>
+                  {paidExpenses.map((expense) => (
+                    <option key={expense.id} value={expense.id}>
+                      {expense.date} · {expense.description} ·{" "}
+                      {money(expense.amountMinor, expense.currency)}
+                    </option>
+                  ))}
                 </select>
-                <select name="groceryPlanItemId" className="rounded border p-2"><option value="">Artículo del plan (opcional)</option>{detail.items.map((item) => <option key={item.id} value={item.id}>{item.productName ?? item.description}</option>)}</select>
-                <input name="receiptDescription" maxLength={300} placeholder="Descripción de línea de ticket (opcional)" className="rounded border p-2" />
-                <input name="receiptTotal" inputMode="decimal" placeholder="Total de ticket (debe igualar gasto)" className="rounded border p-2" />
-                <p className="text-xs text-zinc-500 md:col-span-2">Sin ticket se vincula solo el gasto. Con una línea, su total debe ser exactamente el gasto elegido; las líneas múltiples quedan como seguimiento.</p>
-                <button className="rounded bg-emerald-700 p-2 text-white md:col-span-2">Vincular compra real</button>
+                <select name="groceryPlanItemId" className="rounded border p-2">
+                  <option value="">Artículo del plan (opcional)</option>
+                  {detail.items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.productName ?? item.description}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  name="receiptDescription"
+                  maxLength={300}
+                  placeholder="Descripción de línea de ticket (opcional)"
+                  className="rounded border p-2"
+                />
+                <input
+                  name="receiptTotal"
+                  inputMode="decimal"
+                  placeholder="Total de ticket (debe igualar gasto)"
+                  className="rounded border p-2"
+                />
+                <p className="text-xs text-zinc-500 md:col-span-2">
+                  Sin ticket se vincula solo el gasto. Con una línea, su total
+                  debe ser exactamente el gasto elegido; las líneas múltiples
+                  quedan como seguimiento.
+                </p>
+                <button className="rounded bg-emerald-700 p-2 text-white md:col-span-2">
+                  Vincular compra real
+                </button>
               </form>
             )}
           </div>

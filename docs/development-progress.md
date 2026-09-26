@@ -741,13 +741,12 @@ Step 8 has been decomposed before implementation into six vertical slices:
   invoices, and debts, and five audit events. The temporary dump and restore
   container were confirmed removed afterward.
 
-## Step 10 — in progress
+## Step 10 — completed
 
-- Slices 10.1 and 10.2 await local UI review.
-- **Current slice: 10.3 — Actual-purchase and receipt reconciliation.** Its
-  implementation and automated verification are complete; it awaits local UI
-  review alongside the prior private catalog and plan slices.
-  Slice 10.4 remains the final synthetic local acceptance for the whole step.
+- Slices 10.1 through 10.3 were implemented and reviewed together through the
+  final disposable-household flow.
+- Slice 10.4 completed the synthetic local acceptance documented in
+  `docs/grocery-acceptance.md`.
 
 ### Slice 10.1 — Private grocery catalog and price observations — implemented, pending local UI review
 
@@ -798,7 +797,22 @@ Step 8 has been decomposed before implementation into six vertical slices:
   linked purchases, and receipt-attributed item actuals. It supports linking a
   paid expense with or without receipt evidence.
 
+### Slice 10.4 — Synthetic local acceptance — completed
+
+- Added `docs/grocery-acceptance.md`, a repeatable local UI checklist for the
+  private market/product/price flow, suggested and manual plan prices, the
+  estimate/no-balance-change invariant, a linked paid UYU purchase with a
+  reconciling receipt line, currency and duplicate-link rejection, household
+  privacy/role checks, and synthetic-data cleanup.
+- The acceptance review exposed and corrected asynchronous form-reset handling,
+  paid-expense selector loading, selectable-plan affordance, dependency-safe
+  test-data cleanup, and duplicate-link conflict handling.
+- On 2026-09-26, the household reviewer completed the synthetic flow and
+  confirmed the expected estimates, paid actual, difference, snapshot behavior,
+  duplicate-link rejection, and cleanup.
+
 ### Verification
 
-- `pnpm db:generate`, `pnpm db:migrate`, `pnpm exec tsc --noEmit`, `pnpm test`
-  (85 tests), `pnpm lint`, `pnpm db:check`, and `pnpm build` — passed.
+- `pnpm test` (89 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
+  `pnpm db:check`, `pnpm format:check`, `git diff --check`, and `pnpm build` —
+  passed on 2026-09-26.

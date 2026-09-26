@@ -87,14 +87,25 @@ const receiptLine = z
   })
   .superRefine((value, context) => {
     if (value.unit && value.quantity === undefined)
-      context.addIssue({ code: "custom", path: ["unit"], message: "A unit requires a quantity." });
+      context.addIssue({
+        code: "custom",
+        path: ["unit"],
+        message: "A unit requires a quantity.",
+      });
   });
 
 export const createGroceryPurchaseSchema = z
-  .object({ transactionId: z.uuid(), receiptLines: z.array(receiptLine).max(100).optional() })
+  .object({
+    transactionId: z.uuid(),
+    receiptLines: z.array(receiptLine).max(100).optional(),
+  })
   .superRefine((value, context) => {
     if (value.receiptLines?.length === 0)
-      context.addIssue({ code: "custom", path: ["receiptLines"], message: "Omit receiptLines or provide at least one line." });
+      context.addIssue({
+        code: "custom",
+        path: ["receiptLines"],
+        message: "Omit receiptLines or provide at least one line.",
+      });
   });
 
 export type CreateGroceryMarket = z.infer<typeof createGroceryMarketSchema>;

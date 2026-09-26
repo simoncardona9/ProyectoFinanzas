@@ -141,31 +141,49 @@ export const groceryRepository = {
   },
   findPlanItem(householdId: string, id: string) {
     return db.query.groceryPlanItems.findFirst({
-      where: and(eq(groceryPlanItems.id, id), eq(groceryPlanItems.householdId, householdId)),
+      where: and(
+        eq(groceryPlanItems.id, id),
+        eq(groceryPlanItems.householdId, householdId),
+      ),
     });
   },
   async createPurchase(
     householdId: string,
-    values: { groceryPlanId: string; transactionId: string; receiptLines?: Array<{ groceryPlanItemId?: string; description: string; quantity?: number; unit?: string; unitPriceMinor?: number; totalMinor: number }> },
+    values: {
+      groceryPlanId: string;
+      transactionId: string;
+      receiptLines?: Array<{
+        groceryPlanItemId?: string;
+        description: string;
+        quantity?: number;
+        unit?: string;
+        unitPriceMinor?: number;
+        totalMinor: number;
+      }>;
+    },
   ) {
     return db.transaction(async (tx) => {
-      const [purchase] = await tx.insert(groceryPurchases).values({
-        householdId,
-        groceryPlanId: values.groceryPlanId,
-        transactionId: values.transactionId,
-      }).returning();
-      if (values.receiptLines?.length) await tx.insert(groceryReceiptLines).values(
-        values.receiptLines.map((line) => ({
+      const [purchase] = await tx
+        .insert(groceryPurchases)
+        .values({
           householdId,
-          groceryPurchaseId: purchase.id,
-          groceryPlanItemId: line.groceryPlanItemId,
-          description: line.description,
-          quantity: line.quantity?.toFixed(3),
-          unit: line.unit,
-          unitPriceMinor: line.unitPriceMinor,
-          totalMinor: line.totalMinor,
-        })),
-      );
+          groceryPlanId: values.groceryPlanId,
+          transactionId: values.transactionId,
+        })
+        .returning();
+      if (values.receiptLines?.length)
+        await tx.insert(groceryReceiptLines).values(
+          values.receiptLines.map((line) => ({
+            householdId,
+            groceryPurchaseId: purchase.id,
+            groceryPlanItemId: line.groceryPlanItemId,
+            description: line.description,
+            quantity: line.quantity?.toFixed(3),
+            unit: line.unit,
+            unitPriceMinor: line.unitPriceMinor,
+            totalMinor: line.totalMinor,
+          })),
+        );
       return purchase;
     });
   },
@@ -253,21 +271,46 @@ export const groceryRepository = {
           currency: transactions.currency,
         })
         .from(groceryPurchases)
-        .innerJoin(transactions, eq(groceryPurchases.transactionId, transactions.id))
-        .where(and(eq(groceryPurchases.householdId, householdId), eq(groceryPurchases.groceryPlanId, id)))
+        .innerJoin(
+          transactions,
+          eq(groceryPurchases.transactionId, transactions.id),
+        )
+        .where(
+          and(
+            eq(groceryPurchases.householdId, householdId),
+            eq(groceryPurchases.groceryPlanId, id),
+          ),
+        )
         .orderBy(asc(transactions.date), asc(groceryPurchases.createdAt)),
     ]);
     const receiptLines = purchases.length
-      ? await db.select({
-          groceryPurchaseId: groceryReceiptLines.groceryPurchaseId,
-          groceryPlanItemId: groceryReceiptLines.groceryPlanItemId,
-          description: groceryReceiptLines.description,
-          quantity: groceryReceiptLines.quantity,
-          unit: groceryReceiptLines.unit,
-          unitPriceMinor: groceryReceiptLines.unitPriceMinor,
-          totalMinor: groceryReceiptLines.totalMinor,
-        }).from(groceryReceiptLines).where(and(eq(groceryReceiptLines.householdId, householdId), inArray(groceryReceiptLines.groceryPurchaseId, purchases.map((purchase) => purchase.id))))
+      ? await db
+          .select({
+            groceryPurchaseId: groceryReceiptLines.groceryPurchaseId,
+            groceryPlanItemId: groceryReceiptLines.groceryPlanItemId,
+            description: groceryReceiptLines.description,
+            quantity: groceryReceiptLines.quantity,
+            unit: groceryReceiptLines.unit,
+            unitPriceMinor: groceryReceiptLines.unitPriceMinor,
+            totalMinor: groceryReceiptLines.totalMinor,
+          })
+          .from(groceryReceiptLines)
+          .where(
+            and(
+              eq(groceryReceiptLines.householdId, householdId),
+              inArray(
+                groceryReceiptLines.groceryPurchaseId,
+                purchases.map((purchase) => purchase.id),
+              ),
+            ),
+          )
       : [];
-    return { plan, preferredMarketName: market?.name ?? null, items, purchases, receiptLines };
+    return {
+      plan,
+      preferredMarketName: market?.name ?? null,
+      items,
+      purchases,
+      receiptLines,
+    };
   },
 };

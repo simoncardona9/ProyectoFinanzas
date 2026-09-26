@@ -754,14 +754,25 @@ export const groceryPurchases = pgTable(
   "grocery_purchases",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    householdId: uuid("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
-    groceryPlanId: uuid("grocery_plan_id").notNull().references(() => groceryPlans.id, { onDelete: "cascade" }),
-    transactionId: uuid("transaction_id").notNull().references(() => transactions.id, { onDelete: "restrict" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    groceryPlanId: uuid("grocery_plan_id")
+      .notNull()
+      .references(() => groceryPlans.id, { onDelete: "cascade" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     unique("grocery_purchases_transaction_unique").on(table.transactionId),
-    index("grocery_purchases_household_plan_idx").on(table.householdId, table.groceryPlanId),
+    index("grocery_purchases_household_plan_idx").on(
+      table.householdId,
+      table.groceryPlanId,
+    ),
   ],
 );
 
@@ -771,19 +782,31 @@ export const groceryReceiptLines = pgTable(
   "grocery_receipt_lines",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    householdId: uuid("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
-    groceryPurchaseId: uuid("grocery_purchase_id").notNull().references(() => groceryPurchases.id, { onDelete: "cascade" }),
-    groceryPlanItemId: uuid("grocery_plan_item_id").references(() => groceryPlanItems.id, { onDelete: "restrict" }),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    groceryPurchaseId: uuid("grocery_purchase_id")
+      .notNull()
+      .references(() => groceryPurchases.id, { onDelete: "cascade" }),
+    groceryPlanItemId: uuid("grocery_plan_item_id").references(
+      () => groceryPlanItems.id,
+      { onDelete: "restrict" },
+    ),
     description: text("description").notNull(),
     quantity: numeric("quantity", { precision: 12, scale: 3 }),
     unit: text("unit"),
     unitPriceMinor: integer("unit_price_minor"),
     totalMinor: integer("total_minor").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     index("grocery_receipt_lines_purchase_idx").on(table.groceryPurchaseId),
-    index("grocery_receipt_lines_household_plan_item_idx").on(table.householdId, table.groceryPlanItemId),
+    index("grocery_receipt_lines_household_plan_item_idx").on(
+      table.householdId,
+      table.groceryPlanItemId,
+    ),
   ],
 );
 

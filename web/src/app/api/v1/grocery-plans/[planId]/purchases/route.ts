@@ -12,9 +12,21 @@ export async function POST(request: Request, { params }: RouteContext) {
     requireRole(context, ["owner", "editor"]);
     const input = createGroceryPurchaseSchema.safeParse(await request.json());
     if (!input.success)
-      return Response.json({ error: { code: "VALIDATION_ERROR", message: "Invalid grocery purchase.", fields: input.error.flatten().fieldErrors } }, { status: 400 });
+      return Response.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid grocery purchase.",
+            fields: input.error.flatten().fieldErrors,
+          },
+        },
+        { status: 400 },
+      );
     const { planId } = await params;
-    return Response.json({ data: await addGroceryPurchase(context, planId, input.data) }, { status: 201 });
+    return Response.json(
+      { data: await addGroceryPurchase(context, planId, input.data) },
+      { status: 201 },
+    );
   } catch (error) {
     return errorResponse(error);
   }

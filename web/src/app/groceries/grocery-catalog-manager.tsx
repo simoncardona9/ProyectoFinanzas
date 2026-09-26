@@ -85,13 +85,14 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
     label: string,
   ) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     try {
       await api(endpoint, {
         method: "POST",
         body: JSON.stringify({ name: form.get("name") }),
       });
-      event.currentTarget.reset();
+      formElement.reset();
       setMessage(`${label} guardado como dato privado del hogar.`);
       await load();
     } catch (error) {
@@ -102,7 +103,8 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
   };
   const submitObservation = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const amount = String(form.get("amount") ?? "")
       .trim()
       .replace(",", ".");
@@ -123,7 +125,7 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
           note: form.get("note") || undefined,
         }),
       });
-      event.currentTarget.reset();
+      formElement.reset();
       setKey((current) => current + 1);
       setMessage(
         "Precio observado guardado. No se modificaron saldos ni transacciones.",

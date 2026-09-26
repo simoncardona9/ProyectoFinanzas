@@ -40,9 +40,15 @@ type PlanDetail = {
     plannedUnitPriceMinor: number;
     suggestedPriceObservationId: string | null;
     estimatedTotalMinor: number;
+    actualTotalMinor: number;
   }>;
   estimatedTotalMinor: number;
+  actualTotalMinor: number;
+  differenceMinor: number;
+  purchases: Array<{ id: string; transactionId: string; date: string; description: string; amountMinor: number; currency: string }>;
+  receiptLines: Array<{ groceryPurchaseId: string; groceryPlanItemId: string | null; description: string; quantity: number | undefined; unit: string | null; unitPriceMinor: number | null; totalMinor: number }>;
 };
+type PaidExpense = { id: string; date: string; description: string; amountMinor: number; currency: "UYU" | "USD"; type: string };
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -79,6 +85,7 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
   const [selectedId, setSelectedId] = useState<string>();
   const [selectedProductId, setSelectedProductId] = useState("");
   const [detail, setDetail] = useState<PlanDetail>();
+  const [paidExpenses, setPaidExpenses] = useState<PaidExpense[]>([]);
   const [message, setMessage] = useState("");
   const load = useCallback(async () => {
     try {
@@ -118,6 +125,34 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
   async function selectPlan(id: string) {
     setSelectedId(id);
     await loadDetail(id);
+  }
+  async function addPurchase(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedId || !detail) return;
+    const form = new FormData(event.currentTarget);
+    const totalMinor = parseMoney(form.get("receiptTotal"));
+    const receiptDescription = String(form.get("receiptDescription") || "").trim();
+    const planItemId = String(form.get("groceryPlanItemId") || "");
+    try {
+      await api(`/api/v1/grocery-plans/${selectedId}/purchases`, {
+        method: "POST",
+        body: JSON.stringify({
+          transactionId: form.get("transactionId"),
+          receiptLines: receiptDescription
+            ? [{
+                groceryPlanItemId: planItemId || undefined,
+                description: receiptDescription,
+                totalMinor,
+              }]
+            : undefined,
+        }),
+      });
+      event.currentTarget.reset();
+      setMessage("Compra conciliada. El movimiento pagado existente sigue siendo la única fuente del saldo.");
+      await loadDetail(selectedId);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo conciliar la compra.");
+    }
   }
   const suggestions = useMemo(
     () =>
@@ -303,6 +338,9 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
                     {money(detail.estimatedTotalMinor, detail.plan.currency)}
                   </b>
                 </p>
+                <p className="text-sm text-zinc-600">
+                  Real pagado: <b>{money(detail.actualTotalMinor, detail.plan.currency)}</b> · diferencia: <b>{money(detail.differenceMinor, detail.plan.currency)}</b>
+                </p>
               </div>
               {canEdit && detail.plan.status !== "cancelled" && (
                 <button
@@ -336,7 +374,10 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
                         : " · precio manual"}
                     </small>
                   </span>
-                  <b>{money(item.estimatedTotalMinor, detail.plan.currency)}</b>
+                  <span className="text-right">
+                    <b className="block">{money(item.estimatedTotalMinor, detail.plan.currency)}</b>
+                    {item.actualTotalMinor > 0 && <small className="text-zinc-500">real: {money(item.actualTotalMinor, detail.plan.currency)}</small>}
+                  </span>
                 </li>
               ))}
               {!detail.items.length && (
@@ -345,6 +386,18 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
                 </li>
               )}
             </ul>
+            <div className="mt-4 border-t pt-4">
+              <h4 className="font-semibold">Compras reales conciliadas</h4>
+              <ul className="mt-2 divide-y text-sm">
+                {detail.purchases.map((purchase) => (
+                  <li key={purchase.id} className="flex justify-between py-2">
+                    <span>{purchase.date} · {purchase.description}</span>
+                    <b>{money(purchase.amountMinor, detail.plan.currency)}</b>
+                  </li>
+                ))}
+                {!detail.purchases.length && <li className="py-2 text-zinc-500">Aún no hay compras vinculadas.</li>}
+              </ul>
+            </div>
             {canEdit && detail.plan.status !== "cancelled" && (
               <form
                 onSubmit={addItem}
@@ -407,6 +460,20 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
                 <button className="rounded bg-emerald-700 p-2 text-white md:col-span-2">
                   Agregar estimación
                 </button>
+              </form>
+            )}
+            {canEdit && detail.plan.status !== "cancelled" && (
+              <form onSubmit={addPurchase} className="mt-5 grid gap-2 border-t pt-5 md:grid-cols-2">
+                <h4 className="font-semibold md:col-span-2">Conciliar compra pagada</h4>
+                <select name="transactionId" required className="rounded border p-2" onFocus={() => void api<PaidExpense[]>(`/api/v1/transactions?type=expense&currency=${detail.plan.currency}&limit=100`).then(setPaidExpenses).catch((error: unknown) => setMessage(error instanceof Error ? error.message : "No se pudieron cargar gastos."))}>
+                  <option value="">Elegir gasto pagado ({detail.plan.currency})</option>
+                  {paidExpenses.map((expense) => <option key={expense.id} value={expense.id}>{expense.date} · {expense.description} · {money(expense.amountMinor, expense.currency)}</option>)}
+                </select>
+                <select name="groceryPlanItemId" className="rounded border p-2"><option value="">Artículo del plan (opcional)</option>{detail.items.map((item) => <option key={item.id} value={item.id}>{item.productName ?? item.description}</option>)}</select>
+                <input name="receiptDescription" maxLength={300} placeholder="Descripción de línea de ticket (opcional)" className="rounded border p-2" />
+                <input name="receiptTotal" inputMode="decimal" placeholder="Total de ticket (debe igualar gasto)" className="rounded border p-2" />
+                <p className="text-xs text-zinc-500 md:col-span-2">Sin ticket se vincula solo el gasto. Con una línea, su total debe ser exactamente el gasto elegido; las líneas múltiples quedan como seguimiento.</p>
+                <button className="rounded bg-emerald-700 p-2 text-white md:col-span-2">Vincular compra real</button>
               </form>
             )}
           </div>

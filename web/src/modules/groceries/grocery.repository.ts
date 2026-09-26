@@ -1,11 +1,14 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   groceryMarkets,
   groceryPlanItems,
   groceryPlans,
+  groceryPurchases,
   groceryPriceObservations,
   groceryProducts,
+  groceryReceiptLines,
+  transactions,
 } from "@/db/schema";
 
 export const groceryRepository = {
@@ -126,6 +129,46 @@ export const groceryRepository = {
       ),
     });
   },
+  findPaidExpense(householdId: string, id: string) {
+    return db.query.transactions.findFirst({
+      where: and(
+        eq(transactions.id, id),
+        eq(transactions.householdId, householdId),
+        eq(transactions.status, "paid"),
+        eq(transactions.type, "expense"),
+      ),
+    });
+  },
+  findPlanItem(householdId: string, id: string) {
+    return db.query.groceryPlanItems.findFirst({
+      where: and(eq(groceryPlanItems.id, id), eq(groceryPlanItems.householdId, householdId)),
+    });
+  },
+  async createPurchase(
+    householdId: string,
+    values: { groceryPlanId: string; transactionId: string; receiptLines?: Array<{ groceryPlanItemId?: string; description: string; quantity?: number; unit?: string; unitPriceMinor?: number; totalMinor: number }> },
+  ) {
+    return db.transaction(async (tx) => {
+      const [purchase] = await tx.insert(groceryPurchases).values({
+        householdId,
+        groceryPlanId: values.groceryPlanId,
+        transactionId: values.transactionId,
+      }).returning();
+      if (values.receiptLines?.length) await tx.insert(groceryReceiptLines).values(
+        values.receiptLines.map((line) => ({
+          householdId,
+          groceryPurchaseId: purchase.id,
+          groceryPlanItemId: line.groceryPlanItemId,
+          description: line.description,
+          quantity: line.quantity?.toFixed(3),
+          unit: line.unit,
+          unitPriceMinor: line.unitPriceMinor,
+          totalMinor: line.totalMinor,
+        })),
+      );
+      return purchase;
+    });
+  },
   async createPlan(
     householdId: string,
     values: Omit<typeof groceryPlans.$inferInsert, "householdId">,
@@ -171,7 +214,7 @@ export const groceryRepository = {
   async planDetail(householdId: string, id: string) {
     const [plan] = await Promise.all([this.findPlan(householdId, id)]);
     if (!plan) return undefined;
-    const [market, items] = await Promise.all([
+    const [market, items, purchases] = await Promise.all([
       plan.preferredMarketId
         ? this.findMarket(householdId, plan.preferredMarketId)
         : undefined,
@@ -200,7 +243,31 @@ export const groceryRepository = {
           ),
         )
         .orderBy(asc(groceryPlanItems.createdAt)),
+      db
+        .select({
+          id: groceryPurchases.id,
+          transactionId: transactions.id,
+          date: transactions.date,
+          description: transactions.description,
+          amountMinor: transactions.amountMinor,
+          currency: transactions.currency,
+        })
+        .from(groceryPurchases)
+        .innerJoin(transactions, eq(groceryPurchases.transactionId, transactions.id))
+        .where(and(eq(groceryPurchases.householdId, householdId), eq(groceryPurchases.groceryPlanId, id)))
+        .orderBy(asc(transactions.date), asc(groceryPurchases.createdAt)),
     ]);
-    return { plan, preferredMarketName: market?.name ?? null, items };
+    const receiptLines = purchases.length
+      ? await db.select({
+          groceryPurchaseId: groceryReceiptLines.groceryPurchaseId,
+          groceryPlanItemId: groceryReceiptLines.groceryPlanItemId,
+          description: groceryReceiptLines.description,
+          quantity: groceryReceiptLines.quantity,
+          unit: groceryReceiptLines.unit,
+          unitPriceMinor: groceryReceiptLines.unitPriceMinor,
+          totalMinor: groceryReceiptLines.totalMinor,
+        }).from(groceryReceiptLines).where(and(eq(groceryReceiptLines.householdId, householdId), inArray(groceryReceiptLines.groceryPurchaseId, purchases.map((purchase) => purchase.id))))
+      : [];
+    return { plan, preferredMarketName: market?.name ?? null, items, purchases, receiptLines };
   },
 };

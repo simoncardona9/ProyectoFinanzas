@@ -76,6 +76,27 @@ export const createGroceryPlanItemSchema = z
     }
   });
 
+const receiptLine = z
+  .object({
+    groceryPlanItemId: z.uuid().optional(),
+    description: z.string().trim().min(1).max(300),
+    quantity: quantity.optional(),
+    unit: z.string().trim().min(1).max(40).optional(),
+    unitPriceMinor: z.coerce.number().int().positive().optional(),
+    totalMinor: z.coerce.number().int().positive(),
+  })
+  .superRefine((value, context) => {
+    if (value.unit && value.quantity === undefined)
+      context.addIssue({ code: "custom", path: ["unit"], message: "A unit requires a quantity." });
+  });
+
+export const createGroceryPurchaseSchema = z
+  .object({ transactionId: z.uuid(), receiptLines: z.array(receiptLine).max(100).optional() })
+  .superRefine((value, context) => {
+    if (value.receiptLines?.length === 0)
+      context.addIssue({ code: "custom", path: ["receiptLines"], message: "Omit receiptLines or provide at least one line." });
+  });
+
 export type CreateGroceryMarket = z.infer<typeof createGroceryMarketSchema>;
 export type CreateGroceryProduct = z.infer<typeof createGroceryProductSchema>;
 export type CreateGroceryPriceObservation = z.infer<
@@ -84,3 +105,4 @@ export type CreateGroceryPriceObservation = z.infer<
 export type CreateGroceryPlan = z.infer<typeof createGroceryPlanSchema>;
 export type UpdateGroceryPlan = z.infer<typeof updateGroceryPlanSchema>;
 export type CreateGroceryPlanItem = z.infer<typeof createGroceryPlanItemSchema>;
+export type CreateGroceryPurchase = z.infer<typeof createGroceryPurchaseSchema>;

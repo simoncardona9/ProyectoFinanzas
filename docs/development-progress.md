@@ -743,10 +743,10 @@ Step 8 has been decomposed before implementation into six vertical slices:
 
 ## Step 10 — in progress
 
-- **Current slice: 10.2 — Grocery plans and estimated totals.** Its
+- Slices 10.1 and 10.2 await local UI review.
+- **Current slice: 10.3 — Actual-purchase and receipt reconciliation.** Its
   implementation and automated verification are complete; it awaits local UI
-  review alongside the already implemented Slice 10.1 private catalog.
-- Slice 10.3 actual-purchase and receipt reconciliation has not started.
+  review alongside the prior private catalog and plan slices.
   Slice 10.4 remains the final synthetic local acceptance for the whole step.
 
 ### Slice 10.1 — Private grocery catalog and price observations — implemented, pending local UI review
@@ -765,7 +765,7 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - Added migration `0019_third_celestials.sql` and unit coverage for name
   normalization and positive whole-minor-unit price validation.
 
-### Slice 10.2 — Grocery plans and estimated totals — in progress
+### Slice 10.2 — Grocery plans and estimated totals — implemented, pending local UI review
 
 - Added household-private, single-currency target-month grocery plans with
   optional preferred market, draft/active/cancelled planning status, and
@@ -784,3 +784,21 @@ Step 8 has been decomposed before implementation into six vertical slices:
 
 - `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:check`, `pnpm exec tsc
 --noEmit`, `pnpm test` (84 tests), `pnpm lint`, and `pnpm build` — passed.
+
+### Slice 10.3 — Actual-purchase and receipt reconciliation — implemented, pending local UI review
+
+- Added a household-private purchase link from one grocery plan to one existing
+  paid expense. The transaction must belong to the active household and use the
+  same currency as the plan; the link never creates or changes a financial
+  transaction, account balance, or financial period.
+- Optional receipt lines are saved with the planning link. Their total must
+  exactly reconcile to the linked transaction and any referenced plan item must
+  belong to that plan. A transaction cannot silently be linked to two plans.
+- The plan detail now displays estimate, linked paid actual, difference,
+  linked purchases, and receipt-attributed item actuals. It supports linking a
+  paid expense with or without receipt evidence.
+
+### Verification
+
+- `pnpm db:generate`, `pnpm db:migrate`, `pnpm exec tsc --noEmit`, `pnpm test`
+  (85 tests), `pnpm lint`, `pnpm db:check`, and `pnpm build` — passed.

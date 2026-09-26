@@ -12,8 +12,10 @@ import type {
   CreateGroceryProduct,
   CreateGroceryPlan,
   CreateGroceryPlanItem,
+  CreateGroceryPurchase,
   UpdateGroceryPlan,
 } from "./grocery.schemas";
+import { receiptLinesTotalMinor } from "./grocery-plan.rules";
 
 export function createGroceryMarket(
   context: AuthContext,
@@ -197,13 +199,65 @@ export async function getGroceryPlanDetail(context: AuthContext, id: string) {
       "Grocery plan was not found in this household.",
     );
   const items = detail.items.map(planResult);
+  const receiptActualByItem = new Map<string, number>();
+  for (const line of detail.receiptLines) {
+    if (line.groceryPlanItemId)
+      receiptActualByItem.set(
+        line.groceryPlanItemId,
+        (receiptActualByItem.get(line.groceryPlanItemId) ?? 0) + line.totalMinor,
+      );
+  }
+  const actualTotalMinor = detail.purchases.reduce(
+    (total, purchase) => total + purchase.amountMinor,
+    0,
+  );
   return {
     ...detail,
     plan: { ...detail.plan, period: detail.plan.targetPeriodStart.slice(0, 7) },
-    items,
+    items: items.map((item) => ({
+      ...item,
+      actualTotalMinor: receiptActualByItem.get(item.id) ?? 0,
+    })),
     estimatedTotalMinor: items.reduce(
       (sum, item) => sum + item.estimatedTotalMinor,
       0,
     ),
+    actualTotalMinor,
+    differenceMinor: actualTotalMinor - items.reduce((sum, item) => sum + item.estimatedTotalMinor, 0),
+    purchases: detail.purchases,
+    receiptLines: detail.receiptLines.map((line) => ({ ...line, quantity: line.quantity === null ? undefined : Number(line.quantity) })),
   };
+}
+
+export async function addGroceryPurchase(
+  context: AuthContext,
+  planId: string,
+  values: CreateGroceryPurchase,
+) {
+  const householdId = context.membership.householdId;
+  const [plan, transaction] = await Promise.all([
+    groceryRepository.findPlan(householdId, planId),
+    groceryRepository.findPaidExpense(householdId, values.transactionId),
+  ]);
+  if (!plan) throw new ApiError(404, "GROCERY_PLAN_NOT_FOUND", "Grocery plan was not found in this household.");
+  if (!transaction) throw new ApiError(422, "INVALID_GROCERY_TRANSACTION", "Select an existing paid expense from this household.");
+  if (plan.status === "cancelled") throw new ApiError(409, "GROCERY_PLAN_CANCELLED", "Cancelled grocery plans cannot receive purchases.");
+  if (transaction.currency !== plan.currency) throw new ApiError(422, "GROCERY_PURCHASE_CURRENCY_MISMATCH", "The paid transaction currency must match the plan currency.");
+  if (values.receiptLines) {
+    if (receiptLinesTotalMinor(values.receiptLines) !== transaction.amountMinor)
+      throw new ApiError(422, "RECEIPT_TOTAL_MISMATCH", "Receipt lines must total the linked paid transaction exactly.");
+    for (const line of values.receiptLines) {
+      if (!line.groceryPlanItemId) continue;
+      const item = await groceryRepository.findPlanItem(householdId, line.groceryPlanItemId);
+      if (!item || item.groceryPlanId !== planId)
+        throw new ApiError(422, "INVALID_GROCERY_PLAN_ITEM", "Receipt lines may only reference items in this plan.");
+    }
+  }
+  try {
+    return await groceryRepository.createPurchase(householdId, { groceryPlanId: planId, ...values });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("grocery_purchases_transaction_unique"))
+      throw new ApiError(409, "GROCERY_TRANSACTION_ALREADY_LINKED", "This paid transaction is already linked to a grocery plan.");
+    throw error;
+  }
 }

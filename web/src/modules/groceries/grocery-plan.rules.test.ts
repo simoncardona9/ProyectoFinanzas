@@ -6,6 +6,7 @@ import {
 import {
   estimatedItemTotalMinor,
   resolvePlannedUnitPriceMinor,
+  receiptLinesTotalMinor,
 } from "./grocery-plan.rules";
 
 describe("grocery plan rules", () => {
@@ -50,4 +51,11 @@ describe("grocery plan rules", () => {
       resolvePlannedUnitPriceMinor("UYU", "arroz", undefined, suggestion),
     ).toBeUndefined();
   });
+});
+
+it("requires receipt lines to reconcile to the paid transaction amount", () => {
+  expect(receiptLinesTotalMinor([{ totalMinor: 100 }, { totalMinor: 55 }])).toBe(155);
+  expect(() =>
+    createGroceryPlanItemSchema.parse({ description: "Pan", manualUnitPriceMinor: 100 }),
+  ).not.toThrow();
 });

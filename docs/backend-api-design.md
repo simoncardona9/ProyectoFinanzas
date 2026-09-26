@@ -413,14 +413,20 @@ change, financial-period mutation, or audit event.
 | `GET /grocery-plans/:planId`        | path                                                                             | Return plan, snapshot item estimates, and one currency-safe total.       |
 | `PATCH /grocery-plans/:planId`      | body: optional `name`, `status`, or `preferredMarketId`                          | Edit plan metadata; a cancelled plan cannot receive new items.           |
 | `POST /grocery-plans/:planId/items` | body: product or free-text description, optional quantity/unit, one price source | Add an estimated item from manual price or matching private observation. |
+| `POST /grocery-plans/:planId/purchases` | body: existing paid expense, optional reconciled receipt lines | Link actual spend without changing the transaction. |
 
 Each plan has exactly one currency. An item price selected from a price
 observation must match both that currency and the selected product; its amount
 is copied to the item so its estimate remains reproducible. Amounts stay in
 integer minor units. Quantities allow three decimals; a missing quantity means
 one unit, and positive fractional totals use half-up rounding to a minor unit.
-Actual purchases, receipt lines, fulfillment status, and planned-versus-actual
-comparison are deliberately deferred to Slice 10.3.
+Slice 10.3 links one existing paid `expense` transaction to at most one private
+plan. Its currency must equal the plan currency. Optional receipt lines may
+reference only items in that plan and their integer minor-unit total must equal
+the linked transaction exactly. The detail response reports estimate, total
+paid actual, difference, linked purchases, and per-item receipt actuals. The
+link never creates, corrects, voids, or changes the balance of a transaction,
+so no new dated financial write is introduced.
 
 ### 13. `markets.controller`
 

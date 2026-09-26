@@ -41,7 +41,13 @@ Required fields: `date`, `type`, `status`, `amount_minor`, `currency`, `account_
 
 ### TransactionLineItem
 
-An optional receipt-level breakdown of one transaction. Required fields: `transaction_id`, `description`, `quantity`, `unit`, `unit_price_minor`, `total_minor`, and optional `product_id`, `category_id`, and `grocery_plan_item_id`. Quantities may be decimal (for example, kilograms); monetary values remain integer minor units. The line-item total must reconcile to the parent transaction total, with any difference recorded explicitly as an uncategorized remainder.
+An optional receipt-level breakdown of one linked grocery purchase. Required
+fields: `description` and `total_minor`; optional fields are `quantity`,
+`unit`, `unit_price_minor`, and `grocery_plan_item_id`. Quantities may be
+decimal (for example, kilograms); monetary values remain integer minor units.
+When receipt lines are supplied, their total must reconcile exactly to the
+parent paid transaction. A purchase can instead remain linked without receipt
+lines, preserving the paid transaction total as the actual amount.
 
 ### GroceryPlan and GroceryPlanItem
 

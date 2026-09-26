@@ -748,6 +748,45 @@ export const groceryPlanItems = pgTable(
   ],
 );
 
+/** A purchase only links planning evidence to an existing paid expense. It
+ * never creates, edits, or voids the transaction that moves cash. */
+export const groceryPurchases = pgTable(
+  "grocery_purchases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+    groceryPlanId: uuid("grocery_plan_id").notNull().references(() => groceryPlans.id, { onDelete: "cascade" }),
+    transactionId: uuid("transaction_id").notNull().references(() => transactions.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("grocery_purchases_transaction_unique").on(table.transactionId),
+    index("grocery_purchases_household_plan_idx").on(table.householdId, table.groceryPlanId),
+  ],
+);
+
+/** Receipt rows are optional purchase evidence. A submitted receipt is always
+ * reconciled to its parent paid transaction in integer minor units. */
+export const groceryReceiptLines = pgTable(
+  "grocery_receipt_lines",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+    groceryPurchaseId: uuid("grocery_purchase_id").notNull().references(() => groceryPurchases.id, { onDelete: "cascade" }),
+    groceryPlanItemId: uuid("grocery_plan_item_id").references(() => groceryPlanItems.id, { onDelete: "restrict" }),
+    description: text("description").notNull(),
+    quantity: numeric("quantity", { precision: 12, scale: 3 }),
+    unit: text("unit"),
+    unitPriceMinor: integer("unit_price_minor"),
+    totalMinor: integer("total_minor").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("grocery_receipt_lines_purchase_idx").on(table.groceryPurchaseId),
+    index("grocery_receipt_lines_household_plan_item_idx").on(table.householdId, table.groceryPlanItemId),
+  ],
+);
+
 /**
  * A staged batch is deliberately separate from financial records. Slice 8.1
  * only writes this review/provenance record; committing is introduced later.

@@ -32,3 +32,7 @@ export function resolvePlannedUnitPriceMinor(
     return undefined;
   return suggestion.amountMinor;
 }
+
+export function receiptLinesTotalMinor(lines: Array<{ totalMinor: number }>) {
+  return lines.reduce((total, line) => total + line.totalMinor, 0);
+}

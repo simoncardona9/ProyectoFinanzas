@@ -1617,6 +1617,44 @@ paths:
           {
             description: Price observation does not match product or plan currency,
           }
+  /api/v1/grocery-plans/{planId}/purchases:
+    post:
+      operationId: addGroceryPurchase
+      summary: Link an existing paid grocery expense to a private plan.
+      description: Owner or editor only. The selected active-household transaction must be a paid expense in the plan currency. Receipt lines are optional; if supplied, they must total the transaction exactly and can reference only plan items. This adds planning evidence only and never changes the transaction or account balance.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: planId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transactionId]
+              properties:
+                transactionId: { type: string, format: uuid }
+                receiptLines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [description, totalMinor]
+                    properties:
+                      groceryPlanItemId: { type: string, format: uuid }
+                      description: { type: string, minLength: 1, maxLength: 300 }
+                      quantity: { type: number, exclusiveMinimum: 0 }
+                      unit: { type: string, maxLength: 40 }
+                      unitPriceMinor: { type: integer, minimum: 1 }
+                      totalMinor: { type: integer, minimum: 1 }
+      responses:
+        "201": { description: Existing paid expense linked to plan }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "404": { description: Grocery plan not found }
+        "409": { description: Plan cancelled or transaction already linked }
+        "422": { description: Transaction is not a same-currency paid expense, receipt does not reconcile, or receipt item is outside the plan }
 components:
   securitySchemes:
     { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }

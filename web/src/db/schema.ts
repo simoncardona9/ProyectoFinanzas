@@ -106,6 +106,14 @@ export const financialPeriodStatus = pgEnum("financial_period_status", [
   "closed",
 ]);
 
+/** Grocery plans are planning records only. Their lifecycle must not be
+ * confused with transaction or obligation statuses. */
+export const groceryPlanStatus = pgEnum("grocery_plan_status", [
+  "draft",
+  "active",
+  "cancelled",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
@@ -571,6 +579,233 @@ export const financialPeriods = pgTable(
     index("financial_periods_household_status_idx").on(
       table.householdId,
       table.status,
+    ),
+  ],
+);
+
+/**
+ * Grocery catalog records are deliberately household-private planning data.
+ * They never represent a financial movement; plans and receipt links arrive
+ * in later Step 10 slices.
+ */
+export const groceryMarkets = pgTable(
+  "grocery_markets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_markets_household_normalized_idx").on(
+      table.householdId,
+      table.normalizedName,
+    ),
+  ],
+);
+
+export const groceryProducts = pgTable(
+  "grocery_products",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_products_household_normalized_idx").on(
+      table.householdId,
+      table.normalizedName,
+    ),
+  ],
+);
+
+export const groceryPriceObservations = pgTable(
+  "grocery_price_observations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    marketId: uuid("market_id")
+      .notNull()
+      .references(() => groceryMarkets.id, { onDelete: "restrict" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => groceryProducts.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    observedDate: date("observed_date").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_prices_household_product_date_idx").on(
+      table.householdId,
+      table.productId,
+      table.observedDate,
+    ),
+    index("grocery_prices_household_market_date_idx").on(
+      table.householdId,
+      table.marketId,
+      table.observedDate,
+    ),
+  ],
+);
+
+/**
+ * A grocery plan is deliberately independent of a financial-period row: the
+ * target month is useful for planning even when that financial period is
+ * closed, because creating a plan never changes a financial record or cash.
+ */
+export const groceryPlans = pgTable(
+  "grocery_plans",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    targetPeriodStart: date("target_period_start").notNull(),
+    name: text("name").notNull(),
+    currency: text("currency").notNull(),
+    status: groceryPlanStatus("status").notNull().default("draft"),
+    preferredMarketId: uuid("preferred_market_id").references(
+      () => groceryMarkets.id,
+      { onDelete: "restrict" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_plans_household_period_idx").on(
+      table.householdId,
+      table.targetPeriodStart,
+    ),
+  ],
+);
+
+/**
+ * `plannedUnitPriceMinor` is a snapshot, even when it came from an observed
+ * price. This keeps an estimate reproducible if catalog records gain editing
+ * behavior in a later slice. Quantity is optional; an omitted quantity means
+ * one planned unit for estimation purposes.
+ */
+export const groceryPlanItems = pgTable(
+  "grocery_plan_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    groceryPlanId: uuid("grocery_plan_id")
+      .notNull()
+      .references(() => groceryPlans.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").references(() => groceryProducts.id, {
+      onDelete: "restrict",
+    }),
+    description: text("description"),
+    quantity: numeric("quantity", { precision: 12, scale: 3 }),
+    unit: text("unit"),
+    plannedUnitPriceMinor: integer("planned_unit_price_minor").notNull(),
+    suggestedPriceObservationId: uuid(
+      "suggested_price_observation_id",
+    ).references(() => groceryPriceObservations.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_plan_items_plan_idx").on(table.groceryPlanId),
+    index("grocery_plan_items_household_product_idx").on(
+      table.householdId,
+      table.productId,
+    ),
+  ],
+);
+
+/** A purchase only links planning evidence to an existing paid expense. It
+ * never creates, edits, or voids the transaction that moves cash. */
+export const groceryPurchases = pgTable(
+  "grocery_purchases",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    groceryPlanId: uuid("grocery_plan_id")
+      .notNull()
+      .references(() => groceryPlans.id, { onDelete: "cascade" }),
+    transactionId: uuid("transaction_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("grocery_purchases_transaction_unique").on(table.transactionId),
+    index("grocery_purchases_household_plan_idx").on(
+      table.householdId,
+      table.groceryPlanId,
+    ),
+  ],
+);
+
+/** Receipt rows are optional purchase evidence. A submitted receipt is always
+ * reconciled to its parent paid transaction in integer minor units. */
+export const groceryReceiptLines = pgTable(
+  "grocery_receipt_lines",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    groceryPurchaseId: uuid("grocery_purchase_id")
+      .notNull()
+      .references(() => groceryPurchases.id, { onDelete: "cascade" }),
+    groceryPlanItemId: uuid("grocery_plan_item_id").references(
+      () => groceryPlanItems.id,
+      { onDelete: "restrict" },
+    ),
+    description: text("description").notNull(),
+    quantity: numeric("quantity", { precision: 12, scale: 3 }),
+    unit: text("unit"),
+    unitPriceMinor: integer("unit_price_minor"),
+    totalMinor: integer("total_minor").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("grocery_receipt_lines_purchase_idx").on(table.groceryPurchaseId),
+    index("grocery_receipt_lines_household_plan_item_idx").on(
+      table.householdId,
+      table.groceryPlanItemId,
     ),
   ],
 );

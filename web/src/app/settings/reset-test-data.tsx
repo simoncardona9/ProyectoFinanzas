@@ -20,9 +20,9 @@ export function ResetTestData() {
     <section className="mt-8 rounded-xl border border-red-200 bg-red-50 p-5">
       <h2 className="font-semibold text-red-950">Reiniciar datos de prueba</h2>
       <p className="mt-1 text-sm text-red-900">
-        Elimina cuentas, categorías, movimientos, obligaciones y auditoría del
-        hogar activo. Conserva acceso y configuración. Solo disponible en
-        desarrollo local.
+        Elimina datos financieros, planes y catálogo de compras, importaciones
+        de prueba y auditoría del hogar activo. Conserva acceso y configuración.
+        Solo disponible en desarrollo local.
       </p>
       <input
         value={confirmation}

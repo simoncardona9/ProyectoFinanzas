@@ -41,11 +41,27 @@ Required fields: `date`, `type`, `status`, `amount_minor`, `currency`, `account_
 
 ### TransactionLineItem
 
-An optional receipt-level breakdown of one transaction. Required fields: `transaction_id`, `description`, `quantity`, `unit`, `unit_price_minor`, `total_minor`, and optional `product_id`, `category_id`, and `grocery_plan_item_id`. Quantities may be decimal (for example, kilograms); monetary values remain integer minor units. The line-item total must reconcile to the parent transaction total, with any difference recorded explicitly as an uncategorized remainder.
+An optional receipt-level breakdown of one linked grocery purchase. Required
+fields: `description` and `total_minor`; optional fields are `quantity`,
+`unit`, `unit_price_minor`, and `grocery_plan_item_id`. Quantities may be
+decimal (for example, kilograms); monetary values remain integer minor units.
+When receipt lines are supplied, their total must reconcile exactly to the
+parent paid transaction. A purchase can instead remain linked without receipt
+lines, preserving the paid transaction total as the actual amount.
 
 ### GroceryPlan and GroceryPlanItem
 
-`GroceryPlan` is a household-owned, non-financial shopping plan for a target `FinancialPeriod`. It records status (`draft`, `active`, `partially_fulfilled`, `fulfilled`, or `cancelled`), an optional preferred market, and planned totals. `GroceryPlanItem` records a product or free-text description, quantity, unit, planned price, optional market price suggestion, and actual fulfillment links. A plan may be fulfilled partially or across multiple markets and transactions. It never changes account balances by itself.
+`GroceryPlan` is a household-owned, non-financial shopping plan for a target
+calendar month. Slice 10.2 supports `draft`, `active`, and `cancelled` status,
+an optional preferred private market, one authoritative plan currency, and a
+calculated estimate total. Its target month remains planning metadata: unlike a
+financial record, it neither relies on nor changes a `FinancialPeriod` row.
+`GroceryPlanItem` records a catalog product or free-text description, optional
+quantity/unit, a required snapshotted planned unit price, and an optional source
+price observation. A missing quantity means one unit; totals are calculated
+with half-up minor-unit rounding. Actual fulfillment, receipt lines, and links
+to transactions remain Slice 10.3 work. A plan never changes account balances
+by itself.
 
 ### Market, Product, and MarketPrice
 

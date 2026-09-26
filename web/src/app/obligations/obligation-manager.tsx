@@ -214,7 +214,9 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
             inputMode="decimal"
             required
             value={amount}
-            onChange={(event) => setAmount(formatMoneyInput(event.target.value))}
+            onChange={(event) =>
+              setAmount(formatMoneyInput(event.target.value))
+            }
             onFocus={(event) => event.currentTarget.select()}
             onBlur={() => {
               const minor = parseMoneyToMinor(amount);

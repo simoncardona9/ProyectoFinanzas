@@ -25,6 +25,7 @@ This folder is the product and technical foundation for replacing the family-fin
 | [import-file-conversion-acceptance.md](import-file-conversion-acceptance.md) | Synthetic local UI checklist for Slice 8.5 CSV/Excel conversion. |
 | [import-august-reconciliation-acceptance.md](import-august-reconciliation-acceptance.md) | Slice 8.6 synthetic reconciliation, retry, and rollback checklist. |
 | [audit-export-acceptance.md](audit-export-acceptance.md) | Slice 9.6 synthetic UI checklist for audit filtering and CSV export. |
+| [grocery-acceptance.md](grocery-acceptance.md) | Slice 10.4 synthetic local checklist for private grocery planning and paid-purchase reconciliation. |
 | [roadmap.md](roadmap.md) | Phased implementation plan. |
 | [development-process.md](development-process.md) | Incremental delivery, validation, release, and feedback process. |
 | [git-workflow.md](git-workflow.md) | Branches, pull requests, local testing, and GitHub ownership rules. |

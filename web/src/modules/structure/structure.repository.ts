@@ -7,6 +7,15 @@ import {
   debtPayments,
   debts,
   exchangeRates,
+  financialPeriods,
+  groceryMarkets,
+  groceryPlanItems,
+  groceryPlans,
+  groceryPriceObservations,
+  groceryPurchases,
+  groceryReceiptLines,
+  groceryProducts,
+  importBatches,
   invoiceCollections,
   invoices,
   obligationPayments,
@@ -22,6 +31,29 @@ type NewCategory = Omit<typeof categories.$inferInsert, "householdId">;
 export const structureRepository = {
   async resetFinancialData(householdId: string) {
     return db.transaction(async (tx) => {
+      // Receipt lines retain optional references to plan items, so remove the
+      // dependent reconciliation evidence before its plan and catalog records.
+      await tx
+        .delete(groceryReceiptLines)
+        .where(eq(groceryReceiptLines.householdId, householdId));
+      await tx
+        .delete(groceryPurchases)
+        .where(eq(groceryPurchases.householdId, householdId));
+      await tx
+        .delete(groceryPlanItems)
+        .where(eq(groceryPlanItems.householdId, householdId));
+      await tx
+        .delete(groceryPlans)
+        .where(eq(groceryPlans.householdId, householdId));
+      await tx
+        .delete(groceryPriceObservations)
+        .where(eq(groceryPriceObservations.householdId, householdId));
+      await tx
+        .delete(groceryProducts)
+        .where(eq(groceryProducts.householdId, householdId));
+      await tx
+        .delete(groceryMarkets)
+        .where(eq(groceryMarkets.householdId, householdId));
       await tx
         .delete(exchangeRates)
         .where(eq(exchangeRates.householdId, householdId));
@@ -80,6 +112,12 @@ export const structureRepository = {
       await tx
         .delete(transactions)
         .where(eq(transactions.householdId, householdId));
+      await tx
+        .delete(importBatches)
+        .where(eq(importBatches.householdId, householdId));
+      await tx
+        .delete(financialPeriods)
+        .where(eq(financialPeriods.householdId, householdId));
       await tx.delete(auditLogs).where(eq(auditLogs.householdId, householdId));
       await tx
         .delete(categories)

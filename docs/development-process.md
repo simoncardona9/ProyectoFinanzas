@@ -6,9 +6,9 @@ The application must not be built all at once. Development proceeds through smal
 
 ## Current environments
 
-| Environment | Purpose                                                            | Data rule                 |
-| ----------- | ------------------------------------------------------------------ | ------------------------- |
-| Local       | Agent/developer implementation, unit tests, and functional review. | Synthetic test data only. |
+| Environment          | Purpose                                                                               | Data rule                 |
+| -------------------- | ------------------------------------------------------------------------------------- | ------------------------- |
+| Local                | Agent/developer implementation, unit tests, and functional review.                    | Synthetic test data only. |
 | Local Docker Compose | Reproducible local application, migration, seed, PostgreSQL, and HTTPS-proxy runtime. | Synthetic test data only. |
 
 There is no preview, staging, or cloud-production environment during the current phase. The project may be stored in GitHub for source control, but it is not deployed.
@@ -287,6 +287,7 @@ reconciliation gate is satisfied.
    creation/cancellation (service date), sending (sent date), and collection
    (paid date); debt creation (incurred date) and payment (paid date); tax
    settlement (paid date); and every matching dated row in an import commit.
+
 3. **9.3 — Owner close and controlled reopen:** allow only an owner to close a
    month once the complete guard is active, then to reopen it only with a
    non-empty reason. Both state transitions write household-scoped audit events;

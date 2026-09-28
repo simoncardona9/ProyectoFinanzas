@@ -1,4 +1,13 @@
-import { and, asc, count, desc, eq, gte, lte, type AnyColumn } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  lte,
+  type AnyColumn,
+} from "drizzle-orm";
 import { db } from "@/db";
 import {
   accounts,
@@ -11,7 +20,10 @@ import {
   transactions,
   users,
 } from "@/db/schema";
-import type { AuditReportQuery, FinancialExportQuery } from "./audit-export.schemas";
+import type {
+  AuditReportQuery,
+  FinancialExportQuery,
+} from "./audit-export.schemas";
 
 function startOfDay(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
@@ -59,44 +71,80 @@ export const auditExportRepository = {
       await Promise.all([
         db
           .select({
-            id: transactions.id, date: transactions.date, status: transactions.status,
-            currency: transactions.currency, amountMinor: transactions.amountMinor,
-            accountId: accounts.id, accountName: accounts.name,
-            categoryId: categories.id, categoryName: categories.name,
-            description: transactions.description, type: transactions.type,
+            id: transactions.id,
+            date: transactions.date,
+            status: transactions.status,
+            currency: transactions.currency,
+            amountMinor: transactions.amountMinor,
+            accountId: accounts.id,
+            accountName: accounts.name,
+            categoryId: categories.id,
+            categoryName: categories.name,
+            description: transactions.description,
+            type: transactions.type,
           })
           .from(transactions)
           .innerJoin(accounts, eq(transactions.accountId, accounts.id))
           .leftJoin(categories, eq(transactions.categoryId, categories.id))
-          .where(and(eq(transactions.householdId, householdId), dated(transactions.date)))
+          .where(
+            and(
+              eq(transactions.householdId, householdId),
+              dated(transactions.date),
+            ),
+          )
           .orderBy(asc(transactions.date), asc(transactions.createdAt)),
         db.query.obligations.findMany({
-          where: and(eq(obligations.householdId, householdId), dated(obligations.dueDate)),
+          where: and(
+            eq(obligations.householdId, householdId),
+            dated(obligations.dueDate),
+          ),
           orderBy: [asc(obligations.dueDate), asc(obligations.createdAt)],
         }),
         db.query.invoices.findMany({
-          where: and(eq(invoices.householdId, householdId), dated(invoices.serviceDate)),
+          where: and(
+            eq(invoices.householdId, householdId),
+            dated(invoices.serviceDate),
+          ),
           orderBy: [asc(invoices.serviceDate), asc(invoices.createdAt)],
         }),
         db.query.debts.findMany({
-          where: and(eq(debts.householdId, householdId), dated(debts.incurredDate)),
+          where: and(
+            eq(debts.householdId, householdId),
+            dated(debts.incurredDate),
+          ),
           orderBy: [asc(debts.incurredDate), asc(debts.createdAt)],
         }),
         db.query.exchangeRates.findMany({
-          where: and(eq(exchangeRates.householdId, householdId), dated(exchangeRates.effectiveDate)),
-          orderBy: [asc(exchangeRates.effectiveDate), asc(exchangeRates.createdAt)],
+          where: and(
+            eq(exchangeRates.householdId, householdId),
+            dated(exchangeRates.effectiveDate),
+          ),
+          orderBy: [
+            asc(exchangeRates.effectiveDate),
+            asc(exchangeRates.createdAt),
+          ],
         }),
       ]);
     return { transactionRows, obligationRows, invoiceRows, debtRows, rateRows };
   },
 
-  async recordExport(values: { householdId: string; actorUserId: string; range: FinancialExportQuery; rowCount: number }) {
+  async recordExport(values: {
+    householdId: string;
+    actorUserId: string;
+    range: FinancialExportQuery;
+    rowCount: number;
+  }) {
     await db.insert(auditLogs).values({
       householdId: values.householdId,
       actorUserId: values.actorUserId,
       action: "export",
       entityType: "financial_export",
-      details: { format: "csv", from: values.range.from, to: values.range.to, rowCount: values.rowCount },
+      details: {
+        format: "csv",
+        from: values.range.from,
+        to: values.range.to,
+        rowCount: values.rowCount,
+      },
     });
   },
 };

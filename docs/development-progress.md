@@ -3,14 +3,6 @@
 This log records completed development steps, their scope, and verification.
 It intentionally contains no real financial or personal data.
 
-## Step 10 — planned
-
-- Step 10 is intentionally not implemented yet. Its four-slice plan in
-  `docs/development-process.md` ends with Slice 10.4, a disposable synthetic
-  local acceptance run covering estimated-versus-actual grocery behavior,
-  privacy, authorization, and cleanup. That final acceptance is required
-  before Step 10 can be marked completed.
-
 ## Step 0 — Project foundation — completed
 
 - Created the local Next.js/TypeScript application with PostgreSQL and Drizzle.
@@ -748,3 +740,79 @@ Step 8 has been decomposed before implementation into six vertical slices:
   tables, one household, one membership, one transaction, zero obligations,
   invoices, and debts, and five audit events. The temporary dump and restore
   container were confirmed removed afterward.
+
+## Step 10 — completed
+
+- Slices 10.1 through 10.3 were implemented and reviewed together through the
+  final disposable-household flow.
+- Slice 10.4 completed the synthetic local acceptance documented in
+  `docs/grocery-acceptance.md`.
+
+### Slice 10.1 — Private grocery catalog and price observations — implemented, pending local UI review
+
+- Added household-private markets and products with normalized Spanish names.
+  The catalog shows possible duplicate names after case, accent, punctuation,
+  and whitespace normalization, while preserving legitimate distinct records.
+- Added dated, positive UYU or USD price observations that reference only a
+  market and product in the active household. Catalog and observation reads are
+  household-scoped; owners and editors can create records while viewer and
+  accountant roles remain read-only.
+- Added the Spanish catalog interface at `/groceries`, including private market,
+  product, and observed-price entry. Catalog records and observations are
+  planning data: they create no transaction, do not change account balances,
+  and do not expose data to other households or a shared catalog.
+- Added migration `0019_third_celestials.sql` and unit coverage for name
+  normalization and positive whole-minor-unit price validation.
+
+### Slice 10.2 — Grocery plans and estimated totals — implemented, pending local UI review
+
+- Added household-private, single-currency target-month grocery plans with
+  optional preferred market, draft/active/cancelled planning status, and
+  calculated estimate totals. A plan's target period is planning metadata and
+  is deliberately independent from closed financial-period enforcement.
+- Plan items support a catalog product or free-text description, optional
+  quantity/unit, and exactly one manual minor-unit price or matching household
+  price observation. Suggested prices are copied into the item so estimates
+  remain reproducible; fractional quantities use integer-safe half-up rounding.
+- Added protected plan list/detail/create/update/item endpoints and the Spanish
+  grocery-plan UI. All active members can read; only owners/editors can write.
+  No plan or item mutation creates a transaction, modifies an account balance,
+  or records actual purchase/receipt data; reconciliation remains Slice 10.3.
+
+### Verification
+
+- `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:check`, `pnpm exec tsc
+--noEmit`, `pnpm test` (84 tests), `pnpm lint`, and `pnpm build` — passed.
+
+### Slice 10.3 — Actual-purchase and receipt reconciliation — implemented, pending local UI review
+
+- Added a household-private purchase link from one grocery plan to one existing
+  paid expense. The transaction must belong to the active household and use the
+  same currency as the plan; the link never creates or changes a financial
+  transaction, account balance, or financial period.
+- Optional receipt lines are saved with the planning link. Their total must
+  exactly reconcile to the linked transaction and any referenced plan item must
+  belong to that plan. A transaction cannot silently be linked to two plans.
+- The plan detail now displays estimate, linked paid actual, difference,
+  linked purchases, and receipt-attributed item actuals. It supports linking a
+  paid expense with or without receipt evidence.
+
+### Slice 10.4 — Synthetic local acceptance — completed
+
+- Added `docs/grocery-acceptance.md`, a repeatable local UI checklist for the
+  private market/product/price flow, suggested and manual plan prices, the
+  estimate/no-balance-change invariant, a linked paid UYU purchase with a
+  reconciling receipt line, currency and duplicate-link rejection, household
+  privacy/role checks, and synthetic-data cleanup.
+- The acceptance review exposed and corrected asynchronous form-reset handling,
+  paid-expense selector loading, selectable-plan affordance, dependency-safe
+  test-data cleanup, and duplicate-link conflict handling.
+- On 2026-09-26, the household reviewer completed the synthetic flow and
+  confirmed the expected estimates, paid actual, difference, snapshot behavior,
+  duplicate-link rejection, and cleanup.
+
+### Verification
+
+- `pnpm test` (89 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
+  `pnpm db:check`, `pnpm format:check`, `git diff --check`, and `pnpm build` —
+  passed on 2026-09-26.

@@ -18,3 +18,54 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer base {
+  :where(button, a[href], summary, label:has(input[type="file"])) {
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      filter 150ms ease,
+      transform 100ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :where(
+    button:not(:disabled),
+    a[href],
+    summary,
+    select:not(:disabled),
+    label:has(input[type="file"]:not(:disabled))
+  ) {
+    cursor: pointer;
+  }
+
+  :where(
+    button:disabled,
+    select:disabled,
+    label:has(input[type="file"]:disabled)
+  ) {
+    cursor: not-allowed;
+  }
+
+  :where(button, a[href], summary):focus-visible,
+  label:has(input[type="file"]:focus-visible) {
+    outline: 2px solid #047857;
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    :where(
+      button:not(:disabled),
+      a[href],
+      summary,
+      label:has(input[type="file"]:not(:disabled))
+    ):hover {
+      filter: brightness(0.92);
+    }
+  }
+
+  :where(button:not(:disabled), a[href], summary):active {
+    transform: translateY(1px);
+  }
+}

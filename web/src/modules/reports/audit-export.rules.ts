@@ -31,6 +31,8 @@ function csvCell(value: ExportValue) {
 export function buildFinancialCsv(rows: FinancialExportRow[]): string {
   return [
     headers.map(csvCell).join(","),
-    ...rows.map((row) => headers.map((header) => csvCell(row[header])).join(",")),
+    ...rows.map((row) =>
+      headers.map((header) => csvCell(row[header])).join(","),
+    ),
   ].join("\r\n");
 }

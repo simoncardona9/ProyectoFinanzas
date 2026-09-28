@@ -401,16 +401,38 @@ range, format, and row count; it never copies output rows into audit metadata.
 
 ### 12. `grocery-plans.controller`
 
-| Method and path                         | Parameters                                                             | Purpose                                                         |
-| --------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `GET /grocery-plans`                    | `period`, `status`, pagination                                         | List household grocery plans.                                   |
-| `POST /grocery-plans`                   | body: `period`, optional `marketId`, `name`                            | Create a non-financial grocery plan.                            |
-| `GET /grocery-plans/:planId`            | path                                                                   | Return a plan, its items, estimates, and fulfillment status.    |
-| `PATCH /grocery-plans/:planId`          | path; body: mutable plan fields                                        | Update a draft or active plan.                                  |
-| `POST /grocery-plans/:planId/items`     | body: product/free-text item, quantity, unit, optional suggested price | Add a planned grocery item.                                     |
-| `POST /grocery-plans/:planId/reconcile` | body: `transactionId`, line-item links                                 | Link an actual paid purchase and update fulfillment comparison. |
+Slice 10.2 implements plans through the following protected, household-scoped
+routes. All active-household roles can read them; owners and editors can write.
+They create only private planning data, never a transaction, account-balance
+change, financial-period mutation, or audit event.
+
+| Method and path                     | Parameters                                                                       | Purpose                                                                  |
+| ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `GET /grocery-plans`                | —                                                                                | List target-month plans.                                                 |
+| `POST /grocery-plans`               | body: `period`, `name`, `currency`, optional `preferredMarketId`                 | Create a draft non-financial plan.                                       |
+| `GET /grocery-plans/:planId`        | path                                                                             | Return plan, snapshot item estimates, and one currency-safe total.       |
+| `PATCH /grocery-plans/:planId`      | body: optional `name`, `status`, or `preferredMarketId`                          | Edit plan metadata; a cancelled plan cannot receive new items.           |
+| `POST /grocery-plans/:planId/items` | body: product or free-text description, optional quantity/unit, one price source | Add an estimated item from manual price or matching private observation. |
+| `POST /grocery-plans/:planId/purchases` | body: existing paid expense, optional reconciled receipt lines | Link actual spend without changing the transaction. |
+
+Each plan has exactly one currency. An item price selected from a price
+observation must match both that currency and the selected product; its amount
+is copied to the item so its estimate remains reproducible. Amounts stay in
+integer minor units. Quantities allow three decimals; a missing quantity means
+one unit, and positive fractional totals use half-up rounding to a minor unit.
+Slice 10.3 links one existing paid `expense` transaction to at most one private
+plan. Its currency must equal the plan currency. Optional receipt lines may
+reference only items in that plan and their integer minor-unit total must equal
+the linked transaction exactly. The detail response reports estimate, total
+paid actual, difference, linked purchases, and per-item receipt actuals. The
+link never creates, corrects, voids, or changes the balance of a transaction,
+so no new dated financial write is introduced.
 
 ### 13. `markets.controller`
+
+Slice 10.1 currently exposes the private catalog under `/groceries/markets`,
+`/groceries/products`, and `/groceries/price-observations`. The generic/shared
+catalog and publication routes below remain future design, not current API.
 
 | Method and path                        | Parameters                                                               | Purpose                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |

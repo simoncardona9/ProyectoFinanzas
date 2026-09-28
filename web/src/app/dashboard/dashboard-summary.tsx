@@ -109,7 +109,9 @@ export function DashboardSummary() {
               </div>
               <div className="flex justify-between gap-4 text-amber-900">
                 <dt>IVA protegido</dt>
-                <dd>{money(summary.protectedReserveMinor, summary.currency)}</dd>
+                <dd>
+                  {money(summary.protectedReserveMinor, summary.currency)}
+                </dd>
               </div>
               <div className="flex justify-between gap-4 border-t border-emerald-200 pt-3">
                 <dt className="font-semibold">Efectivo proyectado</dt>

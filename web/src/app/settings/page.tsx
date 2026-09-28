@@ -62,6 +62,11 @@ export default async function SettingsPage() {
             description="Registrar referencias UYU/USD fechadas sin alterar saldos."
           />
           <FeatureNavigationCard
+            href="/groceries"
+            title="Catálogo de compras"
+            description="Guardar mercados, productos y precios privados sin afectar saldos."
+          />
+          <FeatureNavigationCard
             href="/debt-report"
             title="Reporte de deudas"
             description="Revisar pagos, saldos originales y exposición con cotización explícita."

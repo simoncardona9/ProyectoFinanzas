@@ -13,6 +13,7 @@ import type {
   CreateGroceryPlan,
   CreateGroceryPlanItem,
   CreateGroceryPurchase,
+  PublishGroceryCatalogRecord,
   UpdateGroceryPlan,
 } from "./grocery.schemas";
 import { receiptLinesTotalMinor } from "./grocery-plan.rules";
@@ -55,6 +56,159 @@ export async function createGroceryPriceObservation(
       "Market or product was not found in this household.",
     );
   return groceryRepository.createPriceObservation(householdId, values);
+}
+
+function publicationStatus(publication: {
+  id: string;
+  sourceType: "market" | "product" | "price";
+  sourceId: string;
+  createdAt: Date;
+}) {
+  return {
+    id: publication.id,
+    sourceType: publication.sourceType,
+    sourceId: publication.sourceId,
+    createdAt: publication.createdAt,
+  };
+}
+
+/** Copies only the approved catalog fields into identity-free public tables.
+ * The private publication link and audit event remain household-scoped. */
+export async function publishGroceryCatalogRecord(
+  context: AuthContext,
+  values: PublishGroceryCatalogRecord,
+) {
+  const householdId = context.membership.householdId;
+  const existing = await groceryRepository.findPublication(
+    householdId,
+    values.sourceType,
+    values.sourceId,
+  );
+  if (existing) return publicationStatus(existing);
+
+  let snapshot:
+    | {
+        sourceType: "market";
+        sourceId: string;
+        name: string;
+        normalizedName: string;
+      }
+    | {
+        sourceType: "product";
+        sourceId: string;
+        name: string;
+        normalizedName: string;
+      }
+    | {
+        sourceType: "price";
+        sourceId: string;
+        market: { name: string; normalizedName: string };
+        product: { name: string; normalizedName: string };
+        amountMinor: number;
+        currency: string;
+        observedDate: string;
+      };
+
+  if (values.sourceType === "market") {
+    const market = await groceryRepository.findMarket(
+      householdId,
+      values.sourceId,
+    );
+    if (!market)
+      throw new ApiError(
+        404,
+        "GROCERY_PUBLICATION_SOURCE_NOT_FOUND",
+        "Market was not found in this household.",
+      );
+    snapshot = {
+      sourceType: "market",
+      sourceId: market.id,
+      name: market.name,
+      normalizedName: market.normalizedName,
+    };
+  } else if (values.sourceType === "product") {
+    const product = await groceryRepository.findProduct(
+      householdId,
+      values.sourceId,
+    );
+    if (!product)
+      throw new ApiError(
+        404,
+        "GROCERY_PUBLICATION_SOURCE_NOT_FOUND",
+        "Product was not found in this household.",
+      );
+    snapshot = {
+      sourceType: "product",
+      sourceId: product.id,
+      name: product.name,
+      normalizedName: product.normalizedName,
+    };
+  } else {
+    const observation = await groceryRepository.findPriceObservation(
+      householdId,
+      values.sourceId,
+    );
+    if (!observation)
+      throw new ApiError(
+        404,
+        "GROCERY_PUBLICATION_SOURCE_NOT_FOUND",
+        "Price observation was not found in this household.",
+      );
+    const [market, product] = await Promise.all([
+      groceryRepository.findMarket(householdId, observation.marketId),
+      groceryRepository.findProduct(householdId, observation.productId),
+    ]);
+    if (!market || !product)
+      throw new ApiError(
+        409,
+        "GROCERY_PUBLICATION_SOURCE_INVALID",
+        "The price observation no longer has an eligible market and product.",
+      );
+    snapshot = {
+      sourceType: "price",
+      sourceId: observation.id,
+      market: {
+        name: market.name,
+        normalizedName: market.normalizedName,
+      },
+      product: {
+        name: product.name,
+        normalizedName: product.normalizedName,
+      },
+      amountMinor: observation.amountMinor,
+      currency: observation.currency,
+      observedDate: observation.observedDate,
+    };
+  }
+
+  try {
+    return publicationStatus(
+      await groceryRepository.publishCatalogRecord(
+        householdId,
+        context.user.id,
+        snapshot,
+      ),
+    );
+  } catch (error) {
+    const databaseError =
+      typeof error === "object" && error !== null && "cause" in error
+        ? error.cause
+        : error;
+    if (
+      typeof databaseError === "object" &&
+      databaseError !== null &&
+      "code" in databaseError &&
+      databaseError.code === "23505"
+    ) {
+      const publication = await groceryRepository.findPublication(
+        householdId,
+        values.sourceType,
+        values.sourceId,
+      );
+      if (publication) return publicationStatus(publication);
+    }
+    throw error;
+  }
 }
 
 function planResult<

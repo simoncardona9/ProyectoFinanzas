@@ -406,14 +406,14 @@ routes. All active-household roles can read them; owners and editors can write.
 They create only private planning data, never a transaction, account-balance
 change, financial-period mutation, or audit event.
 
-| Method and path                     | Parameters                                                                       | Purpose                                                                  |
-| ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `GET /grocery-plans`                | —                                                                                | List target-month plans.                                                 |
-| `POST /grocery-plans`               | body: `period`, `name`, `currency`, optional `preferredMarketId`                 | Create a draft non-financial plan.                                       |
-| `GET /grocery-plans/:planId`        | path                                                                             | Return plan, snapshot item estimates, and one currency-safe total.       |
-| `PATCH /grocery-plans/:planId`      | body: optional `name`, `status`, or `preferredMarketId`                          | Edit plan metadata; a cancelled plan cannot receive new items.           |
-| `POST /grocery-plans/:planId/items` | body: product or free-text description, optional quantity/unit, one price source | Add an estimated item from manual price or matching private observation. |
-| `POST /grocery-plans/:planId/purchases` | body: existing paid expense, optional reconciled receipt lines | Link actual spend without changing the transaction. |
+| Method and path                         | Parameters                                                                       | Purpose                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `GET /grocery-plans`                    | —                                                                                | List target-month plans.                                                 |
+| `POST /grocery-plans`                   | body: `period`, `name`, `currency`, optional `preferredMarketId`                 | Create a draft non-financial plan.                                       |
+| `GET /grocery-plans/:planId`            | path                                                                             | Return plan, snapshot item estimates, and one currency-safe total.       |
+| `PATCH /grocery-plans/:planId`          | body: optional `name`, `status`, or `preferredMarketId`                          | Edit plan metadata; a cancelled plan cannot receive new items.           |
+| `POST /grocery-plans/:planId/items`     | body: product or free-text description, optional quantity/unit, one price source | Add an estimated item from manual price or matching private observation. |
+| `POST /grocery-plans/:planId/purchases` | body: existing paid expense, optional reconciled receipt lines                   | Link actual spend without changing the transaction.                      |
 
 Each plan has exactly one currency. An item price selected from a price
 observation must match both that currency and the selected product; its amount
@@ -430,9 +430,27 @@ so no new dated financial write is introduced.
 
 ### 13. `markets.controller`
 
-Slice 10.1 currently exposes the private catalog under `/groceries/markets`,
-`/groceries/products`, and `/groceries/price-observations`. The generic/shared
-catalog and publication routes below remain future design, not current API.
+Slice 10.1 exposes the private catalog under `/groceries/markets`,
+`/groceries/products`, and `/groceries/price-observations`. Slice 11.1 adds the
+explicit publication boundary below; generic shared search and adoption remain
+Slice 11.2 work.
+
+| Method and path                | Parameters                     | Purpose                                                                      |
+| ------------------------------ | ------------------------------ | ---------------------------------------------------------------------------- |
+| `GET /groceries/publications`  | —                              | List only the active household's private publication links/status.           |
+| `POST /groceries/publications` | body: `sourceType`, `sourceId` | Idempotently publish one eligible market, product, or price source snapshot. |
+
+Every active-household role can read its own publication status; only owners
+and editors can publish. The server resolves the private source within the
+active household and atomically creates an identity-free public snapshot, a
+private publication link, and a minimal audit event. Market/product publication
+copies only names. Price publication copies the market/product names, amount,
+currency, and observation date; it never copies the private note. The route
+does not expose shared search results, plans, purchases, quantities, budgets,
+receipts, household IDs, or user IDs. Its authenticated household-status
+response includes the private source type/ID only so the UI can mark that
+household's record as published; those fields never enter a public table or a
+shared-catalog response.
 
 | Method and path                        | Parameters                                                               | Purpose                                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
@@ -442,7 +460,7 @@ catalog and publication routes below remain future design, not current API.
 | `POST /products`                       | body: name, optional brand, category, pack size, barcode                 | Create a household-private product.                                      |
 | `GET /market-prices`                   | `marketId`, `productId`, `from`, `to`, `includeShared`                   | Return dated price suggestions.                                          |
 | `POST /market-prices`                  | body: market, product, price, currency, quantity, unit, observation date | Record a household-private price observation.                            |
-| `POST /market-prices/:priceId/publish` | path                                                                     | Explicitly publish an eligible, non-identifying catalog contribution.    |
+| `POST /market-prices/:priceId/publish` | path                                                                     | Future alias/design; Slice 11.1 uses `/groceries/publications`.          |
 
 ### 14. `imports.controller`
 

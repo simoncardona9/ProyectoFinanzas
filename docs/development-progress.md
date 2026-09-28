@@ -816,3 +816,42 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - `pnpm test` (89 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
   `pnpm db:check`, `pnpm format:check`, `git diff --check`, and `pnpm build` —
   passed on 2026-09-26.
+
+## Step 11 — in progress
+
+### Slice 11.1 — Deliberate publication boundary — completed
+
+- Added separate public market, product, and price-suggestion snapshot tables.
+  They contain no household/user identity, private source ID, note, purchase,
+  quantity, budget, plan, or receipt fields. The private household/source link
+  remains in a separate publication table and each source can be published only
+  once per household.
+- Added owner/editor-only `POST /api/v1/groceries/publications` and an
+  active-household `GET` status route. Publication validates the source inside
+  the active household, is idempotent, and atomically writes the sanitized
+  public snapshot, private publication link, and minimal household audit event.
+- Added explicit publication controls to `/groceries`. The confirmation states
+  exactly which fields become shared; price publication excludes its private
+  note. Viewer and accountant roles retain read-only access to household-local
+  publication status.
+- Added `docs/shared-catalog-publication-acceptance.md`, covering confirmation
+  and cancellation, persisted/idempotent status, audit evidence, read-only-role
+  rejection, household isolation, public-table allowlist inspection, financial
+  no-effect checks, and exact synthetic cleanup.
+- Shared search, aliases/duplicate resolution, and copying a public suggestion
+  into another household remain Slice 11.2. Slice 11.1 exposes no cross-
+  household catalog search or financial/plan data.
+- Added migration `0022_gigantic_husk.sql`. It applied successfully to the
+  local PostgreSQL database, and a schema inspection confirmed that only the
+  private link table contains household/source identifiers.
+- On 2026-09-28, the household reviewer completed the documented local flow and
+  confirmed deliberate and cancelled publication behavior, persistent status,
+  minimal audit details, read-only-role rejection, household isolation, no
+  financial effect, the public-table privacy allowlist, and full synthetic
+  cleanup. Slice 11.2 is now the next eligible slice.
+
+### Verification
+
+- `pnpm test` (94 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
+  `pnpm db:check`, `pnpm format:check`, `pnpm db:migrate`, `pnpm build`, and
+  `git diff --check` — passed on 2026-09-28.

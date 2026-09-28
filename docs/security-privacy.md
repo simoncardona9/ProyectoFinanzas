@@ -29,3 +29,8 @@ Financial information is sensitive personal data. Security is a product requirem
 - Before enabling bank integrations, perform a separate security and privacy assessment.
 - Public user registration is disabled in version 1. Users are created through a controlled administrative database process.
 - Household market prices, products, grocery plans, and receipt details are private by default. Shared catalog contributions require explicit opt-in and must not reveal household identity, purchases, budgets, or quantities.
+- Shared catalog publication is owner/editor-only and copies an allowlisted
+  snapshot into identity-free public tables. A published price includes only
+  market/product names, amount, currency, and observation date; private notes
+  and source identifiers remain outside the shared record. The private
+  publication link and minimal audit event stay household-scoped.

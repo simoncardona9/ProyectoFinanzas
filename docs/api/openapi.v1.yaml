@@ -1624,7 +1624,12 @@ paths:
       description: Owner or editor only. The selected active-household transaction must be a paid expense in the plan currency. Receipt lines are optional; if supplied, they must total the transaction exactly and can reference only plan items. This adds planning evidence only and never changes the transaction or account balance.
       security: [{ sessionCookie: [] }]
       parameters:
-        - { name: planId, in: path, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: planId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
       requestBody:
         required: true
         content:
@@ -1642,7 +1647,8 @@ paths:
                     required: [description, totalMinor]
                     properties:
                       groceryPlanItemId: { type: string, format: uuid }
-                      description: { type: string, minLength: 1, maxLength: 300 }
+                      description:
+                        { type: string, minLength: 1, maxLength: 300 }
                       quantity: { type: number, exclusiveMinimum: 0 }
                       unit: { type: string, maxLength: 40 }
                       unitPriceMinor: { type: integer, minimum: 1 }
@@ -1654,7 +1660,55 @@ paths:
         "403": { description: Owner or editor role required }
         "404": { description: Grocery plan not found }
         "409": { description: Plan cancelled or transaction already linked }
-        "422": { description: Transaction is not a same-currency paid expense, receipt does not reconcile, or receipt item is outside the plan }
+        "422":
+          {
+            description: Transaction is not a same-currency paid expense,
+            receipt does not reconcile,
+            or receipt item is outside the plan,
+          }
+  /api/v1/groceries/publications:
+    get:
+      operationId: listGroceryCatalogPublications
+      summary: List publication status for the active household's private catalog sources.
+      description: Every active-household role may read only its household-scoped publication links. This is not a shared-catalog search endpoint and does not expose another household's links.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Active-household publication links }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: publishGroceryCatalogRecord
+      summary: Deliberately publish one eligible private catalog source.
+      description: Owner or editor only. The source must be a market, product, or price observation in the active household. The operation is idempotent and atomically creates an identity-free public snapshot, a private household publication link, and a minimal audit event. Market/product publication copies only names. Price publication copies market/product names, amount, currency, and observation date; it excludes the private note, household/user identity, source IDs, purchases, quantities, budgets, plans, and receipts.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceType, sourceId]
+              properties:
+                sourceType: { type: string, enum: [market, product, price] }
+                sourceId: { type: string, format: uuid }
+            examples:
+              publishPrice:
+                value:
+                  sourceType: price
+                  sourceId: 4cb8ba59-4a87-4e57-9dcd-46968c90e1e2
+      responses:
+        "201":
+          {
+            description: Sanitized public snapshot created,
+            or existing idempotent publication returned,
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "404": { description: Source not found in the active household }
+        "409":
+          {
+            description: Price source no longer has an eligible private market and product,
+          }
 components:
   securitySchemes:
     { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }

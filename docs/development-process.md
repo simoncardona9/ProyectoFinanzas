@@ -355,7 +355,7 @@ closed-period guard before it can be enabled.
    or other-household access is rejected, and reset the synthetic household
    afterward. Record the successful run before marking Step 10 complete.
 
-### Step 11 — Shared catalog (future)
+### Step 11 — Shared catalog
 
 **Goal:** Offer opt-in shared market, product, and price suggestions without exposing household financial data.
 

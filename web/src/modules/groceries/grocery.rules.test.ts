@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createGroceryPriceObservationSchema } from "./grocery.schemas";
+import {
+  createGroceryPriceObservationSchema,
+  publishGroceryCatalogRecordSchema,
+} from "./grocery.schemas";
 import { normalizeGroceryName } from "./grocery.rules";
 
 describe("grocery catalog rules", () => {
@@ -25,6 +28,22 @@ describe("grocery catalog rules", () => {
     ).toThrow();
     expect(() =>
       createGroceryPriceObservationSchema.parse({ ...valid, amountMinor: 1.5 }),
+    ).toThrow();
+  });
+
+  it("accepts only an explicit catalog source kind and UUID", () => {
+    const sourceId = "4cb8ba59-4a87-4e57-9dcd-46968c90e1e2";
+    expect(
+      publishGroceryCatalogRecordSchema.parse({
+        sourceType: "market",
+        sourceId,
+      }),
+    ).toEqual({ sourceType: "market", sourceId });
+    expect(() =>
+      publishGroceryCatalogRecordSchema.parse({
+        sourceType: "plan",
+        sourceId,
+      }),
     ).toThrow();
   });
 });

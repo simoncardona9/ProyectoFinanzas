@@ -18,6 +18,12 @@ type Observation = {
   observedDate: string;
   note: string | null;
 };
+type Publication = {
+  id: string;
+  sourceType: "market" | "product" | "price";
+  sourceId: string;
+  createdAt: string;
+};
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -52,19 +58,26 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
   const [markets, setMarkets] = useState<CatalogItem[]>([]);
   const [products, setProducts] = useState<CatalogItem[]>([]);
   const [observations, setObservations] = useState<Observation[]>([]);
+  const [publications, setPublications] = useState<Publication[]>([]);
   const [message, setMessage] = useState("");
   const [key, setKey] = useState(0);
   const load = useCallback(async () => {
     try {
-      const [loadedMarkets, loadedProducts, loadedObservations] =
-        await Promise.all([
-          api<CatalogItem[]>("/api/v1/groceries/markets"),
-          api<CatalogItem[]>("/api/v1/groceries/products"),
-          api<Observation[]>("/api/v1/groceries/price-observations"),
-        ]);
+      const [
+        loadedMarkets,
+        loadedProducts,
+        loadedObservations,
+        loadedPublications,
+      ] = await Promise.all([
+        api<CatalogItem[]>("/api/v1/groceries/markets"),
+        api<CatalogItem[]>("/api/v1/groceries/products"),
+        api<Observation[]>("/api/v1/groceries/price-observations"),
+        api<Publication[]>("/api/v1/groceries/publications"),
+      ]);
       setMarkets(loadedMarkets);
       setProducts(loadedProducts);
       setObservations(loadedObservations);
+      setPublications(loadedPublications);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -79,6 +92,15 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
   }, [load]);
   const marketDuplicates = useMemo(() => duplicates(markets), [markets]);
   const productDuplicates = useMemo(() => duplicates(products), [products]);
+  const publishedSources = useMemo(
+    () =>
+      new Set(
+        publications.map(
+          (publication) => `${publication.sourceType}:${publication.sourceId}`,
+        ),
+      ),
+    [publications],
+  );
   const submitNamed = async (
     event: FormEvent<HTMLFormElement>,
     endpoint: string,
@@ -136,6 +158,35 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
         error instanceof Error
           ? error.message
           : "No se pudo guardar el precio.",
+      );
+    }
+  };
+  const publish = async (
+    sourceType: Publication["sourceType"],
+    sourceId: string,
+  ) => {
+    const detail =
+      sourceType === "price"
+        ? "Se compartirán el mercado, el producto, el precio, la moneda y la fecha. La nota privada no se publicará."
+        : "Se compartirá únicamente el nombre de este registro.";
+    if (
+      !window.confirm(
+        `¿Publicar este dato en el catálogo compartido? ${detail} Esta acción no se puede deshacer en esta etapa.`,
+      )
+    )
+      return;
+    try {
+      await api("/api/v1/groceries/publications", {
+        method: "POST",
+        body: JSON.stringify({ sourceType, sourceId }),
+      });
+      setMessage(
+        "Dato publicado sin identidad del hogar ni información de compras o planes.",
+      );
+      await load();
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "No se pudo publicar el dato.",
       );
     }
   };
@@ -250,11 +301,19 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
           title="Mercados privados"
           items={markets}
           duplicateNames={marketDuplicates}
+          sourceType="market"
+          canPublish={canEdit}
+          publishedSources={publishedSources}
+          onPublish={publish}
         />
         <CatalogList
           title="Productos privados"
           items={products}
           duplicateNames={productDuplicates}
+          sourceType="product"
+          canPublish={canEdit}
+          publishedSources={publishedSources}
+          onPublish={publish}
         />
       </section>
       <section>
@@ -272,7 +331,22 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
                   {item.note ? ` · ${item.note}` : ""}
                 </small>
               </span>
-              <b>{money(item.amountMinor, item.currency)}</b>
+              <span className="grid justify-items-end gap-2">
+                <b>{money(item.amountMinor, item.currency)}</b>
+                {publishedSources.has(`price:${item.id}`) ? (
+                  <small className="text-emerald-700">Publicado</small>
+                ) : (
+                  canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => void publish("price", item.id)}
+                      className="rounded border border-emerald-700 px-3 py-1 text-sm text-emerald-800"
+                    >
+                      Publicar precio
+                    </button>
+                  )
+                )}
+              </span>
             </li>
           ))}
           {!observations.length && (
@@ -290,27 +364,56 @@ function CatalogList({
   title,
   items,
   duplicateNames,
+  sourceType,
+  canPublish,
+  publishedSources,
+  onPublish,
 }: {
   title: string;
   items: CatalogItem[];
   duplicateNames: Map<string, string[]>;
+  sourceType: "market" | "product";
+  canPublish: boolean;
+  publishedSources: Set<string>;
+  onPublish: (
+    sourceType: "market" | "product" | "price",
+    sourceId: string,
+  ) => Promise<void>;
 }) {
   return (
     <section>
       <h2 className="text-xl font-semibold">{title}</h2>
       <ul className="mt-3 divide-y rounded-xl border">
         {items.map((item) => (
-          <li key={item.id} className="p-4">
-            {item.name}
-            {duplicateNames.has(item.normalizedName) && (
-              <small className="mt-1 block text-amber-700">
-                Posible duplicado: coincide con{" "}
-                {duplicateNames
-                  .get(item.normalizedName)
-                  ?.filter((name) => name !== item.name)
-                  .join(", ")}
-                .
-              </small>
+          <li
+            key={item.id}
+            className="flex items-start justify-between gap-3 p-4"
+          >
+            <span>
+              {item.name}
+              {duplicateNames.has(item.normalizedName) && (
+                <small className="mt-1 block text-amber-700">
+                  Posible duplicado: coincide con{" "}
+                  {duplicateNames
+                    .get(item.normalizedName)
+                    ?.filter((name) => name !== item.name)
+                    .join(", ")}
+                  .
+                </small>
+              )}
+            </span>
+            {publishedSources.has(`${sourceType}:${item.id}`) ? (
+              <small className="text-emerald-700">Publicado</small>
+            ) : (
+              canPublish && (
+                <button
+                  type="button"
+                  onClick={() => void onPublish(sourceType, item.id)}
+                  className="shrink-0 rounded border border-emerald-700 px-3 py-1 text-sm text-emerald-800"
+                >
+                  Publicar
+                </button>
+              )
             )}
           </li>
         ))}

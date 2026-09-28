@@ -1,6 +1,8 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  auditLogs,
+  groceryCatalogPublications,
   groceryMarkets,
   groceryPlanItems,
   groceryPlans,
@@ -8,8 +10,34 @@ import {
   groceryPriceObservations,
   groceryProducts,
   groceryReceiptLines,
+  publicGroceryMarkets,
+  publicGroceryPriceSuggestions,
+  publicGroceryProducts,
   transactions,
 } from "@/db/schema";
+
+type PublicCatalogSnapshot =
+  | {
+      sourceType: "market";
+      sourceId: string;
+      name: string;
+      normalizedName: string;
+    }
+  | {
+      sourceType: "product";
+      sourceId: string;
+      name: string;
+      normalizedName: string;
+    }
+  | {
+      sourceType: "price";
+      sourceId: string;
+      market: { name: string; normalizedName: string };
+      product: { name: string; normalizedName: string };
+      amountMinor: number;
+      currency: string;
+      observedDate: string;
+    };
 
 export const groceryRepository = {
   listMarkets(householdId: string) {
@@ -100,6 +128,105 @@ export const groceryRepository = {
         desc(groceryPriceObservations.observedDate),
         desc(groceryPriceObservations.createdAt),
       );
+  },
+  listPublications(householdId: string) {
+    return db
+      .select({
+        id: groceryCatalogPublications.id,
+        sourceType: groceryCatalogPublications.sourceType,
+        sourceId: groceryCatalogPublications.sourceId,
+        createdAt: groceryCatalogPublications.createdAt,
+      })
+      .from(groceryCatalogPublications)
+      .where(eq(groceryCatalogPublications.householdId, householdId))
+      .orderBy(desc(groceryCatalogPublications.createdAt));
+  },
+  findPublication(
+    householdId: string,
+    sourceType: "market" | "product" | "price",
+    sourceId: string,
+  ) {
+    return db.query.groceryCatalogPublications.findFirst({
+      where: and(
+        eq(groceryCatalogPublications.householdId, householdId),
+        eq(groceryCatalogPublications.sourceType, sourceType),
+        eq(groceryCatalogPublications.sourceId, sourceId),
+      ),
+    });
+  },
+  async publishCatalogRecord(
+    householdId: string,
+    actorUserId: string,
+    snapshot: PublicCatalogSnapshot,
+  ) {
+    return db.transaction(async (tx) => {
+      let publicMarketId: string | null = null;
+      let publicProductId: string | null = null;
+      let publicPriceSuggestionId: string | null = null;
+
+      if (snapshot.sourceType === "market") {
+        const [record] = await tx
+          .insert(publicGroceryMarkets)
+          .values({
+            name: snapshot.name,
+            normalizedName: snapshot.normalizedName,
+          })
+          .returning();
+        publicMarketId = record.id;
+      } else if (snapshot.sourceType === "product") {
+        const [record] = await tx
+          .insert(publicGroceryProducts)
+          .values({
+            name: snapshot.name,
+            normalizedName: snapshot.normalizedName,
+          })
+          .returning();
+        publicProductId = record.id;
+      } else {
+        const [market] = await tx
+          .insert(publicGroceryMarkets)
+          .values(snapshot.market)
+          .returning();
+        const [product] = await tx
+          .insert(publicGroceryProducts)
+          .values(snapshot.product)
+          .returning();
+        publicMarketId = market.id;
+        publicProductId = product.id;
+        const [price] = await tx
+          .insert(publicGroceryPriceSuggestions)
+          .values({
+            marketId: publicMarketId,
+            productId: publicProductId,
+            amountMinor: snapshot.amountMinor,
+            currency: snapshot.currency,
+            observedDate: snapshot.observedDate,
+          })
+          .returning();
+        publicPriceSuggestionId = price.id;
+      }
+
+      const [publication] = await tx
+        .insert(groceryCatalogPublications)
+        .values({
+          householdId,
+          sourceType: snapshot.sourceType,
+          sourceId: snapshot.sourceId,
+          publicMarketId,
+          publicProductId,
+          publicPriceSuggestionId,
+        })
+        .returning();
+      await tx.insert(auditLogs).values({
+        householdId,
+        actorUserId,
+        action: "publish",
+        entityType: "grocery_catalog_publication",
+        entityId: publication.id,
+        details: { sourceType: snapshot.sourceType },
+      });
+      return publication;
+    });
   },
   listPlans(householdId: string) {
     return db

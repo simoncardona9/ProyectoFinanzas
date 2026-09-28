@@ -11,10 +11,11 @@ contener datos financieros reales, credenciales ni exportaciones personales.
 
 ## Estado actual
 
-Están completados los cimientos del proyecto, la autenticación con aislamiento
-por hogar y la estructura financiera inicial. Un propietario o editor puede
-administrar cuentas y categorías desde `/structure`; las transacciones y los
-reportes llegarán en los siguientes pasos del plan.
+Los Steps 1–10 están completados: la aplicación local incluye aislamiento por
+hogar, estructura financiera, transacciones, obligaciones, dashboard, deudas,
+facturas/IVA, importación, cierre/reportes/respaldo y planificación de compras.
+El Step 11 está en desarrollo y comienza con la publicación deliberada y
+anonimizada de datos elegibles hacia un catálogo compartido.
 
 El avance detallado y los criterios de cada etapa están en
 [docs/development-progress.md](docs/development-progress.md) y

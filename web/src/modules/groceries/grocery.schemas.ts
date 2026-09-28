@@ -23,6 +23,15 @@ export const createGroceryPriceObservationSchema = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
+export const publishGroceryCatalogRecordSchema = z.discriminatedUnion(
+  "sourceType",
+  [
+    z.object({ sourceType: z.literal("market"), sourceId: z.uuid() }),
+    z.object({ sourceType: z.literal("product"), sourceId: z.uuid() }),
+    z.object({ sourceType: z.literal("price"), sourceId: z.uuid() }),
+  ],
+);
+
 export const createGroceryPlanSchema = z.object({
   period,
   name: z.string().trim().min(1).max(160),
@@ -112,6 +121,9 @@ export type CreateGroceryMarket = z.infer<typeof createGroceryMarketSchema>;
 export type CreateGroceryProduct = z.infer<typeof createGroceryProductSchema>;
 export type CreateGroceryPriceObservation = z.infer<
   typeof createGroceryPriceObservationSchema
+>;
+export type PublishGroceryCatalogRecord = z.infer<
+  typeof publishGroceryCatalogRecordSchema
 >;
 export type CreateGroceryPlan = z.infer<typeof createGroceryPlanSchema>;
 export type UpdateGroceryPlan = z.infer<typeof updateGroceryPlanSchema>;

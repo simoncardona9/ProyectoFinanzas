@@ -114,6 +114,14 @@ export const groceryPlanStatus = pgEnum("grocery_plan_status", [
   "cancelled",
 ]);
 
+/** The source kind is stored only in the household-private publication link.
+ * Public catalog tables deliberately contain no household or user identity. */
+export const groceryCatalogRecordType = pgEnum("grocery_catalog_record_type", [
+  "market",
+  "product",
+  "price",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
@@ -668,6 +676,104 @@ export const groceryPriceObservations = pgTable(
       table.marketId,
       table.observedDate,
     ),
+  ],
+);
+
+/** Sanitized shared catalog records. These tables must never gain household,
+ * user, purchase, plan, quantity, budget, or private-note columns. */
+export const publicGroceryMarkets = pgTable(
+  "public_grocery_markets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("public_grocery_markets_normalized_idx").on(table.normalizedName),
+  ],
+);
+
+export const publicGroceryProducts = pgTable(
+  "public_grocery_products",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("public_grocery_products_normalized_idx").on(table.normalizedName),
+  ],
+);
+
+export const publicGroceryPriceSuggestions = pgTable(
+  "public_grocery_price_suggestions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    marketId: uuid("market_id")
+      .notNull()
+      .references(() => publicGroceryMarkets.id, { onDelete: "restrict" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => publicGroceryProducts.id, { onDelete: "restrict" }),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    observedDate: date("observed_date").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("public_grocery_prices_product_date_idx").on(
+      table.productId,
+      table.observedDate,
+    ),
+    index("public_grocery_prices_market_date_idx").on(
+      table.marketId,
+      table.observedDate,
+    ),
+  ],
+);
+
+/** This private link proves which household deliberately published a source
+ * record. It is never part of the shared catalog API. */
+export const groceryCatalogPublications = pgTable(
+  "grocery_catalog_publications",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    sourceType: groceryCatalogRecordType("source_type").notNull(),
+    sourceId: uuid("source_id").notNull(),
+    publicMarketId: uuid("public_market_id").references(
+      () => publicGroceryMarkets.id,
+      { onDelete: "restrict" },
+    ),
+    publicProductId: uuid("public_product_id").references(
+      () => publicGroceryProducts.id,
+      { onDelete: "restrict" },
+    ),
+    publicPriceSuggestionId: uuid("public_price_suggestion_id").references(
+      () => publicGroceryPriceSuggestions.id,
+      { onDelete: "restrict" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("grocery_catalog_publications_source_unique").on(
+      table.householdId,
+      table.sourceType,
+      table.sourceId,
+    ),
+    index("grocery_catalog_publications_household_idx").on(table.householdId),
   ],
 );
 

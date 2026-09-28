@@ -10,6 +10,15 @@ const { groceryRepository } = vi.hoisted(() => ({
     findProduct: vi.fn(),
     findPriceObservation: vi.fn(),
     publishCatalogRecord: vi.fn(),
+    searchPublicMarkets: vi.fn(),
+    searchPublicProducts: vi.fn(),
+    searchPublicPrices: vi.fn(),
+    listAdoptions: vi.fn(),
+    findAdoption: vi.fn(),
+    findPublicMarket: vi.fn(),
+    findPublicProduct: vi.fn(),
+    findPublicPriceSuggestion: vi.fn(),
+    adoptPublicCatalogRecord: vi.fn(),
   },
 }));
 
@@ -17,7 +26,9 @@ vi.mock("./grocery.repository", () => ({ groceryRepository }));
 
 import {
   addGroceryPurchase,
+  adoptSharedGroceryCatalogRecord,
   publishGroceryCatalogRecord,
+  searchSharedGroceryCatalog,
 } from "./grocery.service";
 
 const context = {
@@ -151,5 +162,132 @@ describe("publishGroceryCatalogRecord", () => {
     });
     expect(groceryRepository.findProduct).not.toHaveBeenCalled();
     expect(groceryRepository.publishCatalogRecord).not.toHaveBeenCalled();
+  });
+});
+
+describe("searchSharedGroceryCatalog", () => {
+  it("normalizes search, exposes duplicate hints, and returns only this household's adoption status", async () => {
+    groceryRepository.searchPublicMarkets.mockResolvedValue([
+      {
+        id: "public-market-a",
+        name: "Mercado Centro",
+        normalizedName: "mercado centro",
+      },
+      {
+        id: "public-market-b",
+        name: "MERCADO-CENTRO",
+        normalizedName: "mercado centro",
+      },
+    ]);
+    groceryRepository.searchPublicProducts.mockResolvedValue([]);
+    groceryRepository.searchPublicPrices.mockResolvedValue([]);
+    groceryRepository.listAdoptions.mockResolvedValue([
+      {
+        sourceType: "market",
+        publicSourceId: "public-market-a",
+      },
+    ]);
+
+    const result = await searchSharedGroceryCatalog(context, {
+      query: "  Mércado-Centro ",
+    });
+
+    expect(groceryRepository.searchPublicMarkets).toHaveBeenCalledWith(
+      "mercado centro",
+    );
+    expect(groceryRepository.listAdoptions).toHaveBeenCalledWith(
+      "household-id",
+    );
+    expect(result.markets).toEqual([
+      expect.objectContaining({
+        id: "public-market-a",
+        adopted: true,
+        aliases: ["MERCADO-CENTRO"],
+        possibleDuplicates: [{ id: "public-market-b", name: "MERCADO-CENTRO" }],
+      }),
+      expect.objectContaining({
+        id: "public-market-b",
+        adopted: false,
+      }),
+    ]);
+  });
+});
+
+describe("adoptSharedGroceryCatalogRecord", () => {
+  it("copies only the sanitized public price snapshot into the active household", async () => {
+    groceryRepository.findAdoption.mockResolvedValue(undefined);
+    groceryRepository.findPublicPriceSuggestion.mockResolvedValue({
+      id: "public-price-id",
+      market: {
+        name: "Mercado compartido",
+        normalizedName: "mercado compartido",
+      },
+      product: {
+        name: "Producto compartido",
+        normalizedName: "producto compartido",
+      },
+      amountMinor: 24550,
+      currency: "UYU",
+      observedDate: "2026-09-28",
+    });
+    groceryRepository.adoptPublicCatalogRecord.mockResolvedValue({
+      id: "adoption-id",
+      sourceType: "price",
+      publicSourceId: "public-price-id",
+      groceryMarketId: "local-market-id",
+      groceryProductId: "local-product-id",
+      groceryPriceObservationId: "local-price-id",
+      createdAt: new Date("2026-09-28T18:00:00Z"),
+    });
+
+    await expect(
+      adoptSharedGroceryCatalogRecord(context, {
+        sourceType: "price",
+        publicSourceId: "public-price-id",
+      }),
+    ).resolves.toMatchObject({
+      id: "adoption-id",
+      localSourceId: "local-price-id",
+    });
+    expect(groceryRepository.adoptPublicCatalogRecord).toHaveBeenCalledWith(
+      "household-id",
+      "user-id",
+      {
+        sourceType: "price",
+        publicSourceId: "public-price-id",
+        market: {
+          name: "Mercado compartido",
+          normalizedName: "mercado compartido",
+        },
+        product: {
+          name: "Producto compartido",
+          normalizedName: "producto compartido",
+        },
+        amountMinor: 24550,
+        currency: "UYU",
+        observedDate: "2026-09-28",
+      },
+    );
+  });
+
+  it("returns an existing household adoption without copying again", async () => {
+    groceryRepository.findAdoption.mockResolvedValue({
+      id: "adoption-id",
+      sourceType: "product",
+      publicSourceId: "public-product-id",
+      groceryMarketId: null,
+      groceryProductId: "local-product-id",
+      groceryPriceObservationId: null,
+      createdAt: new Date("2026-09-28T18:00:00Z"),
+    });
+
+    await expect(
+      adoptSharedGroceryCatalogRecord(context, {
+        sourceType: "product",
+        publicSourceId: "public-product-id",
+      }),
+    ).resolves.toMatchObject({ localSourceId: "local-product-id" });
+    expect(groceryRepository.findPublicProduct).not.toHaveBeenCalled();
+    expect(groceryRepository.adoptPublicCatalogRecord).not.toHaveBeenCalled();
   });
 });

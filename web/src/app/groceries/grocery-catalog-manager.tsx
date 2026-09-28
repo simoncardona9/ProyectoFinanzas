@@ -24,6 +24,27 @@ type Publication = {
   sourceId: string;
   createdAt: string;
 };
+type SharedNamedItem = CatalogItem & {
+  aliases: string[];
+  possibleDuplicates: Array<{ id: string; name: string }>;
+  adopted: boolean;
+};
+type SharedPrice = {
+  id: string;
+  market: { id: string; name: string };
+  product: { id: string; name: string };
+  amountMinor: number;
+  currency: "UYU" | "USD";
+  observedDate: string;
+  adopted: boolean;
+};
+type SharedCatalogSearch = {
+  query: string;
+  normalizedQuery: string;
+  markets: SharedNamedItem[];
+  products: SharedNamedItem[];
+  prices: SharedPrice[];
+};
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -59,6 +80,8 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
   const [products, setProducts] = useState<CatalogItem[]>([]);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [publications, setPublications] = useState<Publication[]>([]);
+  const [sharedResults, setSharedResults] =
+    useState<SharedCatalogSearch | null>(null);
   const [message, setMessage] = useState("");
   const [key, setKey] = useState(0);
   const load = useCallback(async () => {
@@ -190,6 +213,58 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
       );
     }
   };
+  const searchShared = async (query: string) => {
+    const results = await api<SharedCatalogSearch>(
+      `/api/v1/groceries/shared-catalog?query=${encodeURIComponent(query)}`,
+    );
+    setSharedResults(results);
+  };
+  const submitSharedSearch = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = String(new FormData(event.currentTarget).get("query") ?? "");
+    try {
+      await searchShared(query);
+      setMessage("");
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo buscar en el catálogo compartido.",
+      );
+    }
+  };
+  const adopt = async (
+    sourceType: Publication["sourceType"],
+    publicSourceId: string,
+  ) => {
+    const detail =
+      sourceType === "price"
+        ? "Se copiarán el mercado, el producto, el precio, la moneda y la fecha a tu catálogo privado."
+        : "Se copiará el nombre a tu catálogo privado.";
+    if (
+      !window.confirm(
+        `¿Incorporar esta sugerencia compartida? ${detail} No se crearán transacciones ni se modificarán saldos.`,
+      )
+    )
+      return;
+    try {
+      await api("/api/v1/groceries/shared-catalog", {
+        method: "POST",
+        body: JSON.stringify({ sourceType, publicSourceId }),
+      });
+      setMessage(
+        "Sugerencia incorporada al catálogo privado sin datos del hogar que la publicó.",
+      );
+      await load();
+      if (sharedResults) await searchShared(sharedResults.query);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo incorporar la sugerencia.",
+      );
+    }
+  };
   return (
     <div className="mt-8 grid gap-8">
       {message && (
@@ -296,6 +371,37 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
           </form>
         </section>
       )}
+      <section className="rounded-xl border border-sky-200 bg-sky-50/50 p-5">
+        <h2 className="text-xl font-semibold">Catálogo compartido</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          Busca nombres normalizados y variantes publicadas. Las coincidencias
+          son sugerencias: cada sucursal o producto sigue siendo un registro
+          separado hasta que decidas incorporarlo.
+        </p>
+        <form
+          onSubmit={submitSharedSearch}
+          className="mt-4 flex flex-wrap gap-2"
+        >
+          <input
+            name="query"
+            required
+            minLength={2}
+            maxLength={160}
+            placeholder="Buscar mercado o producto"
+            className="min-w-64 flex-1 rounded border bg-white p-2"
+          />
+          <button className="rounded bg-sky-700 px-4 py-2 text-white">
+            Buscar compartidos
+          </button>
+        </form>
+        {sharedResults && (
+          <SharedResults
+            results={sharedResults}
+            canEdit={canEdit}
+            onAdopt={adopt}
+          />
+        )}
+      </section>
       <section className="grid gap-4 md:grid-cols-2">
         <CatalogList
           title="Mercados privados"
@@ -357,6 +463,148 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
         </ul>
       </section>
     </div>
+  );
+}
+
+function SharedResults({
+  results,
+  canEdit,
+  onAdopt,
+}: {
+  results: SharedCatalogSearch;
+  canEdit: boolean;
+  onAdopt: (
+    sourceType: "market" | "product" | "price",
+    publicSourceId: string,
+  ) => Promise<void>;
+}) {
+  const total =
+    results.markets.length + results.products.length + results.prices.length;
+  return (
+    <div className="mt-5 grid gap-5">
+      <p className="text-sm text-zinc-600">
+        {total
+          ? `${total} sugerencia${total === 1 ? "" : "s"} para “${results.query}”.`
+          : `No hay sugerencias para “${results.query}”.`}
+      </p>
+      {!!results.markets.length && (
+        <SharedNamedList
+          title="Mercados compartidos"
+          sourceType="market"
+          items={results.markets}
+          canEdit={canEdit}
+          onAdopt={onAdopt}
+        />
+      )}
+      {!!results.products.length && (
+        <SharedNamedList
+          title="Productos compartidos"
+          sourceType="product"
+          items={results.products}
+          canEdit={canEdit}
+          onAdopt={onAdopt}
+        />
+      )}
+      {!!results.prices.length && (
+        <section>
+          <h3 className="font-semibold">Precios compartidos</h3>
+          <ul className="mt-2 divide-y rounded border bg-white">
+            {results.prices.map((price) => (
+              <li
+                key={price.id}
+                className="flex flex-wrap items-center justify-between gap-3 p-3"
+              >
+                <span>
+                  <b>{price.product.name}</b> · {price.market.name}
+                  <small className="block text-zinc-500">
+                    {price.observedDate} ·{" "}
+                    {money(price.amountMinor, price.currency)}
+                  </small>
+                </span>
+                <AdoptionControl
+                  adopted={price.adopted}
+                  canEdit={canEdit}
+                  onClick={() => void onAdopt("price", price.id)}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function SharedNamedList({
+  title,
+  sourceType,
+  items,
+  canEdit,
+  onAdopt,
+}: {
+  title: string;
+  sourceType: "market" | "product";
+  items: SharedNamedItem[];
+  canEdit: boolean;
+  onAdopt: (
+    sourceType: "market" | "product" | "price",
+    publicSourceId: string,
+  ) => Promise<void>;
+}) {
+  return (
+    <section>
+      <h3 className="font-semibold">{title}</h3>
+      <ul className="mt-2 divide-y rounded border bg-white">
+        {items.map((item) => (
+          <li
+            key={item.id}
+            className="flex items-start justify-between gap-3 p-3"
+          >
+            <span>
+              {item.name}
+              {!!item.aliases.length && (
+                <small className="block text-zinc-500">
+                  También publicado como: {item.aliases.join(", ")}.
+                </small>
+              )}
+              {!!item.possibleDuplicates.length && (
+                <small className="block text-amber-700">
+                  Posible duplicado; revisa cada opción antes de incorporarla.
+                </small>
+              )}
+            </span>
+            <AdoptionControl
+              adopted={item.adopted}
+              canEdit={canEdit}
+              onClick={() => void onAdopt(sourceType, item.id)}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function AdoptionControl({
+  adopted,
+  canEdit,
+  onClick,
+}: {
+  adopted: boolean;
+  canEdit: boolean;
+  onClick: () => void;
+}) {
+  if (adopted)
+    return <small className="shrink-0 text-emerald-700">Ya incorporado</small>;
+  if (!canEdit) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 rounded border border-sky-700 px-3 py-1 text-sm text-sky-800"
+    >
+      Incorporar
+    </button>
   );
 }
 

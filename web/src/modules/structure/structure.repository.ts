@@ -8,6 +8,7 @@ import {
   debts,
   exchangeRates,
   financialPeriods,
+  groceryCatalogAdoptions,
   groceryCatalogPublications,
   groceryMarkets,
   groceryPlanItems,
@@ -32,8 +33,11 @@ type NewCategory = Omit<typeof categories.$inferInsert, "householdId">;
 export const structureRepository = {
   async resetFinancialData(householdId: string) {
     return db.transaction(async (tx) => {
-      // Public catalog snapshots are intentionally irreversible in this slice,
-      // but the household-private source links must not survive a local reset.
+      // Public catalog snapshots outlive a household reset, but private links
+      // to publications and adopted local copies must not survive it.
+      await tx
+        .delete(groceryCatalogAdoptions)
+        .where(eq(groceryCatalogAdoptions.householdId, householdId));
       await tx
         .delete(groceryCatalogPublications)
         .where(eq(groceryCatalogPublications.householdId, householdId));

@@ -432,8 +432,8 @@ so no new dated financial write is introduced.
 
 Slice 10.1 exposes the private catalog under `/groceries/markets`,
 `/groceries/products`, and `/groceries/price-observations`. Slice 11.1 adds the
-explicit publication boundary below; generic shared search and adoption remain
-Slice 11.2 work.
+explicit publication boundary, and Slice 11.2 adds authenticated shared search
+and deliberate local adoption.
 
 | Method and path                | Parameters                     | Purpose                                                                      |
 | ------------------------------ | ------------------------------ | ---------------------------------------------------------------------------- |
@@ -452,15 +452,26 @@ response includes the private source type/ID only so the UI can mark that
 household's record as published; those fields never enter a public table or a
 shared-catalog response.
 
-| Method and path                        | Parameters                                                               | Purpose                                                                  |
-| -------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `GET /markets`                         | `query`, `location`, `includeShared`                                     | Search household and shared markets, including similar-name suggestions. |
-| `POST /markets`                        | body: `name`, optional branch/location and aliases                       | Create a household-private market after returning possible duplicates.   |
-| `GET /products`                        | `query`, `marketId`, `includeShared`                                     | Search household and shared product catalog entries.                     |
-| `POST /products`                       | body: name, optional brand, category, pack size, barcode                 | Create a household-private product.                                      |
-| `GET /market-prices`                   | `marketId`, `productId`, `from`, `to`, `includeShared`                   | Return dated price suggestions.                                          |
-| `POST /market-prices`                  | body: market, product, price, currency, quantity, unit, observation date | Record a household-private price observation.                            |
-| `POST /market-prices/:priceId/publish` | path                                                                     | Future alias/design; Slice 11.1 uses `/groceries/publications`.          |
+| Method and path                  | Parameters                                 | Purpose                                                                      |
+| -------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `GET /groceries/shared-catalog`  | query: required `query` (2–160 characters) | Search sanitized public markets, products, and price suggestions.            |
+| `POST /groceries/shared-catalog` | body: `sourceType`, `publicSourceId`       | Idempotently copy one public suggestion into the active household's catalog. |
+
+Every active-household role may search. Search normalizes case, accents,
+punctuation, and whitespace, returns at most 50 results per record type, and
+marks only the active household's adoption status. Alternate public spellings
+with the same normalized name are returned as aliases and possible duplicates;
+records are never automatically merged, so legitimate branches and products
+remain independently selectable.
+
+Only owners and editors may adopt. A market or product adoption copies its
+public name into a new household-private record. A price adoption atomically
+copies the public market/product names, integer minor-unit amount, currency,
+and observation date into a private market, product, and price observation.
+The same transaction creates a private idempotency link and a minimal audit
+event. It reads no publication link and returns no publishing household or
+user identity. Adoption creates no transaction, plan, purchase, receipt,
+balance change, or financial-period mutation.
 
 ### 14. `imports.controller`
 

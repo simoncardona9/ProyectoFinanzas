@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeGroceryName } from "./grocery.rules";
 
 const name = z.string().trim().min(1).max(160);
 const currency = z.enum(["UYU", "USD"]);
@@ -29,6 +30,26 @@ export const publishGroceryCatalogRecordSchema = z.discriminatedUnion(
     z.object({ sourceType: z.literal("market"), sourceId: z.uuid() }),
     z.object({ sourceType: z.literal("product"), sourceId: z.uuid() }),
     z.object({ sourceType: z.literal("price"), sourceId: z.uuid() }),
+  ],
+);
+
+export const searchSharedGroceryCatalogSchema = z.object({
+  query: z
+    .string()
+    .trim()
+    .min(2)
+    .max(160)
+    .refine((value) => normalizeGroceryName(value).length >= 2, {
+      message: "Search must contain at least two letters or numbers.",
+    }),
+});
+
+export const adoptSharedGroceryCatalogRecordSchema = z.discriminatedUnion(
+  "sourceType",
+  [
+    z.object({ sourceType: z.literal("market"), publicSourceId: z.uuid() }),
+    z.object({ sourceType: z.literal("product"), publicSourceId: z.uuid() }),
+    z.object({ sourceType: z.literal("price"), publicSourceId: z.uuid() }),
   ],
 );
 
@@ -124,6 +145,12 @@ export type CreateGroceryPriceObservation = z.infer<
 >;
 export type PublishGroceryCatalogRecord = z.infer<
   typeof publishGroceryCatalogRecordSchema
+>;
+export type SearchSharedGroceryCatalog = z.infer<
+  typeof searchSharedGroceryCatalogSchema
+>;
+export type AdoptSharedGroceryCatalogRecord = z.infer<
+  typeof adoptSharedGroceryCatalogRecordSchema
 >;
 export type CreateGroceryPlan = z.infer<typeof createGroceryPlanSchema>;
 export type UpdateGroceryPlan = z.infer<typeof updateGroceryPlanSchema>;

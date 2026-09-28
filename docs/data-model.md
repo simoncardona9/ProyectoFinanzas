@@ -81,7 +81,17 @@ notes, purchases, quantities, budgets, plans, or receipt data.
 publication. It links a private source type/ID to its public snapshot and has a
 unique constraint that makes publication idempotent. It is never returned as
 shared catalog data. Publishing also writes a household audit event containing
-only the source type; shared search and adoption remain Slice 11.2.
+only the source type.
+
+`GroceryCatalogAdoption` is a separate private, household-scoped link from one
+public source type/ID to the copied private market, product, or price
+observation. Its household/source unique constraint makes adoption idempotent.
+For a public price, the copied market, product, and observation are created in
+the same transaction as the link and audit event. Adoption links are used only
+to show the active household's local status; shared search never exposes them
+or any publishing/adopting household identity. Public records with matching
+normalized names remain distinct and are presented as alias/duplicate hints,
+not automatically merged.
 
 ### Obligation
 

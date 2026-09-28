@@ -29,7 +29,8 @@ export default async function GroceriesPage() {
           Mercados, productos y precios son datos privados de planificación.
           Registrar un precio no crea transacciones ni modifica saldos. Puedes
           publicar deliberadamente un dato de catálogo sin compartir identidad
-          del hogar, notas, compras ni planes.
+          del hogar, notas, compras ni planes, o incorporar a tu catálogo
+          privado una sugerencia compartida por otro hogar.
         </p>
         <GroceryCatalogManager
           canEdit={["owner", "editor"].includes(context.membership.role)}

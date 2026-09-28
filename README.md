@@ -14,8 +14,9 @@ contener datos financieros reales, credenciales ni exportaciones personales.
 Los Steps 1–10 están completados: la aplicación local incluye aislamiento por
 hogar, estructura financiera, transacciones, obligaciones, dashboard, deudas,
 facturas/IVA, importación, cierre/reportes/respaldo y planificación de compras.
-El Step 11 está en desarrollo y comienza con la publicación deliberada y
-anonimizada de datos elegibles hacia un catálogo compartido.
+El Step 11 está en desarrollo e incluye publicación deliberada y anonimizada,
+búsqueda normalizada y adopción explícita de sugerencias hacia el catálogo
+privado de otro hogar.
 
 El avance detallado y los criterios de cada etapa están en
 [docs/development-progress.md](docs/development-progress.md) y

@@ -21,6 +21,7 @@ vi.mock("@/db", () => ({ db }));
 
 import {
   financialPeriods,
+  groceryCatalogAdoptions,
   groceryCatalogPublications,
   groceryMarkets,
   groceryPlanItems,
@@ -43,6 +44,9 @@ describe("structureRepository.resetFinancialData", () => {
       deletedTables.indexOf(groceryPlanItems),
     );
     expect(deletedTables.indexOf(groceryCatalogPublications)).toBeLessThan(
+      deletedTables.indexOf(groceryMarkets),
+    );
+    expect(deletedTables.indexOf(groceryCatalogAdoptions)).toBeLessThan(
       deletedTables.indexOf(groceryMarkets),
     );
     expect(deletedTables).toContain(importBatches);

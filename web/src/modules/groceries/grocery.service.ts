@@ -1,6 +1,9 @@
 import type { AuthContext } from "@/shared/auth/auth.types";
 import { ApiError } from "@/shared/errors/api-error";
-import { normalizeGroceryName } from "./grocery.rules";
+import {
+  normalizeGroceryName,
+  withSharedDuplicateMetadata,
+} from "./grocery.rules";
 import {
   estimatedItemTotalMinor,
   resolvePlannedUnitPriceMinor,
@@ -13,7 +16,9 @@ import type {
   CreateGroceryPlan,
   CreateGroceryPlanItem,
   CreateGroceryPurchase,
+  AdoptSharedGroceryCatalogRecord,
   PublishGroceryCatalogRecord,
+  SearchSharedGroceryCatalog,
   UpdateGroceryPlan,
 } from "./grocery.schemas";
 import { receiptLinesTotalMinor } from "./grocery-plan.rules";
@@ -206,6 +211,192 @@ export async function publishGroceryCatalogRecord(
         values.sourceId,
       );
       if (publication) return publicationStatus(publication);
+    }
+    throw error;
+  }
+}
+
+function adoptionStatus(adoption: {
+  id: string;
+  sourceType: "market" | "product" | "price";
+  publicSourceId: string;
+  groceryMarketId: string | null;
+  groceryProductId: string | null;
+  groceryPriceObservationId: string | null;
+  createdAt: Date;
+}) {
+  const localSourceId =
+    adoption.sourceType === "price"
+      ? adoption.groceryPriceObservationId
+      : adoption.sourceType === "product"
+        ? adoption.groceryProductId
+        : adoption.groceryMarketId;
+  if (!localSourceId)
+    throw new Error("Catalog adoption is missing its private target.");
+  return {
+    id: adoption.id,
+    sourceType: adoption.sourceType,
+    publicSourceId: adoption.publicSourceId,
+    localSourceId,
+    createdAt: adoption.createdAt,
+  };
+}
+
+export async function searchSharedGroceryCatalog(
+  context: AuthContext,
+  values: SearchSharedGroceryCatalog,
+) {
+  const normalizedQuery = normalizeGroceryName(values.query);
+  const [markets, products, prices, adoptions] = await Promise.all([
+    groceryRepository.searchPublicMarkets(normalizedQuery),
+    groceryRepository.searchPublicProducts(normalizedQuery),
+    groceryRepository.searchPublicPrices(normalizedQuery),
+    groceryRepository.listAdoptions(context.membership.householdId),
+  ]);
+  const adopted = new Set(
+    adoptions.map(
+      (adoption) => `${adoption.sourceType}:${adoption.publicSourceId}`,
+    ),
+  );
+
+  return {
+    query: values.query,
+    normalizedQuery,
+    markets: withSharedDuplicateMetadata(markets).map((market) => ({
+      ...market,
+      adopted: adopted.has(`market:${market.id}`),
+    })),
+    products: withSharedDuplicateMetadata(products).map((product) => ({
+      ...product,
+      adopted: adopted.has(`product:${product.id}`),
+    })),
+    prices: prices.map((price) => ({
+      id: price.id,
+      market: { id: price.marketId, name: price.marketName },
+      product: { id: price.productId, name: price.productName },
+      amountMinor: price.amountMinor,
+      currency: price.currency,
+      observedDate: price.observedDate,
+      adopted: adopted.has(`price:${price.id}`),
+    })),
+  };
+}
+
+/** Adoption copies only the already-sanitized public snapshot. It never reads
+ * the publishing household link and never creates a financial movement. */
+export async function adoptSharedGroceryCatalogRecord(
+  context: AuthContext,
+  values: AdoptSharedGroceryCatalogRecord,
+) {
+  const householdId = context.membership.householdId;
+  const existing = await groceryRepository.findAdoption(
+    householdId,
+    values.sourceType,
+    values.publicSourceId,
+  );
+  if (existing) return adoptionStatus(existing);
+
+  let snapshot:
+    | {
+        sourceType: "market";
+        publicSourceId: string;
+        name: string;
+        normalizedName: string;
+      }
+    | {
+        sourceType: "product";
+        publicSourceId: string;
+        name: string;
+        normalizedName: string;
+      }
+    | {
+        sourceType: "price";
+        publicSourceId: string;
+        market: { name: string; normalizedName: string };
+        product: { name: string; normalizedName: string };
+        amountMinor: number;
+        currency: string;
+        observedDate: string;
+      };
+
+  if (values.sourceType === "market") {
+    const market = await groceryRepository.findPublicMarket(
+      values.publicSourceId,
+    );
+    if (!market)
+      throw new ApiError(
+        404,
+        "SHARED_GROCERY_SOURCE_NOT_FOUND",
+        "Shared market was not found.",
+      );
+    snapshot = {
+      sourceType: "market",
+      publicSourceId: market.id,
+      name: market.name,
+      normalizedName: market.normalizedName,
+    };
+  } else if (values.sourceType === "product") {
+    const product = await groceryRepository.findPublicProduct(
+      values.publicSourceId,
+    );
+    if (!product)
+      throw new ApiError(
+        404,
+        "SHARED_GROCERY_SOURCE_NOT_FOUND",
+        "Shared product was not found.",
+      );
+    snapshot = {
+      sourceType: "product",
+      publicSourceId: product.id,
+      name: product.name,
+      normalizedName: product.normalizedName,
+    };
+  } else {
+    const price = await groceryRepository.findPublicPriceSuggestion(
+      values.publicSourceId,
+    );
+    if (!price)
+      throw new ApiError(
+        404,
+        "SHARED_GROCERY_SOURCE_NOT_FOUND",
+        "Shared price suggestion was not found.",
+      );
+    snapshot = {
+      sourceType: "price",
+      publicSourceId: price.id,
+      market: price.market,
+      product: price.product,
+      amountMinor: price.amountMinor,
+      currency: price.currency,
+      observedDate: price.observedDate,
+    };
+  }
+
+  try {
+    return adoptionStatus(
+      await groceryRepository.adoptPublicCatalogRecord(
+        householdId,
+        context.user.id,
+        snapshot,
+      ),
+    );
+  } catch (error) {
+    const databaseError =
+      typeof error === "object" && error !== null && "cause" in error
+        ? error.cause
+        : error;
+    if (
+      typeof databaseError === "object" &&
+      databaseError !== null &&
+      "code" in databaseError &&
+      databaseError.code === "23505"
+    ) {
+      const adoption = await groceryRepository.findAdoption(
+        householdId,
+        values.sourceType,
+        values.publicSourceId,
+      );
+      if (adoption) return adoptionStatus(adoption);
     }
     throw error;
   }

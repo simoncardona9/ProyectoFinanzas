@@ -777,6 +777,43 @@ export const groceryCatalogPublications = pgTable(
   ],
 );
 
+/** Private proof that one household copied a sanitized public snapshot into
+ * its own catalog. Public search never reads or returns these links. */
+export const groceryCatalogAdoptions = pgTable(
+  "grocery_catalog_adoptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    sourceType: groceryCatalogRecordType("source_type").notNull(),
+    publicSourceId: uuid("public_source_id").notNull(),
+    groceryMarketId: uuid("grocery_market_id").references(
+      () => groceryMarkets.id,
+      { onDelete: "cascade" },
+    ),
+    groceryProductId: uuid("grocery_product_id").references(
+      () => groceryProducts.id,
+      { onDelete: "cascade" },
+    ),
+    groceryPriceObservationId: uuid("grocery_price_observation_id").references(
+      () => groceryPriceObservations.id,
+      { onDelete: "cascade" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("grocery_catalog_adoptions_source_unique").on(
+      table.householdId,
+      table.sourceType,
+      table.publicSourceId,
+    ),
+    index("grocery_catalog_adoptions_household_idx").on(table.householdId),
+  ],
+);
+
 /**
  * A grocery plan is deliberately independent of a financial-period row: the
  * target month is useful for planning even when that financial period is

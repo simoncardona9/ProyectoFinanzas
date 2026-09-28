@@ -22,7 +22,9 @@
 - Separate tax reserves from spendable money.
 - Support monthly budgets and cash-flow forecasts.
 - Support optional grocery plans per household and target month, including item quantities, units, estimated prices, supermarket suggestions, and planned-versus-actual comparison.
-- Support household-private supermarkets, products, and price observations. A shared catalog may be used only through an explicit publish/share choice and must not expose household financial data.
+- Support household-private supermarkets, products, and price observations. A
+  shared catalog may be published to or copied from only through an explicit
+  user choice and must not expose household identity or financial data.
 
 ### Debt and invoicing
 

@@ -34,3 +34,11 @@ Financial information is sensitive personal data. Security is a product requirem
   market/product names, amount, currency, and observation date; private notes
   and source identifiers remain outside the shared record. The private
   publication link and minimal audit event stay household-scoped.
+- Shared catalog search is authenticated and reads only sanitized public
+  tables. It may add adoption status from the active household, but never
+  returns publication links or publishing/adopting household identity.
+- Shared catalog adoption is owner/editor-only, idempotent, and atomic. It
+  copies only allowlisted public snapshot fields into new household-private
+  catalog rows, plus a private adoption link and minimal audit event; it cannot
+  read or copy plans, transactions, purchases, receipts, quantities, budgets,
+  or private notes.

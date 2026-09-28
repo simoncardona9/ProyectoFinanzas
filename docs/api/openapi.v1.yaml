@@ -1709,6 +1709,191 @@ paths:
           {
             description: Price source no longer has an eligible private market and product,
           }
+  /api/v1/groceries/shared-catalog:
+    get:
+      operationId: searchSharedGroceryCatalog
+      summary: Search sanitized shared grocery suggestions.
+      description: Every active-household role may search normalized public market and product names, alternate public spellings, and related price suggestions. Results are limited to 50 per record type, present same-normalized records as alias/duplicate hints without merging them, and include only the active household's adoption status. The response contains no household/user identity, publication link, private source ID, note, purchase, quantity, budget, plan, receipt, or transaction data. This read has no financial or audit side effect.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 160 }
+          example: Cañarias
+          description: Case-, accent-, punctuation-, and whitespace-normalized substring search over public market and product names and their published spelling variants.
+      responses:
+        "200":
+          description: Sanitized public suggestions and active-household adoption status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      [query, normalizedQuery, markets, products, prices]
+                    properties:
+                      query: { type: string }
+                      normalizedQuery: { type: string }
+                      markets:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            [
+                              id,
+                              name,
+                              normalizedName,
+                              aliases,
+                              possibleDuplicates,
+                              adopted,
+                            ]
+                          properties:
+                            id: { type: string, format: uuid }
+                            name: { type: string }
+                            normalizedName: { type: string }
+                            aliases: { type: array, items: { type: string } }
+                            possibleDuplicates:
+                              type: array
+                              items:
+                                type: object
+                                required: [id, name]
+                                properties:
+                                  id: { type: string, format: uuid }
+                                  name: { type: string }
+                            adopted: { type: boolean }
+                      products:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            [
+                              id,
+                              name,
+                              normalizedName,
+                              aliases,
+                              possibleDuplicates,
+                              adopted,
+                            ]
+                          properties:
+                            id: { type: string, format: uuid }
+                            name: { type: string }
+                            normalizedName: { type: string }
+                            aliases: { type: array, items: { type: string } }
+                            possibleDuplicates:
+                              type: array
+                              items:
+                                type: object
+                                required: [id, name]
+                                properties:
+                                  id: { type: string, format: uuid }
+                                  name: { type: string }
+                            adopted: { type: boolean }
+                      prices:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            [
+                              id,
+                              market,
+                              product,
+                              amountMinor,
+                              currency,
+                              observedDate,
+                              adopted,
+                            ]
+                          properties:
+                            id: { type: string, format: uuid }
+                            market:
+                              type: object
+                              required: [id, name]
+                              properties:
+                                id: { type: string, format: uuid }
+                                name: { type: string }
+                            product:
+                              type: object
+                              required: [id, name]
+                              properties:
+                                id: { type: string, format: uuid }
+                                name: { type: string }
+                            amountMinor: { type: integer, minimum: 1 }
+                            currency: { type: string, enum: [UYU, USD] }
+                            observedDate: { type: string, format: date }
+                            adopted: { type: boolean }
+              examples:
+                productAlias:
+                  value:
+                    data:
+                      query: Cañarias
+                      normalizedQuery: canarias
+                      markets: []
+                      products:
+                        - id: 4cb8ba59-4a87-4e57-9dcd-46968c90e1e2
+                          name: Yerba Canarias 1 kg
+                          normalizedName: yerba canarias 1 kg
+                          aliases: [Yerba Cañarias 1-kg]
+                          possibleDuplicates:
+                            - id: cb33a49c-77ca-4f76-a285-f42f3a1d5e59
+                              name: Yerba Cañarias 1-kg
+                          adopted: false
+                      prices: []
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: adoptSharedGroceryCatalogRecord
+      summary: Copy one shared suggestion into the active household's private catalog.
+      description: Owner or editor only. The operation is idempotent for one active household, source type, and public source ID. It atomically copies only the sanitized public snapshot into private catalog rows, creates a private adoption link, and writes a minimal audit event. Price adoption copies market/product names, positive integer minor-unit amount, currency, and observation date; it copies no private note or publishing-household information. On failure the transaction rolls back all copied rows. It creates no financial transaction, plan, purchase, receipt, balance change, or financial-period mutation.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceType, publicSourceId]
+              properties:
+                sourceType: { type: string, enum: [market, product, price] }
+                publicSourceId: { type: string, format: uuid }
+            examples:
+              adoptPrice:
+                value:
+                  sourceType: price
+                  publicSourceId: 4cb8ba59-4a87-4e57-9dcd-46968c90e1e2
+      responses:
+        "201":
+          description: New private catalog copy created, or the existing idempotent adoption returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      [id, sourceType, publicSourceId, localSourceId, createdAt]
+                    properties:
+                      id: { type: string, format: uuid }
+                      sourceType:
+                        { type: string, enum: [market, product, price] }
+                      publicSourceId: { type: string, format: uuid }
+                      localSourceId: { type: string, format: uuid }
+                      createdAt: { type: string, format: date-time }
+              example:
+                data:
+                  id: cb33a49c-77ca-4f76-a285-f42f3a1d5e59
+                  sourceType: price
+                  publicSourceId: 4cb8ba59-4a87-4e57-9dcd-46968c90e1e2
+                  localSourceId: 74ae11f3-bff3-4dc7-b81a-13417f7f53ac
+                  createdAt: 2026-09-28T18:00:00Z
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "404": { description: Public source not found for the requested type }
 components:
   securitySchemes:
     { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }

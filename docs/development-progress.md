@@ -839,8 +839,8 @@ Step 8 has been decomposed before implementation into six vertical slices:
   rejection, household isolation, public-table allowlist inspection, financial
   no-effect checks, and exact synthetic cleanup.
 - Shared search, aliases/duplicate resolution, and copying a public suggestion
-  into another household remain Slice 11.2. Slice 11.1 exposes no cross-
-  household catalog search or financial/plan data.
+  into another household were reserved for Slice 11.2. Slice 11.1 exposes no
+  cross-household catalog search or financial/plan data.
 - Added migration `0022_gigantic_husk.sql`. It applied successfully to the
   local PostgreSQL database, and a schema inspection confirmed that only the
   private link table contains household/source identifiers.
@@ -848,10 +848,44 @@ Step 8 has been decomposed before implementation into six vertical slices:
   confirmed deliberate and cancelled publication behavior, persistent status,
   minimal audit details, read-only-role rejection, household isolation, no
   financial effect, the public-table privacy allowlist, and full synthetic
-  cleanup. Slice 11.2 is now the next eligible slice.
+  cleanup. That acceptance made Slice 11.2 eligible to begin.
 
 ### Verification
 
 - `pnpm test` (94 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
   `pnpm db:check`, `pnpm format:check`, `pnpm db:migrate`, `pnpm build`, and
   `git diff --check` — passed on 2026-09-28.
+
+### Slice 11.2 — Shared search and local adoption — implemented
+
+- Added authenticated normalized shared-catalog search for markets, products,
+  and price suggestions. Case, accents, punctuation, and whitespace are
+  normalized; alternate public spellings with the same normalized value are
+  shown as aliases and possible duplicates without automatically merging
+  legitimate branches or products.
+- Added owner/editor-only explicit adoption. A market or product copies only
+  its public name into the active household; a price atomically copies its
+  public market/product names, integer minor-unit amount, currency, and date
+  into new private catalog records. It never reads the publishing household's
+  private link or copies notes, financial records, plans, purchases, receipts,
+  quantities, or budgets.
+- Added a private, household-scoped adoption link with a unique public-source
+  key. It makes retries idempotent, exposes status only to the adopting
+  household, and is created atomically with the private copy and minimal audit
+  event. Adoption has no account-balance, transaction, forecast, or financial-
+  period effect.
+- Added shared search and adoption controls to `/groceries`, including an
+  explicit no-financial-effect confirmation and read-only search for viewer and
+  accountant roles. Local duplicate hints remain visible after adoption.
+- Added migration `0023_yummy_barracuda.sql`, exact OpenAPI/controller/model/
+  privacy documentation, and tests for normalized validation, alias/duplicate
+  hints, active-household status, sanitized price copying, idempotency, UI
+  confirmation, and reset ordering.
+- Cross-household synthetic review and cleanup remain Slice 11.3; Step 11 is
+  not yet marked complete.
+
+### Verification
+
+- `pnpm test` (100 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
+  `pnpm db:check`, `pnpm format:check`, `pnpm db:migrate`, `pnpm build`, and
+  focused Slice 11.2 tests — passed on 2026-09-28.

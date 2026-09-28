@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  adoptSharedGroceryCatalogRecordSchema,
   createGroceryPriceObservationSchema,
   publishGroceryCatalogRecordSchema,
+  searchSharedGroceryCatalogSchema,
 } from "./grocery.schemas";
-import { normalizeGroceryName } from "./grocery.rules";
+import {
+  normalizeGroceryName,
+  withSharedDuplicateMetadata,
+} from "./grocery.rules";
 
 describe("grocery catalog rules", () => {
   it("normalizes case, accents, punctuation, and repeated whitespace for duplicate suggestions", () => {
@@ -45,5 +50,53 @@ describe("grocery catalog rules", () => {
         sourceId,
       }),
     ).toThrow();
+  });
+
+  it("requires a useful shared search query and explicit adoption source", () => {
+    expect(
+      searchSharedGroceryCatalogSchema.parse({ query: "  Cañarias " }),
+    ).toEqual({ query: "Cañarias" });
+    expect(() =>
+      searchSharedGroceryCatalogSchema.parse({ query: "x" }),
+    ).toThrow();
+    expect(() =>
+      searchSharedGroceryCatalogSchema.parse({ query: "--" }),
+    ).toThrow();
+    expect(
+      adoptSharedGroceryCatalogRecordSchema.parse({
+        sourceType: "product",
+        publicSourceId: "4cb8ba59-4a87-4e57-9dcd-46968c90e1e2",
+      }),
+    ).toEqual({
+      sourceType: "product",
+      publicSourceId: "4cb8ba59-4a87-4e57-9dcd-46968c90e1e2",
+    });
+  });
+
+  it("shows normalized aliases as duplicate hints without merging records", () => {
+    const results = withSharedDuplicateMetadata([
+      {
+        id: "branch-a",
+        name: "Mercado Centro",
+        normalizedName: "mercado centro",
+      },
+      {
+        id: "branch-b",
+        name: "MERCADO-CENTRO",
+        normalizedName: "mercado centro",
+      },
+      {
+        id: "branch-c",
+        name: "Mercado Norte",
+        normalizedName: "mercado norte",
+      },
+    ]);
+
+    expect(results).toHaveLength(3);
+    expect(results[0]).toMatchObject({
+      aliases: ["MERCADO-CENTRO"],
+      possibleDuplicates: [{ id: "branch-b", name: "MERCADO-CENTRO" }],
+    });
+    expect(results[2]).toMatchObject({ aliases: [], possibleDuplicates: [] });
   });
 });

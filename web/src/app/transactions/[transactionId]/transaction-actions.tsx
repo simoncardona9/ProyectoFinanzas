@@ -2,6 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  formatMoneyInput,
+  parseMoneyToMinor,
+} from "@/shared/money/parse-money";
 
 type Transaction = {
   id: string;
@@ -38,6 +42,12 @@ export function TransactionActions({
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [amount, setAmount] = useState(
+    new Intl.NumberFormat("es-UY", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(transaction.amountMinor / 100),
+  );
   const [isOneOff, setIsOneOff] = useState(transaction.isOneOff);
   const available =
     canEdit &&
@@ -55,11 +65,16 @@ export function TransactionActions({
   async function update(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const amountMinor = parseMoneyToMinor(amount);
+    if (amountMinor === undefined || amountMinor <= 0) {
+      setMessage("Ingresa un importe válido, por ejemplo 1.234,56.");
+      return;
+    }
     try {
       await request(`/api/v1/transactions/${transaction.id}`, {
         date: form.get("date"),
         type: transaction.type,
-        amountMinor: Number(form.get("amountMinor")),
+        amountMinor,
         currency: transaction.currency,
         accountId: transaction.accountId,
         categoryId: transaction.categoryId,
@@ -118,11 +133,13 @@ export function TransactionActions({
           className="rounded border p-2"
         />
         <input
-          name="amountMinor"
-          type="number"
-          defaultValue={transaction.amountMinor}
-          min="1"
-          step="1"
+          name="amount"
+          type="text"
+          inputMode="decimal"
+          aria-label="Importe corregido"
+          value={amount}
+          onChange={(event) => setAmount(formatMoneyInput(event.target.value))}
+          onFocus={(event) => event.currentTarget.select()}
           required
           className="rounded border p-2"
         />

@@ -30,6 +30,62 @@ deployment decision, architecture review, and operational documentation.
 8. **Merge through the Git workflow.** Follow [git-workflow.md](git-workflow.md); Simon alone approves and merges a pull request into `main`.
 9. **Document and plan follow-up.** Update documentation and create follow-up tasks instead of expanding the current slice.
 
+## Resuming development after a break
+
+At the start of a resumed session, inspect the current branch, uncommitted
+changes, recent commits, and `development-progress.md`. Preserve unfinished
+work and identify the current slice, its last recorded verification date,
+pending acceptance criteria, and the next concrete action. Historical passing
+checks are evidence of the previous run, not verification of the current tree.
+
+Continue the current approved slice before starting later features. A request
+to continue development authorizes implementation and routine local validation
+within that slice; do not require the household to run commands the agent can
+execute itself.
+
+## Agent-executed local verification
+
+When Simon asks to verify or test locally, execute the checks against the
+current working tree and report actual results; do not respond only with
+instructions or repeat an earlier passing result. Run commands from `web/`:
+
+```sh
+pnpm test
+pnpm exec tsc --noEmit
+pnpm lint
+pnpm format:check
+pnpm db:check
+pnpm build
+```
+
+Also run `git diff --check` from the repository root. For a focused request,
+run the relevant checks and state their scope. For migration changes, review
+the migration and apply it to the intended synthetic local database before
+the functional review. Inspect the existing runtime before starting services;
+use the documented local or Docker Compose setup and preserve existing data.
+
+Execute the current slice's acceptance checklist locally where available tools
+permit it, including API/database checks and browser flows when browser tooling
+is available. Use disposable synthetic households and record cleanup outcomes.
+Do not reset an existing household or delete unrelated records. If a tool,
+credential, runtime, or permission is missing, report the exact blocked check
+and continue independent checks. Never label an unexecuted check as passed or
+claim API verification proves a browser or physical-phone interaction.
+
+Keep technical verification separate from household acceptance. The agent may
+execute and document acceptance scenarios, fix defects, and repeat affected
+checks. Simon's household review remains required to accept usability and mark
+the step complete; request only the specific review that remains after the
+agent's work. Cloud deployment and approval/merge into `main` retain their
+existing separate approval requirements.
+
+After verification, update `development-progress.md` with the date, branch or
+commit and whether uncommitted changes were included, commands and outcomes,
+functional scenarios exercised, cleanup, and remaining failures or review.
+End the session with the current slice status and next action so development
+can resume without reconstructing the previous conversation. Never include
+credentials, cookies, or private financial data in this evidence.
+
 ## Implementation steps
 
 ### Step 0 — Project foundation
@@ -274,13 +330,15 @@ reconciliation gate is satisfied.
    derived from a record's actual date; it does not duplicate reporting dates on
    financial records. This slice does not expose a close action.
 2. **9.2 — Closed-period enforcement:** apply the shared guard to every current
-   financial mutation before any period can be closed: transaction and expected-
+   financial mutation before any period can be closed: account opening entries,
+   transaction and expected-
    income creation, correction and void; obligation creation, payment and
    deferral; invoice lifecycle and collection; debt creation/payment; tax-reserve
    settlement; and import commit. Define and test the affected date for each
    operation. A rejected write must leave all records and balances unchanged.
 
-   Affected dates are: transaction/expected-income creation (record date);
+   Affected dates are: account creation (opening balance date);
+   transaction/expected-income creation (record date);
    transaction correction (both prior and replacement dates); transaction void
    (record date); obligation creation (due date); obligation payment (paid
    date); obligation deferral (both prior and replacement due dates); invoice
@@ -355,7 +413,7 @@ closed-period guard before it can be enabled.
    or other-household access is rejected, and reset the synthetic household
    afterward. Record the successful run before marking Step 10 complete.
 
-### Step 11 — Shared catalog (future)
+### Step 11 — Shared catalog — completed
 
 **Goal:** Offer opt-in shared market, product, and price suggestions without exposing household financial data.
 
@@ -382,6 +440,11 @@ closed-period guard before it can be enabled.
    11 complete.
 
 ## Rules for scope control
+
+Future scope outside completed Steps 1–11 is registered in
+[future-requirements.md](future-requirements.md). Refer to its F-01–F-12 and
+O-01 IDs during analysis/design. No Step 12 or later implementation sequence
+is defined by that backlog; select and design an outcome before scheduling it.
 
 - Do not begin a later step until the current step meets its acceptance criteria.
 - A step may be split further if it cannot be reviewed in one short development cycle.

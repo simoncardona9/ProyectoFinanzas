@@ -25,7 +25,8 @@ export default async function InvoicesPage() {
         <p className="mt-2 text-zinc-600">
           Envía facturas, reconcilia cobranzas con ingresos pagados de la misma
           moneda y registra los pagos de IVA desde sus reservas protegidas. Las
-          reservas aún no modifican el panel.
+          reservas se muestran por separado y se excluyen del dinero disponible
+          en el panel.
         </p>
         <InvoiceManager
           canEdit={["owner", "editor"].includes(context.membership.role)}

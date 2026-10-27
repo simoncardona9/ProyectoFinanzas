@@ -305,7 +305,7 @@ export function GroceryPlanManager({ canEdit }: { canEdit: boolean }) {
     }
   }
   return (
-    <section className="mt-10 border-t pt-8">
+    <section className="mt-10 min-w-0 border-t pt-8 [overflow-wrap:anywhere] [&_input]:min-w-0 [&_select]:min-w-0">
       <h2 className="text-xl font-semibold">Planes de compra</h2>
       <p className="mt-1 text-sm text-zinc-600">
         Cada plan usa una sola moneda. Los precios elegidos se copian como

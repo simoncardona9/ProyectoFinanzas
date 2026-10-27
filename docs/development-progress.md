@@ -816,3 +816,204 @@ Step 8 has been decomposed before implementation into six vertical slices:
 - `pnpm test` (89 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
   `pnpm db:check`, `pnpm format:check`, `git diff --check`, and `pnpm build` —
   passed on 2026-09-26.
+
+## Step 11 — Shared catalog — completed
+
+### Slice 11.1 — Deliberate publication boundary — completed
+
+- Added separate public market, product, and price-suggestion snapshot tables.
+  They contain no household/user identity, private source ID, note, purchase,
+  quantity, budget, plan, or receipt fields. The private household/source link
+  remains in a separate publication table and each source can be published only
+  once per household.
+- Added owner/editor-only `POST /api/v1/groceries/publications` and an
+  active-household `GET` status route. Publication validates the source inside
+  the active household, is idempotent, and atomically writes the sanitized
+  public snapshot, private publication link, and minimal household audit event.
+- Added explicit publication controls to `/groceries`. The confirmation states
+  exactly which fields become shared; price publication excludes its private
+  note. Viewer and accountant roles retain read-only access to household-local
+  publication status.
+- Added `docs/shared-catalog-publication-acceptance.md`, covering confirmation
+  and cancellation, persisted/idempotent status, audit evidence, read-only-role
+  rejection, household isolation, public-table allowlist inspection, financial
+  no-effect checks, and exact synthetic cleanup.
+- Shared search, aliases/duplicate resolution, and copying a public suggestion
+  into another household were reserved for Slice 11.2. Slice 11.1 exposes no
+  cross-household catalog search or financial/plan data.
+- Added migration `0022_gigantic_husk.sql`. It applied successfully to the
+  local PostgreSQL database, and a schema inspection confirmed that only the
+  private link table contains household/source identifiers.
+- On 2026-09-28, the household reviewer completed the documented local flow and
+  confirmed deliberate and cancelled publication behavior, persistent status,
+  minimal audit details, read-only-role rejection, household isolation, no
+  financial effect, the public-table privacy allowlist, and full synthetic
+  cleanup. That acceptance made Slice 11.2 eligible to begin.
+
+### Verification
+
+- `pnpm test` (94 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
+  `pnpm db:check`, `pnpm format:check`, `pnpm db:migrate`, `pnpm build`, and
+  `git diff --check` — passed on 2026-09-28.
+
+### Slice 11.2 — Shared search and local adoption — implemented
+
+- Added authenticated normalized shared-catalog search for markets, products,
+  and price suggestions. Case, accents, punctuation, and whitespace are
+  normalized; alternate public spellings with the same normalized value are
+  shown as aliases and possible duplicates without automatically merging
+  legitimate branches or products.
+- Added owner/editor-only explicit adoption. A market or product copies only
+  its public name into the active household; a price atomically copies its
+  public market/product names, integer minor-unit amount, currency, and date
+  into new private catalog records. It never reads the publishing household's
+  private link or copies notes, financial records, plans, purchases, receipts,
+  quantities, or budgets.
+- Added a private, household-scoped adoption link with a unique public-source
+  key. It makes retries idempotent, exposes status only to the adopting
+  household, and is created atomically with the private copy and minimal audit
+  event. Adoption has no account-balance, transaction, forecast, or financial-
+  period effect.
+- Added shared search and adoption controls to `/groceries`, including an
+  explicit no-financial-effect confirmation and read-only search for viewer and
+  accountant roles. Local duplicate hints remain visible after adoption.
+- Added migration `0023_yummy_barracuda.sql`, exact OpenAPI/controller/model/
+  privacy documentation, and tests for normalized validation, alias/duplicate
+  hints, active-household status, sanitized price copying, idempotency, UI
+  confirmation, and reset ordering.
+- Cross-household synthetic review and cleanup remain Slice 11.3; Step 11 is
+  not yet marked complete.
+
+### Verification
+
+- `pnpm test` (100 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
+  `pnpm db:check`, `pnpm format:check`, `pnpm db:migrate`, `pnpm build`, and
+  focused Slice 11.2 tests — passed on 2026-09-28.
+
+### Slice 11.3 — Synthetic local acceptance — completed
+
+- Added `docs/shared-catalog-acceptance.md`, a repeatable two-household review
+  for deliberate publication, normalized shared search, alias and legitimate-
+  branch handling, explicit/idempotent adoption, read-only-role rejection,
+  household-scoped adoption status and audit events, unchanged financial and
+  planning state, public-table allowlist inspection, and dependency-safe
+  private/public cleanup.
+- Acceptance preparation exposed and corrected an identical-name duplicate-
+  hint defect: distinct private records now compare by ID, so each hint names
+  the matching record instead of rendering an empty label. A focused UI
+  regression test covers the price-adoption case.
+- `pnpm test` (101 tests), `pnpm exec tsc --noEmit`, `pnpm lint`,
+  `pnpm db:check`, `pnpm format:check`, focused UI tests, `git diff --check`,
+  and `pnpm build` — passed on 2026-09-28.
+- At initial preparation, local household review was still pending. The
+  verification and acceptance entries below record the subsequent closure.
+
+### Step 11 resumed verification — 2026-10-27
+
+- Resumed on `development-step-11`, base commit `afdf906`, preserving and
+  verifying the uncommitted Slice 11.3 checklist, duplicate-hint fix, and
+  regression test. Step 11 implementation and agent technical verification
+  are complete; final household usability acceptance remains pending.
+- Added `pnpm test:acceptance:shared-catalog`, a repeatable real local
+  login/API/PostgreSQL verification runner. It provisions two uniquely named
+  disposable households and credentials in memory, with paid expenses,
+  nonzero UYU/USD account balances, and private grocery plans as baselines.
+- The local run passed deliberate publication and retry, normalized search,
+  aliases/duplicate hints, distinct branches, unpublished controls, explicit
+  adoption and concurrent retries, sanitized price copies without notes,
+  owner/editor access and viewer/accountant rejection, household-scoped status
+  and audit reports, cross-household transaction/plan rejection, unchanged
+  financial/planning baselines, and public-table column allowlists.
+- Development reset and exact-ID public snapshot cleanup passed. The runner
+  verified empty private catalog/link/audit/financial/planning records and an
+  empty shared search, then removed its disposable households/users. Existing
+  household data was preserved.
+- Fresh checks passed: `pnpm test` (101 tests across 29 files), `pnpm exec tsc
+  --noEmit`, `pnpm lint`, `pnpm format:check`, `pnpm db:check`,
+  `pnpm db:migrate`, `pnpm build`, and `git diff --check`. Lint and formatting
+  were also rerun after adding the acceptance runner.
+- No interactive browser or physical-phone tooling was available. Automated
+  component tests cover the UI confirmation/adoption and duplicate-hint
+  behavior; they do not replace household usability acceptance. Next action:
+  Simon reviews the remaining desktop/phone checklist and records acceptance
+  in `docs/shared-catalog-acceptance.md`, then the slice can proceed through
+  the documented Git review workflow. No later feature step was started.
+
+### Step 11 browser verification — 2026-10-27
+
+- Added `pnpm test:acceptance:shared-catalog:browser`, extending the existing
+  synthetic acceptance runner with real Chromium sessions. Publisher and
+  adopter sign in through the UI in separate browser contexts. Catalog and
+  localized-price entry, accepted/cancelled publication/adoption dialogs,
+  reload persistence, duplicate hints, viewer/accountant read-only controls,
+  editor controls, and development settings reset all passed.
+- Browser testing exposed horizontal overflow at a 390px viewport. Fixed the
+  grocery page's responsive padding, search input width, name wrapping,
+  catalog action stacking, and private catalog/plan form control minimum
+  widths. The browser layout regression now passes at 1440px, 390px, and
+  320px. Desktop and 320px screenshots were visually inspected; temporary
+  evidence is in `/tmp/finance-step11-browser-1793075953624/`.
+- The same browser run passed the real API/database assertions for household
+  privacy and authorization, sanitized public data, idempotent retries,
+  minimal household-scoped audits, and unchanged nonzero UYU/USD financial
+  and planning baselines. No uncaught browser page errors occurred.
+- UI reset, exact-ID public snapshot deletion, empty post-cleanup search, and
+  disposable household/user removal passed. Existing household data was
+  preserved. MCP-generated local snapshots/logs are excluded from Git.
+- Verification on the uncommitted `development-step-11` tree: 101 unit tests,
+  TypeScript, lint, formatting, schema checks, production build, and
+  `git diff --check` passed. Real browser layout assertions cover the CSS
+  regression because jsdom unit tests do not perform layout.
+- All agent-executable Step 11 browser checks are now complete. This
+  supersedes the prior tooling limitation; Simon's household usability
+  acceptance and physical-phone review remain outstanding before formal
+  step closure. No later product feature was started.
+
+### Step 11 acceptance and closure — 2026-10-27
+
+- Simon explicitly accepted the completed local verification as the basis for
+  closing Step 11 and requested that it be marked done. Slice 11.3 and Step 11
+  are complete; this supersedes the earlier pending-review entries.
+- Acceptance covers the documented 101 passing tests, local browser/API/
+  database scenarios, desktop and 390px/320px viewport checks, privacy and role
+  enforcement, unchanged financial baselines, and verified synthetic cleanup.
+- No physical-phone test or separate manual household usability session is
+  claimed. Simon accepted closure based on the agent's recorded checks.
+- Source-control review and merge remain separate delivery actions; this
+  completion does not claim the uncommitted work has been merged or deployed.
+
+## Full-system audit — 2026-10-27 — completed
+
+- Audited all implemented Steps 1–11 on the uncommitted
+  `development-step-11` tree, base commit `afdf906`. The final system runner
+  passed all 20 groups, including real API/database scenarios, core browser
+  mutations, every application page, concurrency protection, isolated native
+  PostgreSQL recovery, and synthetic cleanup. The separate shared-catalog
+  browser acceptance also passed.
+- Corrected duplicate-rate error handling, broken invoice-source navigation,
+  account-currency mutation, missing closed-period opening/send-date guards,
+  narrow-page overflow, obligation selection of archived accounts, and raw-
+  minor-unit correction/payment inputs. Added focused regression coverage and
+  completed missing OpenAPI route/method inventory.
+- Fresh verification passed: 111 tests across 35 files, TypeScript, lint,
+  formatting, schema checks, local migration application, production build,
+  and `git diff --check`. All 31 public tables matched by row count/checksum
+  after restore; the private temporary recovery cluster and dump were removed.
+- Repeatable commands are `pnpm test:acceptance:system` and
+  `pnpm test:acceptance:shared-catalog:browser`. Full coverage, defects, evidence,
+  runtime limitations, and requirements outside the completed plan are recorded
+  in `docs/system-verification.md`. No real workbook/financial data was used;
+  existing households were preserved. Changes remain uncommitted.
+
+## Future requirements registered — 2026-10-27
+
+- Registered the missing broader scope as F-01–F-12 and O-01 in
+  `docs/future-requirements.md`, including current foundations, analysis
+  questions, acceptance examples and the process for designing future slices.
+- Updated requirements, roadmap, feature priorities, development-process scope
+  guidance, audit cross-reference and the documentation index. These distinguish
+  the completed Steps 1–11 from unimplemented product requirements.
+- All new backlog items remain pending analysis/design. No Step 12, final
+  priority, implementation, external integration or deployment was authorized
+  by this registration. Expected-income collection is only a suggested first
+  analysis candidate. This update changes documentation only.

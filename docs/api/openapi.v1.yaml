@@ -4,6 +4,531 @@ info:
   version: 1.0.0
   description: Local-first API. Protected operations derive the active household from the server-side session; clients cannot select arbitrary household data.
 paths:
+  /api/v1/groceries/markets:
+    get:
+      operationId: listPrivateGroceryMarkets
+      summary: List household-private grocery markets.
+      description:
+        Every active-household role can read its own records, ordered by name with no pagination. No publication,
+        financial movement or audit write occurs.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Private named catalog records.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - householdId
+                        - name
+                        - normalizedName
+                        - createdAt
+                        - updatedAt
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        householdId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        normalizedName:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createPrivateGroceryMarket
+      summary: Create a household-private grocery market.
+      description:
+        Owner/editor only. Stores a trimmed name and normalized duplicate-search name in the active household.
+        Duplicate names remain distinct records. Does not publish, create transactions, change balances, or write
+        a financial audit event. Not idempotent.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 160
+            example:
+              name: Synthetic catalog name
+      responses:
+        "201":
+          description: Private record created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - householdId
+                      - name
+                      - normalizedName
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      householdId:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      normalizedName:
+                        type: string
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Owner/editor write role required
+  /api/v1/groceries/products:
+    get:
+      operationId: listPrivateGroceryProducts
+      summary: List household-private grocery products.
+      description:
+        Every active-household role can read its own records, ordered by name with no pagination. No publication,
+        financial movement or audit write occurs.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Private named catalog records.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - householdId
+                        - name
+                        - normalizedName
+                        - createdAt
+                        - updatedAt
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        householdId:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        normalizedName:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createPrivateGroceryProduct
+      summary: Create a household-private grocery product.
+      description:
+        Owner/editor only. Stores a trimmed name and normalized duplicate-search name in the active household.
+        Duplicate names remain distinct records. Does not publish, create transactions, change balances, or write
+        a financial audit event. Not idempotent.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 160
+            example:
+              name: Synthetic catalog name
+      responses:
+        "201":
+          description: Private record created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - householdId
+                      - name
+                      - normalizedName
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      householdId:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      normalizedName:
+                        type: string
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Owner/editor write role required
+  /api/v1/groceries/price-observations:
+    get:
+      operationId: listPrivateGroceryPrices
+      summary: List active-household observed prices.
+      description:
+        All active-household roles. Ordered by observation date and creation time descending; no pagination.
+        Includes private market/product IDs and names, amountMinor, currency, observedDate, note and createdAt. No
+        financial or audit side effects.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Private price observations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - marketId
+                        - marketName
+                        - productId
+                        - productName
+                        - amountMinor
+                        - currency
+                        - observedDate
+                        - note
+                        - createdAt
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        marketId:
+                          type: string
+                          format: uuid
+                        marketName:
+                          type: string
+                        productId:
+                          type: string
+                          format: uuid
+                        productName:
+                          type: string
+                        amountMinor:
+                          type: integer
+                        currency:
+                          enum:
+                            - UYU
+                            - USD
+                        observedDate:
+                          type: string
+                          format: date
+                        note:
+                          type:
+                            - string
+                            - "null"
+                        createdAt:
+                          type: string
+                          format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createPrivateGroceryPrice
+      summary: Record a household-private observed price.
+      description:
+        Owner/editor only. Both market and product must belong to the active household. Stores a positive
+        integer minor-unit amount, currency, date and optional private note. Not idempotent. Creates no transaction,
+        publication, account movement, financial-period change or financial audit event.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - marketId
+                - productId
+                - amountMinor
+                - currency
+                - observedDate
+              properties:
+                marketId:
+                  type: string
+                  format: uuid
+                productId:
+                  type: string
+                  format: uuid
+                amountMinor:
+                  type: integer
+                  minimum: 1
+                currency:
+                  enum:
+                    - UYU
+                    - USD
+                observedDate:
+                  type: string
+                  format: date
+                note:
+                  type: string
+                  maxLength: 500
+            example:
+              marketId: 00000000-0000-4000-8000-000000000001
+              productId: 00000000-0000-4000-8000-000000000002
+              amountMinor: 32109
+              currency: UYU
+              observedDate: "2026-10-15"
+              note: Synthetic private note
+      responses:
+        "201":
+          description: Private observation created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      householdId:
+                        type: string
+                        format: uuid
+                      marketId:
+                        type: string
+                        format: uuid
+                      productId:
+                        type: string
+                        format: uuid
+                      amountMinor:
+                        type: integer
+                      currency:
+                        enum:
+                          - UYU
+                          - USD
+                      observedDate:
+                        type: string
+                        format: date
+                      note:
+                        type:
+                          - string
+                          - "null"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Owner/editor write role required
+        "404":
+          description: GROCERY_CATALOG_ITEM_NOT_FOUND — market or product unavailable in the active household
+  /api/v1/tax-reserves/{reserveId}:
+    parameters:
+      - name: reserveId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTaxReserve
+      summary: Get a protected IVA reserve and settlement history.
+      description:
+        All active-household roles can read only their own reserve. Returns reserve fields (invoice/collection
+        links, original/remaining minor units, currency and status) and dated settlements with account and transaction
+        links. Read-only; no pagination, balance change or audit write.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Reserve and settlements.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - reserve
+                      - settlements
+                    properties:
+                      reserve:
+                        type: object
+                      settlements:
+                        type: array
+                        items:
+                          type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: NOT_FOUND — reserve absent from active household
+  /api/v1/tax-reserves/{reserveId}/settle:
+    parameters:
+      - name: reserveId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: settleTaxReserve
+      summary: Settle part or all of a protected IVA reserve.
+      description:
+        "Owner/editor only. Validates active same-currency account, positive amount no greater than remaining
+        protected reserve, reference and an open paid-date period. Atomically creates one paid tax expense, settlement
+        link, reserve balance/status change and audit event; concurrent modifications roll back all writes. Reduces
+        cash and protected reserve by the settled amount. Not idempotent: a deliberate retry is another payment if
+        balance remains."
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amountMinor
+                - accountId
+                - paidDate
+                - reference
+              properties:
+                amountMinor:
+                  type: integer
+                  minimum: 1
+                  maximum: 2000000000
+                accountId:
+                  type: string
+                  format: uuid
+                paidDate:
+                  type: string
+                  format: date
+                reference:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+            example:
+              amountMinor: 500
+              accountId: 00000000-0000-4000-8000-000000000003
+              paidDate: "2026-10-15"
+              reference: Synthetic IVA payment
+      responses:
+        "201":
+          description: Settlement and linked paid expense recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - reserve
+                      - settlement
+                      - transaction
+                    properties:
+                      reserve:
+                        type: object
+                      settlement:
+                        type: object
+                      transaction:
+                        type: object
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Owner/editor write role required
+        "404":
+          description: NOT_FOUND — reserve absent from active household
+        "409":
+          description: CONCURRENT_MODIFICATION — reserve changed; no partial writes
+        "422":
+          description: CLOSED_PERIOD, INVALID_ACCOUNT, CURRENCY_MISMATCH, RESERVE_CLOSED or SETTLEMENT_EXCEEDS_BALANCE
+          content:
+            application/json:
+              example:
+                error:
+                  code: SETTLEMENT_EXCEEDS_BALANCE
+                  message: Settlement exceeds the remaining reserve balance.
   /api/v1/financial-periods:
     get:
       operationId: getFinancialPeriodStatus
@@ -973,6 +1498,7 @@ paths:
       {
         operationId: createAccount,
         summary: Create an active-household account,
+        description: "Owner/editor only. The opening balance date must belong to an open household financial period, including zero-balance accounts. A closed period returns CLOSED_PERIOD without creating an account or audit event. Currency is fixed at creation; another currency requires another account.",
         security: [{ sessionCookie: [] }],
         requestBody:
           {
@@ -988,6 +1514,24 @@ paths:
             "201": { description: Account created },
             "400": { $ref: "#/components/responses/ValidationError" },
             "403": { description: Editor or owner role required },
+            "422":
+              {
+                description: CLOSED_PERIOD — the opening balance date belongs to a closed household month,
+                content:
+                  {
+                    application/json:
+                      {
+                        example:
+                          {
+                            error:
+                              {
+                                code: CLOSED_PERIOD,
+                                message: "The financial period 2026-09 is closed.",
+                              },
+                          },
+                      },
+                  },
+              },
           },
       }
   /api/v1/accounts/{accountId}:
@@ -1015,8 +1559,33 @@ paths:
       {
         operationId: updateAccount,
         summary: Update account metadata,
+        description: "Owner/editor only, scoped to the active household. Name and type may change; submitting the current currency is permitted. A different currency returns ACCOUNT_CURRENCY_IMMUTABLE without changing the account or its audit history. Opening balance and date are not editable through this operation.",
         security: [{ sessionCookie: [] }],
-        responses: { "200": { description: Account updated } },
+        responses:
+          {
+            "200": { description: Account updated },
+            "400": { $ref: "#/components/responses/ValidationError" },
+            "403": { description: Editor or owner role required },
+            "404": { description: Account not found in the active household },
+            "422":
+              {
+                description: ACCOUNT_CURRENCY_IMMUTABLE — account currency cannot change,
+                content:
+                  {
+                    application/json:
+                      {
+                        example:
+                          {
+                            error:
+                              {
+                                code: ACCOUNT_CURRENCY_IMMUTABLE,
+                                message: "An account's currency cannot be changed. Create a separate account for another currency.",
+                              },
+                          },
+                      },
+                  },
+              },
+          },
       }
   /api/v1/accounts/{accountId}/archive:
     post:
@@ -1075,6 +1644,19 @@ paths:
           },
       }
   /api/v1/categories:
+    put:
+      operationId: rejectLegacyCategorySeed
+      summary: Reject the legacy category-seeding method.
+      description: No authentication or writes occur. Always returns METHOD_NOT_ALLOWED and directs callers to POST /categories/seed.
+      responses:
+        "405":
+          description: METHOD_NOT_ALLOWED — use POST /categories/seed.
+          content:
+            application/json:
+              example:
+                error:
+                  code: METHOD_NOT_ALLOWED
+                  message: Use POST /categories/seed to install the controlled defaults.
     get:
       {
         operationId: listCategories,
@@ -1624,7 +2206,12 @@ paths:
       description: Owner or editor only. The selected active-household transaction must be a paid expense in the plan currency. Receipt lines are optional; if supplied, they must total the transaction exactly and can reference only plan items. This adds planning evidence only and never changes the transaction or account balance.
       security: [{ sessionCookie: [] }]
       parameters:
-        - { name: planId, in: path, required: true, schema: { type: string, format: uuid } }
+        - {
+            name: planId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid },
+          }
       requestBody:
         required: true
         content:
@@ -1642,7 +2229,8 @@ paths:
                     required: [description, totalMinor]
                     properties:
                       groceryPlanItemId: { type: string, format: uuid }
-                      description: { type: string, minLength: 1, maxLength: 300 }
+                      description:
+                        { type: string, minLength: 1, maxLength: 300 }
                       quantity: { type: number, exclusiveMinimum: 0 }
                       unit: { type: string, maxLength: 40 }
                       unitPriceMinor: { type: integer, minimum: 1 }
@@ -1654,7 +2242,240 @@ paths:
         "403": { description: Owner or editor role required }
         "404": { description: Grocery plan not found }
         "409": { description: Plan cancelled or transaction already linked }
-        "422": { description: Transaction is not a same-currency paid expense, receipt does not reconcile, or receipt item is outside the plan }
+        "422":
+          {
+            description: Transaction is not a same-currency paid expense,
+            receipt does not reconcile,
+            or receipt item is outside the plan,
+          }
+  /api/v1/groceries/publications:
+    get:
+      operationId: listGroceryCatalogPublications
+      summary: List publication status for the active household's private catalog sources.
+      description: Every active-household role may read only its household-scoped publication links. This is not a shared-catalog search endpoint and does not expose another household's links.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Active-household publication links }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: publishGroceryCatalogRecord
+      summary: Deliberately publish one eligible private catalog source.
+      description: Owner or editor only. The source must be a market, product, or price observation in the active household. The operation is idempotent and atomically creates an identity-free public snapshot, a private household publication link, and a minimal audit event. Market/product publication copies only names. Price publication copies market/product names, amount, currency, and observation date; it excludes the private note, household/user identity, source IDs, purchases, quantities, budgets, plans, and receipts.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceType, sourceId]
+              properties:
+                sourceType: { type: string, enum: [market, product, price] }
+                sourceId: { type: string, format: uuid }
+            examples:
+              publishPrice:
+                value:
+                  sourceType: price
+                  sourceId: 4cb8ba59-4a87-4e57-9dcd-46968c90e1e2
+      responses:
+        "201":
+          {
+            description: Sanitized public snapshot created,
+            or existing idempotent publication returned,
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "404": { description: Source not found in the active household }
+        "409":
+          {
+            description: Price source no longer has an eligible private market and product,
+          }
+  /api/v1/groceries/shared-catalog:
+    get:
+      operationId: searchSharedGroceryCatalog
+      summary: Search sanitized shared grocery suggestions.
+      description: Every active-household role may search normalized public market and product names, alternate public spellings, and related price suggestions. Results are limited to 50 per record type, present same-normalized records as alias/duplicate hints without merging them, and include only the active household's adoption status. The response contains no household/user identity, publication link, private source ID, note, purchase, quantity, budget, plan, receipt, or transaction data. This read has no financial or audit side effect.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema: { type: string, minLength: 2, maxLength: 160 }
+          example: Cañarias
+          description: Case-, accent-, punctuation-, and whitespace-normalized substring search over public market and product names and their published spelling variants.
+      responses:
+        "200":
+          description: Sanitized public suggestions and active-household adoption status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      [query, normalizedQuery, markets, products, prices]
+                    properties:
+                      query: { type: string }
+                      normalizedQuery: { type: string }
+                      markets:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            [
+                              id,
+                              name,
+                              normalizedName,
+                              aliases,
+                              possibleDuplicates,
+                              adopted,
+                            ]
+                          properties:
+                            id: { type: string, format: uuid }
+                            name: { type: string }
+                            normalizedName: { type: string }
+                            aliases: { type: array, items: { type: string } }
+                            possibleDuplicates:
+                              type: array
+                              items:
+                                type: object
+                                required: [id, name]
+                                properties:
+                                  id: { type: string, format: uuid }
+                                  name: { type: string }
+                            adopted: { type: boolean }
+                      products:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            [
+                              id,
+                              name,
+                              normalizedName,
+                              aliases,
+                              possibleDuplicates,
+                              adopted,
+                            ]
+                          properties:
+                            id: { type: string, format: uuid }
+                            name: { type: string }
+                            normalizedName: { type: string }
+                            aliases: { type: array, items: { type: string } }
+                            possibleDuplicates:
+                              type: array
+                              items:
+                                type: object
+                                required: [id, name]
+                                properties:
+                                  id: { type: string, format: uuid }
+                                  name: { type: string }
+                            adopted: { type: boolean }
+                      prices:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            [
+                              id,
+                              market,
+                              product,
+                              amountMinor,
+                              currency,
+                              observedDate,
+                              adopted,
+                            ]
+                          properties:
+                            id: { type: string, format: uuid }
+                            market:
+                              type: object
+                              required: [id, name]
+                              properties:
+                                id: { type: string, format: uuid }
+                                name: { type: string }
+                            product:
+                              type: object
+                              required: [id, name]
+                              properties:
+                                id: { type: string, format: uuid }
+                                name: { type: string }
+                            amountMinor: { type: integer, minimum: 1 }
+                            currency: { type: string, enum: [UYU, USD] }
+                            observedDate: { type: string, format: date }
+                            adopted: { type: boolean }
+              examples:
+                productAlias:
+                  value:
+                    data:
+                      query: Cañarias
+                      normalizedQuery: canarias
+                      markets: []
+                      products:
+                        - id: 4cb8ba59-4a87-4e57-9dcd-46968c90e1e2
+                          name: Yerba Canarias 1 kg
+                          normalizedName: yerba canarias 1 kg
+                          aliases: [Yerba Cañarias 1-kg]
+                          possibleDuplicates:
+                            - id: cb33a49c-77ca-4f76-a285-f42f3a1d5e59
+                              name: Yerba Cañarias 1-kg
+                          adopted: false
+                      prices: []
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: adoptSharedGroceryCatalogRecord
+      summary: Copy one shared suggestion into the active household's private catalog.
+      description: Owner or editor only. The operation is idempotent for one active household, source type, and public source ID. It atomically copies only the sanitized public snapshot into private catalog rows, creates a private adoption link, and writes a minimal audit event. Price adoption copies market/product names, positive integer minor-unit amount, currency, and observation date; it copies no private note or publishing-household information. On failure the transaction rolls back all copied rows. It creates no financial transaction, plan, purchase, receipt, balance change, or financial-period mutation.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceType, publicSourceId]
+              properties:
+                sourceType: { type: string, enum: [market, product, price] }
+                publicSourceId: { type: string, format: uuid }
+            examples:
+              adoptPrice:
+                value:
+                  sourceType: price
+                  publicSourceId: 4cb8ba59-4a87-4e57-9dcd-46968c90e1e2
+      responses:
+        "201":
+          description: New private catalog copy created, or the existing idempotent adoption returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      [id, sourceType, publicSourceId, localSourceId, createdAt]
+                    properties:
+                      id: { type: string, format: uuid }
+                      sourceType:
+                        { type: string, enum: [market, product, price] }
+                      publicSourceId: { type: string, format: uuid }
+                      localSourceId: { type: string, format: uuid }
+                      createdAt: { type: string, format: date-time }
+              example:
+                data:
+                  id: cb33a49c-77ca-4f76-a285-f42f3a1d5e59
+                  sourceType: price
+                  publicSourceId: 4cb8ba59-4a87-4e57-9dcd-46968c90e1e2
+                  localSourceId: 74ae11f3-bff3-4dc7-b81a-13417f7f53ac
+                  createdAt: 2026-09-28T18:00:00Z
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: Owner or editor role required }
+        "404": { description: Public source not found for the requested type }
 components:
   securitySchemes:
     { sessionCookie: { type: apiKey, in: cookie, name: finanzas_session } }

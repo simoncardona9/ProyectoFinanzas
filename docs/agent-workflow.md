@@ -13,6 +13,12 @@ All source-control work must follow [git-workflow.md](git-workflow.md). Agents m
 3. Identify data migrations, security impact, and financial-calculation impact.
 4. Do not alter financial source data without explicit approval.
 
+When resuming after a break or receiving a local-verification request, follow
+the resumption and agent-executed verification procedures in
+[development-process.md](development-process.md). Execute available checks,
+record fresh evidence and remaining household review, and preserve existing
+uncommitted work. Do not delegate executable local checks back to Simon.
+
 ## Task boundaries
 
 Split work into independently testable tasks, for example:

@@ -65,9 +65,33 @@ by itself.
 
 ### Market, Product, and MarketPrice
 
-`Market` is a reusable supermarket identity with a display name, normalized name, optional branch/location, and aliases. `Product` records a name, optional brand, category, quantity, unit or pack size, and optional barcode. A market or product can be household-private or a deliberately published shared catalog record.
+`GroceryMarket`, `GroceryProduct`, and `GroceryPriceObservation` are private to
+one household. The current private records contain display/normalized names;
+an observation links one market and product and stores integer minor units,
+currency, observation date, and an optional private note.
 
-`MarketPrice` is a dated price observation for one market and product. Required fields: `market_id`, `product_id`, `price_minor`, `currency`, `quantity`, `unit`, `observed_on`, `source`, and `visibility` (`household` by default or `shared`). Shared observations contain no household, purchase, budget, or user-identifying data.
+Slice 11.1 adds separate `PublicGroceryMarket`, `PublicGroceryProduct`, and
+`PublicGroceryPriceSuggestion` snapshots. Public market/product rows contain
+only display and normalized names. A public price contains only its public
+market/product links, positive minor-unit amount, currency, and observation
+date. Public tables deliberately have no household/user identity, source IDs,
+notes, purchases, quantities, budgets, plans, or receipt data.
+
+`GroceryCatalogPublication` is the private, household-scoped proof of explicit
+publication. It links a private source type/ID to its public snapshot and has a
+unique constraint that makes publication idempotent. It is never returned as
+shared catalog data. Publishing also writes a household audit event containing
+only the source type.
+
+`GroceryCatalogAdoption` is a separate private, household-scoped link from one
+public source type/ID to the copied private market, product, or price
+observation. Its household/source unique constraint makes adoption idempotent.
+For a public price, the copied market, product, and observation are created in
+the same transaction as the link and audit event. Adoption links are used only
+to show the active household's local status; shared search never exposes them
+or any publishing/adopting household identity. Public records with matching
+normalized names remain distinct and are presented as alias/duplicate hints,
+not automatically merged.
 
 ### Obligation
 

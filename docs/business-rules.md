@@ -6,6 +6,8 @@
    User interfaces accept localized display amounts (for example `1.234,56`)
    and convert them to minor units before persistence.
 2. Do not mix UYU and USD totals without an explicit exchange rate and date.
+   Account currency is fixed at creation; use another account for another
+   currency rather than relabelling existing opening balances or movements.
 3. Preserve the original currency and the UYU planning equivalent for foreign-currency transactions.
 
 ## Cash-flow definitions
@@ -28,11 +30,13 @@
 1. A financial period belongs to one household and represents one calendar month (`year` and `month`). It is unique per household.
 2. A transaction belongs to reporting periods according to its actual transaction date. The application does not duplicate month or year values on transactions.
 3. Closing a financial period prevents changes to financial records dated in that month. Reopening requires an authorized user, a reason, and an audit entry.
+   This includes account opening dates (direct creation and import), and both
+   service and optional send dates on imported invoices.
 4. A spending summary accepts an inclusive `from` and `to` date. It can cover any range, including two months, a calendar year, or a custom interval, and can group results by month, year, or category.
 5. Spending totals include paid `expense` transactions in the requested range. Transfers are excluded; debt payments and tax payments are reported separately unless a report explicitly includes them.
 6. UYU and USD are never added as if they were the same currency. Reports return separate currency totals unless the caller supplies an explicit base currency and exchange rate.
 7. A USD/UYU rate records the movement it represents. All stored rates use `1
-   USD = X UYU`: buying USD means `UYU` → `USD`; selling USD means `USD` →
+USD = X UYU`: buying USD means `UYU` → `USD`; selling USD means `USD` →
    `UYU`; a reference has no movement. A USD liability's UYU exposure uses an
    explicitly selected USD-purchase rate, never a sale or reference rate.
 
@@ -45,6 +49,12 @@
 5. Market and product creation searches normalized names and aliases for potential duplicates. The application alerts the user to matches but allows a new record when a different branch, location, or product is legitimate.
 6. Household market prices and products are private by default. Publishing a shared market, product, or price is an explicit opt-in action and must never disclose a household's purchases, quantities, budgets, or identity.
 7. A market price includes its market or branch, observation date, currency, quantity, unit or pack size, and source. It is a suggestion, not an authoritative or automatically applied value.
+8. Shared names with the same normalized value are aliases and possible-
+   duplicate hints only. They remain distinct records so a household can keep
+   legitimate branches or product variants separate.
+9. Adopting a shared suggestion creates only household-private catalog data.
+   It is idempotent for that household and public source and never changes a
+   transaction, plan, account balance, forecast, or financial period.
 
 ## Tax and IVA
 

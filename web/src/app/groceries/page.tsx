@@ -12,8 +12,8 @@ export default async function GroceriesPage() {
     redirect("/login");
   }
   return (
-    <main className="flex flex-1 justify-center bg-zinc-50 p-6">
-      <section className="w-full max-w-5xl rounded-2xl bg-white p-8 shadow-sm ring-1 ring-zinc-950/5">
+    <main className="flex min-w-0 flex-1 justify-center bg-zinc-50 p-3 sm:p-6">
+      <section className="min-w-0 w-full max-w-5xl rounded-2xl bg-white p-4 shadow-sm ring-1 ring-zinc-950/5 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-emerald-700">
@@ -27,7 +27,10 @@ export default async function GroceriesPage() {
         </div>
         <p className="mt-2 text-zinc-600">
           Mercados, productos y precios son datos privados de planificación.
-          Registrar un precio no crea transacciones ni modifica saldos.
+          Registrar un precio no crea transacciones ni modifica saldos. Puedes
+          publicar deliberadamente un dato de catálogo sin compartir identidad
+          del hogar, notas, compras ni planes, o incorporar a tu catálogo
+          privado una sugerencia compartida por otro hogar.
         </p>
         <GroceryCatalogManager
           canEdit={["owner", "editor"].includes(context.membership.role)}

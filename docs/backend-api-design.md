@@ -205,6 +205,18 @@ This controller manages household membership and roles, not passwords or session
 
 ### 2. `accounts.controller`
 
+Account currency is fixed at creation. `PATCH /accounts/:accountId` permits
+the existing currency but returns `422 ACCOUNT_CURRENCY_IMMUTABLE` for a
+different one, preserving historical amounts and currency-separated reports.
+Creation applies the closed-period guard to `openingBalanceDate`, returning
+`422 CLOSED_PERIOD` before account/audit writes if that month is closed. The
+same date guard applies to account-opening rows in reviewed imports. Import
+invoice rows also check both service and optional send dates.
+
+The invoice/IVA report's `/invoices/:invoiceId` UI links open a protected,
+household-scoped invoice detail page with collections and reserve controls.
+Missing, invalid, or other-household invoice IDs do not expose invoice data.
+
 | Method and path                         | Parameters                                                                    | Purpose                                                      |
 | --------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `GET /accounts`                         | `type`, `currency`, `active`, pagination                                      | List accounts.                                               |
@@ -406,14 +418,14 @@ routes. All active-household roles can read them; owners and editors can write.
 They create only private planning data, never a transaction, account-balance
 change, financial-period mutation, or audit event.
 
-| Method and path                     | Parameters                                                                       | Purpose                                                                  |
-| ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `GET /grocery-plans`                | —                                                                                | List target-month plans.                                                 |
-| `POST /grocery-plans`               | body: `period`, `name`, `currency`, optional `preferredMarketId`                 | Create a draft non-financial plan.                                       |
-| `GET /grocery-plans/:planId`        | path                                                                             | Return plan, snapshot item estimates, and one currency-safe total.       |
-| `PATCH /grocery-plans/:planId`      | body: optional `name`, `status`, or `preferredMarketId`                          | Edit plan metadata; a cancelled plan cannot receive new items.           |
-| `POST /grocery-plans/:planId/items` | body: product or free-text description, optional quantity/unit, one price source | Add an estimated item from manual price or matching private observation. |
-| `POST /grocery-plans/:planId/purchases` | body: existing paid expense, optional reconciled receipt lines | Link actual spend without changing the transaction. |
+| Method and path                         | Parameters                                                                       | Purpose                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `GET /grocery-plans`                    | —                                                                                | List target-month plans.                                                 |
+| `POST /grocery-plans`                   | body: `period`, `name`, `currency`, optional `preferredMarketId`                 | Create a draft non-financial plan.                                       |
+| `GET /grocery-plans/:planId`            | path                                                                             | Return plan, snapshot item estimates, and one currency-safe total.       |
+| `PATCH /grocery-plans/:planId`          | body: optional `name`, `status`, or `preferredMarketId`                          | Edit plan metadata; a cancelled plan cannot receive new items.           |
+| `POST /grocery-plans/:planId/items`     | body: product or free-text description, optional quantity/unit, one price source | Add an estimated item from manual price or matching private observation. |
+| `POST /grocery-plans/:planId/purchases` | body: existing paid expense, optional reconciled receipt lines                   | Link actual spend without changing the transaction.                      |
 
 Each plan has exactly one currency. An item price selected from a price
 observation must match both that currency and the selected product; its amount
@@ -430,19 +442,59 @@ so no new dated financial write is introduced.
 
 ### 13. `markets.controller`
 
-Slice 10.1 currently exposes the private catalog under `/groceries/markets`,
-`/groceries/products`, and `/groceries/price-observations`. The generic/shared
-catalog and publication routes below remain future design, not current API.
+Slice 10.1 exposes the private catalog under `/groceries/markets`,
+`/groceries/products`, and `/groceries/price-observations`. Slice 11.1 adds the
+explicit publication boundary, and Slice 11.2 adds authenticated shared search
+and deliberate local adoption.
 
-| Method and path                        | Parameters                                                               | Purpose                                                                  |
-| -------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `GET /markets`                         | `query`, `location`, `includeShared`                                     | Search household and shared markets, including similar-name suggestions. |
-| `POST /markets`                        | body: `name`, optional branch/location and aliases                       | Create a household-private market after returning possible duplicates.   |
-| `GET /products`                        | `query`, `marketId`, `includeShared`                                     | Search household and shared product catalog entries.                     |
-| `POST /products`                       | body: name, optional brand, category, pack size, barcode                 | Create a household-private product.                                      |
-| `GET /market-prices`                   | `marketId`, `productId`, `from`, `to`, `includeShared`                   | Return dated price suggestions.                                          |
-| `POST /market-prices`                  | body: market, product, price, currency, quantity, unit, observation date | Record a household-private price observation.                            |
-| `POST /market-prices/:priceId/publish` | path                                                                     | Explicitly publish an eligible, non-identifying catalog contribution.    |
+The three private-catalog routes support `GET` for every active-household role
+and `POST` for owners/editors. Name writes accept `name` (1–160 characters);
+price writes accept same-household `marketId`/`productId`, positive integer
+`amountMinor`, UYU/USD `currency`, ISO `observedDate`, and optional `note`
+(500 characters). They return `201` on creation, `400 VALIDATION_ERROR` for
+invalid input, `403` for read-only roles, and price creation returns
+`404 GROCERY_CATALOG_ITEM_NOT_FOUND` for unavailable references. Private list
+and create operations have no balance/publication/financial-audit effects.
+The exact private-catalog and tax-reserve detail/settlement contracts are
+included in OpenAPI and checked against the implemented route inventory.
+
+| Method and path                | Parameters                     | Purpose                                                                      |
+| ------------------------------ | ------------------------------ | ---------------------------------------------------------------------------- |
+| `GET /groceries/publications`  | —                              | List only the active household's private publication links/status.           |
+| `POST /groceries/publications` | body: `sourceType`, `sourceId` | Idempotently publish one eligible market, product, or price source snapshot. |
+
+Every active-household role can read its own publication status; only owners
+and editors can publish. The server resolves the private source within the
+active household and atomically creates an identity-free public snapshot, a
+private publication link, and a minimal audit event. Market/product publication
+copies only names. Price publication copies the market/product names, amount,
+currency, and observation date; it never copies the private note. The route
+does not expose shared search results, plans, purchases, quantities, budgets,
+receipts, household IDs, or user IDs. Its authenticated household-status
+response includes the private source type/ID only so the UI can mark that
+household's record as published; those fields never enter a public table or a
+shared-catalog response.
+
+| Method and path                  | Parameters                                 | Purpose                                                                      |
+| -------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `GET /groceries/shared-catalog`  | query: required `query` (2–160 characters) | Search sanitized public markets, products, and price suggestions.            |
+| `POST /groceries/shared-catalog` | body: `sourceType`, `publicSourceId`       | Idempotently copy one public suggestion into the active household's catalog. |
+
+Every active-household role may search. Search normalizes case, accents,
+punctuation, and whitespace, returns at most 50 results per record type, and
+marks only the active household's adoption status. Alternate public spellings
+with the same normalized name are returned as aliases and possible duplicates;
+records are never automatically merged, so legitimate branches and products
+remain independently selectable.
+
+Only owners and editors may adopt. A market or product adoption copies its
+public name into a new household-private record. A price adoption atomically
+copies the public market/product names, integer minor-unit amount, currency,
+and observation date into a private market, product, and price observation.
+The same transaction creates a private idempotency link and a minimal audit
+event. It reads no publication link and returns no publishing household or
+user identity. Adoption creates no transaction, plan, purchase, receipt,
+balance change, or financial-period mutation.
 
 ### 14. `imports.controller`
 

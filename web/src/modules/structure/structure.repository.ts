@@ -8,6 +8,8 @@ import {
   debts,
   exchangeRates,
   financialPeriods,
+  groceryCatalogAdoptions,
+  groceryCatalogPublications,
   groceryMarkets,
   groceryPlanItems,
   groceryPlans,
@@ -31,6 +33,14 @@ type NewCategory = Omit<typeof categories.$inferInsert, "householdId">;
 export const structureRepository = {
   async resetFinancialData(householdId: string) {
     return db.transaction(async (tx) => {
+      // Public catalog snapshots outlive a household reset, but private links
+      // to publications and adopted local copies must not survive it.
+      await tx
+        .delete(groceryCatalogAdoptions)
+        .where(eq(groceryCatalogAdoptions.householdId, householdId));
+      await tx
+        .delete(groceryCatalogPublications)
+        .where(eq(groceryCatalogPublications.householdId, householdId));
       // Receipt lines retain optional references to plan items, so remove the
       // dependent reconciliation evidence before its plan and catalog records.
       await tx

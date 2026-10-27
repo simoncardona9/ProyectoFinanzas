@@ -65,7 +65,7 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
       const [nextCategories, nextAccounts, nextItems, nextForecast] =
         await Promise.all([
           api<Category[]>("/api/v1/categories"),
-          api<Account[]>("/api/v1/accounts"),
+          api<Account[]>("/api/v1/accounts?active=true"),
           api<Obligation[]>(
             `/api/v1/obligations?dueFrom=${period}-01&dueTo=${new Date(Number(period.slice(0, 4)), Number(period.slice(5)), 0).toISOString().slice(0, 10)}`,
           ),
@@ -117,10 +117,18 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
   };
   const pay = async (item: Obligation) => {
     const amount = window.prompt(
-      "Importe a pagar en centésimos",
-      String(item.remainingAmountMinor),
+      "Importe a pagar (ej. 1.234,56)",
+      new Intl.NumberFormat("es-UY", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(item.remainingAmountMinor / 100),
     );
     if (!amount) return;
+    const amountMinor = parseMoneyToMinor(amount);
+    if (amountMinor === undefined || amountMinor <= 0) {
+      setMessage("Ingresa un importe válido, por ejemplo 1.234,56.");
+      return;
+    }
     const account = accounts.find(
       (candidate) => candidate.currency === item.currency,
     );
@@ -134,7 +142,7 @@ export function ObligationManager({ canEdit }: { canEdit: boolean }) {
       await api(`/api/v1/obligations/${item.id}/payments`, {
         method: "POST",
         body: JSON.stringify({
-          amountMinor: Number(amount),
+          amountMinor,
           accountId: account.id,
           paidDate: new Date().toISOString().slice(0, 10),
           description: `${item.description} (${account.name})`,

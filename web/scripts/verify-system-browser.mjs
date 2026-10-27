@@ -55,7 +55,7 @@ export async function verifyBrowserJourneys(
     await page.getByLabel("Correo electrónico").fill(credentials.email);
     await page.getByLabel("Contraseña").fill(credentials.password);
     await page.getByRole("button", { name: "Ingresar", exact: true }).click();
-    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page).toHaveURL(/\/overview$/);
 
     await navigate("/structure");
     let form = page.locator("form").filter({

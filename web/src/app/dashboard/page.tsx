@@ -10,14 +10,16 @@ export default async function DashboardPage() {
     redirect("/login");
   }
   return (
-    <main className="flex flex-1 justify-center bg-zinc-50 p-6">
-      <section className="w-full max-w-5xl rounded-2xl bg-white p-8 shadow-sm ring-1 ring-zinc-950/5">
+    <main className="dashboard-page flex flex-1 justify-center p-6">
+      <section className="w-full max-w-7xl">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-emerald-700">
-              Finanzas Familiares
+              TU RESUMEN FINANCIERO
             </p>
-            <h1 className="mt-2 text-2xl font-semibold">Panel mensual</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+              Panel mensual
+            </h1>
           </div>
           <BackLink href="/settings">Volver a configuración</BackLink>
         </div>

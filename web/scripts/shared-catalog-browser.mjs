@@ -20,7 +20,7 @@ export async function openCatalogBrowserReview(base, credentials) {
       await page.getByLabel("Correo electrónico").fill(email);
       await page.getByLabel("Contraseña").fill(password);
       await page.getByRole("button", { name: "Ingresar", exact: true }).click();
-      await expect(page).toHaveURL(/\/settings$/);
+      await expect(page).toHaveURL(/\/overview$/);
       await page.goto(new URL("/groceries", base).href);
       await expect(
         page.getByRole("heading", { name: "Compras y planificación" }),

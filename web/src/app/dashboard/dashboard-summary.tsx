@@ -79,15 +79,18 @@ export function DashboardSummary() {
         {dashboard?.currencies.map((summary) => (
           <section
             key={summary.currency}
-            className="rounded-xl border border-emerald-200 bg-emerald-50 p-5"
+            className="dashboard-currency rounded-xl border border-zinc-200 p-6"
           >
-            <h2 className="text-xl font-semibold">{summary.currency}</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold tracking-widest">
+                {summary.currency}
+              </h2>
+              <span className="dashboard-currency-tag">Resumen del mes</span>
+            </div>
             <dl className="mt-4 grid gap-3 text-sm">
-              <div className="flex justify-between gap-4">
+              <div className="dashboard-balance">
                 <dt>Efectivo disponible para gastar</dt>
-                <dd className="font-semibold">
-                  {money(summary.currentCashMinor, summary.currency)}
-                </dd>
+                <dd>{money(summary.currentCashMinor, summary.currency)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt>Ingresos cobrados del mes</dt>
@@ -145,25 +148,27 @@ export function DashboardSummary() {
           No hay cuentas ni movimientos para mostrar en este hogar.
         </p>
       )}
-      <ExpectedIncomeForm period={period} onCreated={load} />
-      <section className="rounded-xl border border-zinc-200 p-5 text-sm text-zinc-700">
-        <h2 className="font-semibold">Cómo se calculan estos importes</h2>
-        <p className="mt-2">
-          El efectivo disponible para gastar se obtiene de las cuentas de
-          efectivo y banco, sus saldos iniciales y sus movimientos pagados,
-          menos el IVA aún protegido. La proyección también resta las
-          obligaciones abiertas que vencen en el mes elegido. Cada moneda se
-          mantiene separada.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link className="text-emerald-700 underline" href="/transactions">
-            Ver movimientos pagados
-          </Link>
-          <Link className="text-emerald-700 underline" href="/obligations">
-            Ver obligaciones
-          </Link>
-        </div>
-      </section>
+      <div className="dashboard-bottom-grid">
+        <ExpectedIncomeForm period={period} onCreated={load} />
+        <section className="rounded-xl border border-zinc-200 p-5 text-sm text-zinc-700">
+          <h2 className="font-semibold">Cómo se calculan estos importes</h2>
+          <p className="mt-2">
+            El efectivo disponible para gastar se obtiene de las cuentas de
+            efectivo y banco, sus saldos iniciales y sus movimientos pagados,
+            menos el IVA aún protegido. La proyección también resta las
+            obligaciones abiertas que vencen en el mes elegido. Cada moneda se
+            mantiene separada.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link className="text-emerald-700 underline" href="/transactions">
+              Ver movimientos pagados
+            </Link>
+            <Link className="text-emerald-700 underline" href="/obligations">
+              Ver obligaciones
+            </Link>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

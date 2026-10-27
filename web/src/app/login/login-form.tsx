@@ -21,7 +21,7 @@ export function LoginForm() {
       setError("No fue posible iniciar sesión. Revisa tus datos.");
       return;
     }
-    router.replace("/settings");
+    router.replace("/overview");
     router.refresh();
   }
   return (

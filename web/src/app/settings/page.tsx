@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { authRepository } from "@/modules/auth/auth.repository";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { FeatureNavigationCard } from "@/shared/ui/navigation";
-import { LogoutButton } from "./logout-button";
 import { LowBufferSettings } from "./low-buffer-settings";
 import { ResetTestData } from "./reset-test-data";
 export default async function SettingsPage() {
@@ -28,9 +27,13 @@ export default async function SettingsPage() {
               Configuración del hogar
             </h1>
           </div>
-          <LogoutButton />
         </div>
         <nav aria-label="Secciones principales" className="mt-6 grid gap-3">
+          <FeatureNavigationCard
+            href="/overview"
+            title="Resumen general"
+            description="Ver el estado financiero, gráficos y próximos pagos."
+          />
           <FeatureNavigationCard
             href="/dashboard"
             title="Panel mensual"

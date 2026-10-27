@@ -1414,10 +1414,53 @@ try {
       await page.getByLabel("Correo electrónico").fill(credentials[0].email);
       await page.getByLabel("Contraseña").fill(credentials[0].password);
       await page.getByRole("button", { name: "Ingresar", exact: true }).click();
-      await expect(page).toHaveURL(/\/settings$/);
+      await expect(page).toHaveURL(/\/overview$/);
+      await page.goto(
+        new URL("/overview?period=2026-10&currency=UYU", base).href,
+      );
+      await expect(
+        page.getByRole("heading", { name: "Resumen general", exact: true }),
+      ).toBeVisible();
+      await expect(page.locator(".overview-kpi")).toHaveCount(4);
+      const overviewDashboard = await get("dashboard?period=2026-10");
+      const formatOverviewMoney = (amount, currency) =>
+        new Intl.NumberFormat("es-UY", {
+          style: "currency",
+          currency,
+          maximumFractionDigits: 2,
+        }).format(amount / 100);
+      await expect(page.locator(".overview-kpi.available strong")).toHaveText(
+        formatOverviewMoney(
+          row(overviewDashboard.currencies, "UYU").currentCashMinor,
+          "UYU",
+        ),
+      );
+      await expect(page.locator(".overview-kpi.projected strong")).toHaveText(
+        formatOverviewMoney(
+          row(overviewDashboard.currencies, "UYU").projectedCashMinor,
+          "UYU",
+        ),
+      );
+      await page.getByLabel("Moneda", { exact: true }).selectOption("USD");
+      await page.getByRole("button", { name: "Actualizar resumen" }).click();
+      await expect(page).toHaveURL(/currency=USD/);
+      await expect(page.locator(".overview-kpi.available strong")).toHaveText(
+        formatOverviewMoney(
+          row(overviewDashboard.currencies, "USD").currentCashMinor,
+          "USD",
+        ),
+      );
+      await page.goto(
+        new URL("/overview?period=invalid&currency=UYU", base).href,
+      );
+      await expect(page.getByRole("status")).toContainText(
+        "El mes indicado no es válido",
+      );
       const routes = [
         "/",
         "/settings",
+        "/overview?period=2026-10&currency=UYU",
+        "/overview?period=2026-10&currency=USD",
         "/structure",
         "/transactions",
         `/transactions/${paid.id}`,
@@ -1447,6 +1490,11 @@ try {
         await page.waitForLoadState("networkidle");
         for (const width of [1440, 390, 320]) {
           await page.setViewportSize({ width, height: 844 });
+          if (route !== "/") {
+            await expect(
+              page.getByRole("button", { name: "Cerrar sesión", exact: true }),
+            ).toBeInViewport();
+          }
           const measured = await page.evaluate(() => ({
             width: innerWidth,
             scroll: document.documentElement.scrollWidth,
@@ -1460,6 +1508,7 @@ try {
           }
           if (
             [
+              "/overview?period=2026-10&currency=UYU",
               "/structure",
               "/invoices",
               "/debt-report",
@@ -1500,6 +1549,19 @@ try {
         404,
       );
       await isolatedContext.close();
+      await page.goto(new URL("/overview", base).href);
+      await page
+        .getByRole("button", { name: "Cerrar sesión", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/login$/);
+      assert.equal(
+        (
+          await context.request.get(new URL("/api/v1/auth/me", base).href)
+        ).status(),
+        401,
+      );
+      await page.goto(new URL("/overview", base).href);
+      await expect(page).toHaveURL(/\/login$/);
       assert.deepEqual(errors, [], "Uncaught browser errors");
       assert.deepEqual(issues, [], "Browser route/layout/source-link audit");
     },

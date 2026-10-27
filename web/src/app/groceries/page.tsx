@@ -12,8 +12,8 @@ export default async function GroceriesPage() {
     redirect("/login");
   }
   return (
-    <main className="flex flex-1 justify-center bg-zinc-50 p-6">
-      <section className="w-full max-w-5xl rounded-2xl bg-white p-8 shadow-sm ring-1 ring-zinc-950/5">
+    <main className="flex min-w-0 flex-1 justify-center bg-zinc-50 p-3 sm:p-6">
+      <section className="min-w-0 w-full max-w-5xl rounded-2xl bg-white p-4 shadow-sm ring-1 ring-zinc-950/5 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-emerald-700">

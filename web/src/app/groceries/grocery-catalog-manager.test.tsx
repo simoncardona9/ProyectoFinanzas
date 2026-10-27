@@ -158,4 +158,34 @@ describe("GroceryCatalogManager", () => {
     );
     expect(await screen.findByText("Ya incorporado")).toBeInTheDocument();
   });
+
+  it("names an identical private record in duplicate hints", async () => {
+    const fetchMock = vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      const data = url.endsWith("/markets")
+        ? [
+            {
+              id: "market-a",
+              name: "Mercado idéntico",
+              normalizedName: "mercado identico",
+            },
+            {
+              id: "market-b",
+              name: "Mercado idéntico",
+              normalizedName: "mercado identico",
+            },
+          ]
+        : [];
+      return new Response(JSON.stringify({ data }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<GroceryCatalogManager canEdit={false} />);
+
+    expect(
+      await screen.findAllByText(
+        "Posible duplicado: coincide con Mercado idéntico.",
+      ),
+    ).toHaveLength(2);
+  });
 });

@@ -6,6 +6,8 @@ This folder is the product and technical foundation for replacing the family-fin
 | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | [vision.md](vision.md)                                                                   | Problem, goals, users, and product boundaries.                                                                    |
 | [requirements.md](requirements.md)                                                       | Functional and non-functional requirements.                                                                       |
+| [future-requirements.md](future-requirements.md)                                         | Missing requirements F-01–F-12 and separate operational item O-01, pending future analysis and design. |
+| [system-verification.md](system-verification.md)                                         | Full Steps 1–11 local API/browser/recovery audit, corrected defects, repeat commands, and remaining product gaps. |
 | [functionalities.md](functionalities.md)                                                 | Features grouped by release priority.                                                                             |
 | [data-model.md](data-model.md)                                                           | Core entities, fields, and relationships.                                                                         |
 | [business-rules.md](business-rules.md)                                                   | Financial calculation and classification rules.                                                                   |
@@ -27,6 +29,7 @@ This folder is the product and technical foundation for replacing the family-fin
 | [audit-export-acceptance.md](audit-export-acceptance.md)                                 | Slice 9.6 synthetic UI checklist for audit filtering and CSV export.                                              |
 | [grocery-acceptance.md](grocery-acceptance.md)                                           | Slice 10.4 synthetic local checklist for private grocery planning and paid-purchase reconciliation.               |
 | [shared-catalog-publication-acceptance.md](shared-catalog-publication-acceptance.md)     | Slice 11.1 synthetic UI and privacy checklist for deliberate shared-catalog publication.                          |
+| [shared-catalog-acceptance.md](shared-catalog-acceptance.md)                             | Slice 11.3 two-household acceptance checklist for shared search, adoption, authorization, and privacy.            |
 | [roadmap.md](roadmap.md)                                                                 | Phased implementation plan.                                                                                       |
 | [development-process.md](development-process.md)                                         | Incremental delivery, validation, release, and feedback process.                                                  |
 | [git-workflow.md](git-workflow.md)                                                       | Branches, pull requests, local testing, and GitHub ownership rules.                                               |

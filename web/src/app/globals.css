@@ -20,6 +20,21 @@ body {
 }
 
 @layer base {
+  main {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  main > section,
+  main .grid > *,
+  main :where(input, select, textarea) {
+    min-width: 0;
+  }
+
+  main :where(input, select, textarea) {
+    max-width: 100%;
+  }
+
   :where(button, a[href], summary, label:has(input[type="file"])) {
     transition:
       background-color 150ms ease,
@@ -67,5 +82,17 @@ body {
 
   :where(button:not(:disabled), a[href], summary):active {
     transform: translateY(1px);
+  }
+}
+
+@layer utilities {
+  @media (width < 40rem) {
+    body > main {
+      padding: 0.75rem;
+    }
+
+    body > main > section {
+      padding: 1rem;
+    }
   }
 }

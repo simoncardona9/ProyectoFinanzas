@@ -1,5 +1,25 @@
 # Roadmap
 
+## Current baseline and future planning
+
+Steps 1–11 are complete. The phases below are broad product groupings and do
+not mean every listed capability has been delivered. The remaining scope is
+tracked in [future-requirements.md](future-requirements.md), with all items
+pending analysis/design and no new implementation step assigned.
+
+- Financial lifecycles: expected-income collection (F-01), transfers (F-02),
+  adjustments (F-03), budgets (F-04), recurring generation (F-05), and debt
+  schedules/interest/plans (F-06).
+- Reporting and convenience: cross-plan grocery summaries (F-07), receipt
+  attachments (F-08), reminders (F-09), savings/emergency fund (F-10), and
+  specialized accountant exports (F-11).
+- External scope: bank/other integrations (F-12) and the separate cloud
+  hosting/production-operations decision (O-01).
+
+Expected-income collection is a suggested first analysis candidate, not an
+approved priority or Step 12. Select and design a small outcome before adding
+new slices to the development process.
+
 ## Phase 0 — Discovery and financial cleanup
 
 - Confirm the data model and classifications with the household.

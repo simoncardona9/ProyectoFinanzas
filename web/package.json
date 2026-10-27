@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:acceptance:shared-catalog": "node scripts/verify-shared-catalog.mjs",
+    "test:acceptance:shared-catalog:browser": "node scripts/verify-shared-catalog.mjs --browser",
+    "test:acceptance:system": "node scripts/verify-system.mjs",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -29,6 +32,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",

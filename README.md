@@ -11,10 +11,10 @@ contener datos financieros reales, credenciales ni exportaciones personales.
 
 ## Estado actual
 
-Los Steps 1–10 están completados: la aplicación local incluye aislamiento por
+Los Steps 1–11 están completados: la aplicación local incluye aislamiento por
 hogar, estructura financiera, transacciones, obligaciones, dashboard, deudas,
 facturas/IVA, importación, cierre/reportes/respaldo y planificación de compras.
-El Step 11 está en desarrollo e incluye publicación deliberada y anonimizada,
+El Step 11 incluye publicación deliberada y anonimizada,
 búsqueda normalizada y adopción explícita de sugerencias hacia el catálogo
 privado de otro hogar.
 

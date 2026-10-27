@@ -162,6 +162,11 @@ export async function commitStructureImport(
       alreadyCommitted: true,
     };
   canCommit(preview, context);
+  await assertFinancialPeriodsOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    importAffectedFinancialDates(bundle),
+  );
   const result = await importRepository.commitStructure({
     householdId: context.membership.householdId,
     actorUserId: context.user.id,

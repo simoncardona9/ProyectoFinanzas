@@ -6,6 +6,8 @@
    User interfaces accept localized display amounts (for example `1.234,56`)
    and convert them to minor units before persistence.
 2. Do not mix UYU and USD totals without an explicit exchange rate and date.
+   Account currency is fixed at creation; use another account for another
+   currency rather than relabelling existing opening balances or movements.
 3. Preserve the original currency and the UYU planning equivalent for foreign-currency transactions.
 
 ## Cash-flow definitions
@@ -28,6 +30,8 @@
 1. A financial period belongs to one household and represents one calendar month (`year` and `month`). It is unique per household.
 2. A transaction belongs to reporting periods according to its actual transaction date. The application does not duplicate month or year values on transactions.
 3. Closing a financial period prevents changes to financial records dated in that month. Reopening requires an authorized user, a reason, and an audit entry.
+   This includes account opening dates (direct creation and import), and both
+   service and optional send dates on imported invoices.
 4. A spending summary accepts an inclusive `from` and `to` date. It can cover any range, including two months, a calendar year, or a custom interval, and can group results by month, year, or category.
 5. Spending totals include paid `expense` transactions in the requested range. Transfers are excluded; debt payments and tax payments are reported separately unless a report explicitly includes them.
 6. UYU and USD are never added as if they were the same currency. Reports return separate currency totals unless the caller supplies an explicit base currency and exchange rate.

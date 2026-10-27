@@ -1,5 +1,7 @@
 import { ApiError } from "@/shared/errors/api-error";
 import type { AuthContext } from "@/shared/auth/auth.types";
+import { financialPeriodRepository } from "@/modules/financial-periods/financial-period.repository";
+import { assertFinancialPeriodOpen } from "@/modules/financial-periods/financial-period.service";
 import { structureRepository } from "./structure.repository";
 
 const seededCategories = [
@@ -54,6 +56,11 @@ export async function createAccount(
   context: AuthContext,
   values: Parameters<typeof structureRepository.createAccount>[1],
 ) {
+  await assertFinancialPeriodOpen(
+    financialPeriodRepository,
+    context.membership.householdId,
+    values.openingBalanceDate,
+  );
   const account = await structureRepository.createAccount(
     context.membership.householdId,
     values,
@@ -72,6 +79,17 @@ export async function updateAccount(
   id: string,
   values: Parameters<typeof structureRepository.updateAccount>[2],
 ) {
+  const existing = await structureRepository.findAccount(
+    context.membership.householdId,
+    id,
+  );
+  if (!existing) throw new ApiError(404, "NOT_FOUND", "Account not found.");
+  if (values.currency !== undefined && values.currency !== existing.currency)
+    throw new ApiError(
+      422,
+      "ACCOUNT_CURRENCY_IMMUTABLE",
+      "An account's currency cannot be changed. Create a separate account for another currency.",
+    );
   const account = await structureRepository.updateAccount(
     context.membership.householdId,
     id,

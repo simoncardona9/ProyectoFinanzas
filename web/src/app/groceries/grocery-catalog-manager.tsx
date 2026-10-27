@@ -66,13 +66,13 @@ function money(amountMinor: number, currency: string) {
 }
 
 function duplicates(items: CatalogItem[]) {
-  const groups = new Map<string, string[]>();
+  const groups = new Map<string, CatalogItem[]>();
   for (const item of items)
     groups.set(item.normalizedName, [
       ...(groups.get(item.normalizedName) ?? []),
-      item.name,
+      item,
     ]);
-  return new Map([...groups].filter(([, names]) => names.length > 1));
+  return new Map([...groups].filter(([, matches]) => matches.length > 1));
 }
 
 export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
@@ -266,7 +266,7 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
     }
   };
   return (
-    <div className="mt-8 grid gap-8">
+    <div className="mt-8 grid min-w-0 gap-8 [overflow-wrap:anywhere] [&_input]:min-w-0 [&_select]:min-w-0">
       {message && (
         <p className="rounded bg-emerald-50 p-3 text-sm text-emerald-800">
           {message}
@@ -388,7 +388,7 @@ export function GroceryCatalogManager({ canEdit }: { canEdit: boolean }) {
             minLength={2}
             maxLength={160}
             placeholder="Buscar mercado o producto"
-            className="min-w-64 flex-1 rounded border bg-white p-2"
+            className="min-w-0 flex-1 basis-full rounded border bg-white p-2 sm:min-w-64 sm:basis-auto"
           />
           <button className="rounded bg-sky-700 px-4 py-2 text-white">
             Buscar compartidos
@@ -558,7 +558,7 @@ function SharedNamedList({
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex items-start justify-between gap-3 p-3"
+            className="flex flex-col items-start justify-between gap-3 p-3 sm:flex-row"
           >
             <span>
               {item.name}
@@ -619,7 +619,7 @@ function CatalogList({
 }: {
   title: string;
   items: CatalogItem[];
-  duplicateNames: Map<string, string[]>;
+  duplicateNames: Map<string, CatalogItem[]>;
   sourceType: "market" | "product";
   canPublish: boolean;
   publishedSources: Set<string>;
@@ -635,7 +635,7 @@ function CatalogList({
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex items-start justify-between gap-3 p-4"
+            className="flex flex-col items-start justify-between gap-3 p-4 sm:flex-row"
           >
             <span>
               {item.name}
@@ -644,7 +644,8 @@ function CatalogList({
                   Posible duplicado: coincide con{" "}
                   {duplicateNames
                     .get(item.normalizedName)
-                    ?.filter((name) => name !== item.name)
+                    ?.filter((candidate) => candidate.id !== item.id)
+                    .map((candidate) => candidate.name)
                     .join(", ")}
                   .
                 </small>

@@ -54,10 +54,16 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body.data;
 }
 
-export function InvoiceManager({ canEdit }: { canEdit: boolean }) {
+export function InvoiceManager({
+  canEdit,
+  initialDetail = null,
+}: {
+  canEdit: boolean;
+  initialDetail?: InvoiceDetail | null;
+}) {
   const [items, setItems] = useState<Invoice[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [detail, setDetail] = useState<InvoiceDetail | null>(null);
+  const [detail, setDetail] = useState<InvoiceDetail | null>(initialDetail);
   const [message, setMessage] = useState("");
   const [grossAmount, setGrossAmount] = useState("0,00");
   const [collectionAmount, setCollectionAmount] = useState("0,00");

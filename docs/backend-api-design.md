@@ -205,6 +205,18 @@ This controller manages household membership and roles, not passwords or session
 
 ### 2. `accounts.controller`
 
+Account currency is fixed at creation. `PATCH /accounts/:accountId` permits
+the existing currency but returns `422 ACCOUNT_CURRENCY_IMMUTABLE` for a
+different one, preserving historical amounts and currency-separated reports.
+Creation applies the closed-period guard to `openingBalanceDate`, returning
+`422 CLOSED_PERIOD` before account/audit writes if that month is closed. The
+same date guard applies to account-opening rows in reviewed imports. Import
+invoice rows also check both service and optional send dates.
+
+The invoice/IVA report's `/invoices/:invoiceId` UI links open a protected,
+household-scoped invoice detail page with collections and reserve controls.
+Missing, invalid, or other-household invoice IDs do not expose invoice data.
+
 | Method and path                         | Parameters                                                                    | Purpose                                                      |
 | --------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `GET /accounts`                         | `type`, `currency`, `active`, pagination                                      | List accounts.                                               |
@@ -434,6 +446,17 @@ Slice 10.1 exposes the private catalog under `/groceries/markets`,
 `/groceries/products`, and `/groceries/price-observations`. Slice 11.1 adds the
 explicit publication boundary, and Slice 11.2 adds authenticated shared search
 and deliberate local adoption.
+
+The three private-catalog routes support `GET` for every active-household role
+and `POST` for owners/editors. Name writes accept `name` (1–160 characters);
+price writes accept same-household `marketId`/`productId`, positive integer
+`amountMinor`, UYU/USD `currency`, ISO `observedDate`, and optional `note`
+(500 characters). They return `201` on creation, `400 VALIDATION_ERROR` for
+invalid input, `403` for read-only roles, and price creation returns
+`404 GROCERY_CATALOG_ITEM_NOT_FOUND` for unavailable references. Private list
+and create operations have no balance/publication/financial-audit effects.
+The exact private-catalog and tax-reserve detail/settlement contracts are
+included in OpenAPI and checked against the implemented route inventory.
 
 | Method and path                | Parameters                     | Purpose                                                                      |
 | ------------------------------ | ------------------------------ | ---------------------------------------------------------------------------- |

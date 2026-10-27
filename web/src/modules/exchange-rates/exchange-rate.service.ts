@@ -16,11 +16,15 @@ export async function createExchangeRate(
       values,
     );
   } catch (error) {
+    const databaseError =
+      typeof error === "object" && error !== null && "cause" in error
+        ? error.cause
+        : error;
     if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "23505"
+      typeof databaseError === "object" &&
+      databaseError !== null &&
+      "code" in databaseError &&
+      databaseError.code === "23505"
     )
       throw new ApiError(
         409,

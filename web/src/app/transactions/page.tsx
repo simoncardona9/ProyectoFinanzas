@@ -28,13 +28,15 @@ export default async function TransactionsPage() {
           Registra ingresos y egresos pagados en pesos uruguayos o dólares
           estadounidenses.
         </p>
-        <div className="mt-4">
-          <FeatureNavigationCard
-            href="/imports"
-            title="Importar movimientos"
-            description="Abrir el mismo asistente de revisión por lote."
-          />
-        </div>
+        {context.user.viewMode === "advanced" && (
+          <div className="mt-4">
+            <FeatureNavigationCard
+              href="/imports"
+              title="Importar movimientos"
+              description="Abrir el mismo asistente de revisión por lote."
+            />
+          </div>
+        )}
         <TransactionRegister
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />

@@ -100,9 +100,10 @@ export default async function SettingsPage() {
         <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
           <ViewModeSelect id="settings-view-mode" />
           <p className="mt-2 text-sm text-zinc-600">
-            La vista básica muestra las tareas cotidianas. La avanzada agrega
-            planificación, facturas, deudas, compras, importaciones y reportes.
-            Tus datos y permisos son los mismos en ambas vistas.
+            La vista básica muestra movimientos, cuentas, categorías y pagos
+            previstos. La avanzada agrega pronósticos detallados, facturas,
+            deudas, compras, importaciones y reportes. Tus datos y permisos son
+            los mismos en ambas vistas.
           </p>
         </div>
         <nav aria-label="Secciones principales" className="mt-6 grid gap-3">

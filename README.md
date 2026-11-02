@@ -24,6 +24,8 @@ cuentas/categorías y obligaciones; la avanzada agrega el resto de las
 herramientas. La elección se guarda por usuario y no modifica permisos,
 registros ni cálculos financieros. Los usuarios existentes conservan la vista
 avanzada al aplicar la migración; los nuevos comienzan con la básica.
+El alcance actual y la ubicación prevista de presupuestos mensuales y gastos
+recibidos de ReceiptIntelligence están en [docs/view-modes.md](docs/view-modes.md).
 
 El avance detallado y los criterios de cada etapa están en
 [docs/development-progress.md](docs/development-progress.md) y

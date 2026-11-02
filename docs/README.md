@@ -9,6 +9,7 @@ This folder is the product and technical foundation for replacing the family-fin
 | [future-requirements.md](future-requirements.md)                                         | Missing requirements F-01–F-12 and separate operational item O-01, pending future analysis and design. |
 | [system-verification.md](system-verification.md)                                         | Full Steps 1–11 local API/browser/recovery audit, corrected defects, repeat commands, and remaining product gaps. |
 | [functionalities.md](functionalities.md)                                                 | Features grouped by release priority.                                                                             |
+| [view-modes.md](view-modes.md)                                                             | Current Basic and Advanced views and agreed placement for future budgets and receipt expenses.                   |
 | [data-model.md](data-model.md)                                                           | Core entities, fields, and relationships.                                                                         |
 | [business-rules.md](business-rules.md)                                                   | Financial calculation and classification rules.                                                                   |
 | [architecture.md](architecture.md)                                                       | Proposed cloud architecture and engineering principles.                                                           |

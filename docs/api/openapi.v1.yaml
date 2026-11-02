@@ -1424,6 +1424,43 @@ paths:
           "400": { $ref: "#/components/responses/ValidationError" },
           "403": { description: Membership required },
         }
+  /api/v1/auth/view-mode:
+    patch:
+      operationId: updateOwnViewMode
+      summary: Save the signed-in user's Basic or Advanced view preference.
+      description: >
+        Auth controller. Available to every authenticated household role. Updates only the current user's
+        preference and updatedAt timestamp, across sessions and households. No financial, household,
+        permission, balance, or audit changes. Repeating the same value has the same result.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [viewMode]
+              properties:
+                viewMode: { type: string, enum: [basic, advanced] }
+            example: { viewMode: basic }
+      responses:
+        "200":
+          description: Preference saved.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [viewMode]
+                    properties:
+                      viewMode: { type: string, enum: [basic, advanced] }
+              example: { data: { viewMode: basic } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/household:
     get:
       operationId: getHousehold

@@ -26,13 +26,15 @@ export default async function StructurePage() {
         <p className="mt-2 text-zinc-600">
           Define la estructura financiera antes de registrar movimientos.
         </p>
-        <div className="mt-4">
-          <FeatureNavigationCard
-            href="/imports"
-            title="Importar estructura"
-            description="Abrir el mismo asistente de revisión por lote."
-          />
-        </div>
+        {context.user.viewMode === "advanced" && (
+          <div className="mt-4">
+            <FeatureNavigationCard
+              href="/imports"
+              title="Importar estructura"
+              description="Abrir el mismo asistente de revisión por lote."
+            />
+          </div>
+        )}
         <StructureManager
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />

@@ -2,8 +2,82 @@ import { redirect } from "next/navigation";
 import { authRepository } from "@/modules/auth/auth.repository";
 import { requireAuth } from "@/shared/auth/request-auth";
 import { FeatureNavigationCard } from "@/shared/ui/navigation";
+import { ViewModeSelect } from "@/shared/ui/finance-shell";
 import { LowBufferSettings } from "./low-buffer-settings";
 import { ResetTestData } from "./reset-test-data";
+
+const basicLinks = [
+  [
+    "/overview",
+    "Resumen general",
+    "Ver el estado financiero, gráficos y próximos pagos.",
+  ],
+  [
+    "/transactions",
+    "Registro de movimientos",
+    "Registrar y revisar ingresos y egresos pagados.",
+  ],
+  [
+    "/structure",
+    "Cuentas y categorías",
+    "Crear y organizar la estructura financiera del hogar.",
+  ],
+  [
+    "/obligations",
+    "Obligaciones",
+    "Planificar vencimientos y registrar pagos.",
+  ],
+] as const;
+
+const advancedLinks = [
+  [
+    "/dashboard",
+    "Panel mensual",
+    "Revisar efectivo, ingresos esperados y proyección por moneda.",
+  ],
+  [
+    "/invoices",
+    "Facturas e IVA",
+    "Gestionar facturas, cobros y reservas de IVA.",
+  ],
+  ["/debts", "Deudas", "Registrar deudas, pagos y saldos pendientes."],
+  [
+    "/groceries",
+    "Compras",
+    "Planificar compras y consultar catálogos y precios.",
+  ],
+  [
+    "/exchange-rates",
+    "Cotizaciones",
+    "Registrar referencias UYU/USD fechadas.",
+  ],
+  [
+    "/financial-periods",
+    "Cierre mensual",
+    "Consultar, cerrar o reabrir períodos según tu rol.",
+  ],
+  [
+    "/imports",
+    "Importación por lote",
+    "Revisar JSON, CSV o Excel antes de importar.",
+  ],
+  [
+    "/reports/accounts-cash-flow",
+    "Flujo de efectivo",
+    "Consultar saldos y movimientos por cuenta y moneda.",
+  ],
+  [
+    "/reports/categories-tax",
+    "Categorías e IVA",
+    "Revisar egresos, facturación y liquidaciones.",
+  ],
+  [
+    "/debt-report",
+    "Reporte de deudas",
+    "Consultar saldos y exposición con cotización explícita.",
+  ],
+] as const;
+
 export default async function SettingsPage() {
   const canResetTestData = process.env.NODE_ENV !== "production";
   let context;
@@ -15,99 +89,50 @@ export default async function SettingsPage() {
   const household = await authRepository.getHousehold(
     context.membership.householdId,
   );
+  const isAdvanced = context.user.viewMode === "advanced";
   return (
     <main className="flex flex-1 justify-center bg-zinc-50 p-6">
       <section className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-sm ring-1 ring-zinc-950/5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-emerald-700">
-              Finanzas Familiares
-            </p>
-            <h1 className="mt-2 text-2xl font-semibold">
-              Configuración del hogar
-            </h1>
-          </div>
+        <p className="text-sm font-semibold text-emerald-700">
+          Finanzas Familiares
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold">Configuración del hogar</h1>
+        <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+          <ViewModeSelect id="settings-view-mode" />
+          <p className="mt-2 text-sm text-zinc-600">
+            La vista básica muestra movimientos, cuentas, categorías y pagos
+            previstos. La avanzada agrega pronósticos detallados, facturas,
+            deudas, compras, importaciones y reportes. Tus datos y permisos son
+            los mismos en ambas vistas.
+          </p>
         </div>
         <nav aria-label="Secciones principales" className="mt-6 grid gap-3">
-          <FeatureNavigationCard
-            href="/overview"
-            title="Resumen general"
-            description="Ver el estado financiero, gráficos y próximos pagos."
-          />
-          <FeatureNavigationCard
-            href="/dashboard"
-            title="Panel mensual"
-            description="Revisar efectivo, ingresos cobrados y proyección por moneda."
-          />
-          <FeatureNavigationCard
-            href="/structure"
-            title="Cuentas y categorías"
-            description="Crear y organizar la estructura financiera del hogar."
-          />
-          <FeatureNavigationCard
-            href="/transactions"
-            title="Registro de movimientos"
-            description="Registrar y revisar ingresos y egresos pagados."
-          />
-          <FeatureNavigationCard
-            href="/obligations"
-            title="Obligaciones y proyección"
-            description="Planificar vencimientos y revisar el efectivo proyectado."
-          />
-          <FeatureNavigationCard
-            href="/debts"
-            title="Deudas"
-            description="Registrar y consultar saldos pendientes en su moneda original."
-          />
-          <FeatureNavigationCard
-            href="/exchange-rates"
-            title="Cotizaciones"
-            description="Registrar referencias UYU/USD fechadas sin alterar saldos."
-          />
-          <FeatureNavigationCard
-            href="/groceries"
-            title="Catálogo de compras"
-            description="Guardar mercados, productos y precios privados sin afectar saldos."
-          />
-          <FeatureNavigationCard
-            href="/debt-report"
-            title="Reporte de deudas"
-            description="Revisar pagos, saldos originales y exposición con cotización explícita."
-          />
-          <FeatureNavigationCard
-            href="/reports/accounts-cash-flow"
-            title="Cuentas y flujo de efectivo"
-            description="Consultar saldos iniciales, movimientos pagados y cierres por moneda."
-          />
-          <FeatureNavigationCard
-            href="/reports/categories-tax"
-            title="Categorías, facturación e IVA"
-            description="Revisar egresos pagados, facturación, reservas y liquidaciones por moneda."
-          />
-          <FeatureNavigationCard
-            href="/imports"
-            title="Importación por lote"
-            description="Pegar JSON o convertir CSV/Excel para una revisión sin modificar registros."
-          />
-          <FeatureNavigationCard
-            href="/invoices"
-            title="Facturas e IVA"
-            description="Registrar facturas y ver el IVA calculado antes de cobrar o reservar fondos."
-          />
-          <FeatureNavigationCard
-            href="/financial-periods"
-            title="Cierre mensual"
-            description="Consultar el estado del mes y, si eres propietario, cerrarlo o reabrirlo con evidencia."
-          />
-          {(context.membership.role === "owner" ||
-            context.membership.role === "accountant") && (
+          {basicLinks.map(([href, title, description]) => (
             <FeatureNavigationCard
-              href="/reports/audit-export"
-              title="Auditoría y exportación"
-              description="Revisar eventos del hogar y descargar registros financieros en CSV."
+              key={href}
+              href={href}
+              title={title}
+              description={description}
             />
-          )}
-          {context.membership.role === "editor" && (
+          ))}
+          {isAdvanced &&
+            advancedLinks.map(([href, title, description]) => (
+              <FeatureNavigationCard
+                key={href}
+                href={href}
+                title={title}
+                description={description}
+              />
+            ))}
+          {isAdvanced &&
+            ["owner", "accountant"].includes(context.membership.role) && (
+              <FeatureNavigationCard
+                href="/reports/audit-export"
+                title="Auditoría y exportación"
+                description="Revisar eventos del hogar y descargar registros financieros en CSV."
+              />
+            )}
+          {isAdvanced && context.membership.role === "editor" && (
             <FeatureNavigationCard
               href="/reports/export"
               title="Exportar registros financieros"

@@ -4,7 +4,11 @@ import { hashPassword, verifyPassword } from "./password";
 import { createSessionToken, hashSessionToken } from "./session-token";
 
 const viewerContext = {
-  user: { id: "user-1", email: "viewer@example.test" },
+  user: {
+    id: "user-1",
+    email: "viewer@example.test",
+    viewMode: "basic" as const,
+  },
   membership: {
     id: "member-1",
     householdId: "household-a",

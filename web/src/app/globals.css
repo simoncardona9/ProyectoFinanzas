@@ -76,6 +76,33 @@
   letter-spacing: 1.6px;
   color: #8994ae;
 }
+.finance-view-mode {
+  display: grid;
+  gap: 6px;
+  color: #c4ccde;
+  font-size: 12px;
+}
+.finance-sidebar .finance-view-mode {
+  margin: 24px 10px 0;
+}
+.finance-view-mode label {
+  font-weight: 600;
+}
+.finance-view-mode select {
+  width: 100%;
+  border: 1px solid #394257;
+  border-radius: 8px;
+  background: #202635;
+  color: #edf0f8;
+  padding: 8px;
+}
+.finance-view-mode select:focus-visible {
+  outline: 2px solid #70e0bf;
+  outline-offset: 2px;
+}
+.finance-view-mode p {
+  color: #ff9caa;
+}
 .finance-sidebar nav {
   display: grid;
   gap: 4px;

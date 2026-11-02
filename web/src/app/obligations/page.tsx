@@ -28,13 +28,22 @@ export default async function ObligationsPage() {
           Las obligaciones pendientes afectan la proyección, pero no el efectivo
           actual hasta registrar un pago.
         </p>
-        <div className="mt-4">
-          <FeatureNavigationCard
-            href="/imports"
-            title="Importar obligaciones"
-            description="Abrir el mismo asistente de revisión por lote."
-          />
-        </div>
+        {context.user.viewMode === "basic" && (
+          <p className="mt-2 text-sm text-zinc-500">
+            Para planificar un gasto del mes, registra una obligación con su
+            importe y vencimiento. Los límites mensuales por categoría todavía
+            no están disponibles.
+          </p>
+        )}
+        {context.user.viewMode === "advanced" && (
+          <div className="mt-4">
+            <FeatureNavigationCard
+              href="/imports"
+              title="Importar obligaciones"
+              description="Abrir el mismo asistente de revisión por lote."
+            />
+          </div>
+        )}
         <ObligationManager
           canEdit={["owner", "editor"].includes(context.membership.role)}
         />

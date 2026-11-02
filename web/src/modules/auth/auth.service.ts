@@ -36,7 +36,7 @@ export async function login(email: string, password: string) {
   );
   return {
     token,
-    user: { id: user.id, email: user.email },
+    user: { id: user.id, email: user.email, viewMode: user.viewMode },
     memberships,
     activeMembership: memberships[0],
   };
@@ -63,7 +63,11 @@ export async function getAuthContext(
       "This user has no household membership.",
     );
   return {
-    user: { id: session.userId, email: session.email },
+    user: {
+      id: session.userId,
+      email: session.email,
+      viewMode: session.viewMode,
+    },
     membership,
     sessionId: session.sessionId,
   };

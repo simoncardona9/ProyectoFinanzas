@@ -122,11 +122,14 @@ export const groceryCatalogRecordType = pgEnum("grocery_catalog_record_type", [
   "price",
 ]);
 
+export const viewModeEnum = pgEnum("view_mode", ["basic", "advanced"]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  viewMode: viewModeEnum("view_mode").notNull().default("basic"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

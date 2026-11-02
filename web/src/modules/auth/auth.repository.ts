@@ -1,18 +1,20 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { households, memberships, sessions, users } from "@/db/schema";
-import type { Membership, Role } from "@/shared/auth/auth.types";
+import type { Membership, Role, ViewMode } from "@/shared/auth/auth.types";
 
 export type UserLogin = {
   id: string;
   email: string;
   passwordHash: string;
   isActive: boolean;
+  viewMode: ViewMode;
 };
 export type SessionLookup = {
   sessionId: string;
   userId: string;
   email: string;
+  viewMode: ViewMode;
   householdId: string | null;
 };
 
@@ -20,7 +22,13 @@ export const authRepository = {
   async findUserByEmail(email: string): Promise<UserLogin | undefined> {
     return db.query.users.findFirst({
       where: eq(users.email, email),
-      columns: { id: true, email: true, passwordHash: true, isActive: true },
+      columns: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        isActive: true,
+        viewMode: true,
+      },
     });
   },
   async createSession(
@@ -43,6 +51,7 @@ export const authRepository = {
         sessionId: sessions.id,
         userId: users.id,
         email: users.email,
+        viewMode: users.viewMode,
         householdId: sessions.activeHouseholdId,
       })
       .from(sessions)
@@ -62,6 +71,14 @@ export const authRepository = {
       .update(sessions)
       .set({ revokedAt: new Date() })
       .where(eq(sessions.tokenHash, tokenHash));
+  },
+  async updateViewMode(userId: string, viewMode: ViewMode) {
+    const [user] = await db
+      .update(users)
+      .set({ viewMode, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning({ viewMode: users.viewMode });
+    return user;
   },
   async getMemberships(userId: string): Promise<Membership[]> {
     return db

@@ -18,6 +18,13 @@ El Step 11 incluye publicación deliberada y anonimizada,
 búsqueda normalizada y adopción explícita de sugerencias hacia el catálogo
 privado de otro hogar.
 
+Cada usuario puede elegir la vista **Básica** o **Avanzada** desde la barra
+lateral o Configuración. La vista básica muestra el resumen, movimientos,
+cuentas/categorías y obligaciones; la avanzada agrega el resto de las
+herramientas. La elección se guarda por usuario y no modifica permisos,
+registros ni cálculos financieros. Los usuarios existentes conservan la vista
+avanzada al aplicar la migración; los nuevos comienzan con la básica.
+
 El avance detallado y los criterios de cada etapa están en
 [docs/development-progress.md](docs/development-progress.md) y
 [docs/development-process.md](docs/development-process.md).

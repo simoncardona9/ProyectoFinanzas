@@ -15,6 +15,7 @@ export default async function OverviewPage({
     redirect("/login");
   }
   const query = await searchParams;
+  const isAdvanced = context.user.viewMode === "advanced";
   const currentPeriod = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Montevideo",
     year: "numeric",
@@ -154,7 +155,10 @@ export default async function OverviewPage({
             {data.lowBuffer
               ? "está por debajo del colchón mínimo del hogar"
               : "es negativa"}
-            . <Link href="/dashboard">Revisar planificación →</Link>
+            .{" "}
+            {isAdvanced && (
+              <Link href="/dashboard">Revisar planificación →</Link>
+            )}
           </p>
         )}
         <div className="overview-kpis">
@@ -262,7 +266,9 @@ export default async function OverviewPage({
                   {money(net)}
                 </strong>
               </span>
-              <Link href="/reports/accounts-cash-flow">Ver reporte →</Link>
+              {isAdvanced && (
+                <Link href="/reports/accounts-cash-flow">Ver reporte →</Link>
+              )}
             </div>
           </section>
           <section className="overview-card">
@@ -283,7 +289,11 @@ export default async function OverviewPage({
                 {data.categories.slice(0, 6).map((row, index) => (
                   <div key={row.key}>
                     <div className="overview-category-label">
-                      <Link href={categoriesHref}>{row.label}</Link>
+                      {isAdvanced ? (
+                        <Link href={categoriesHref}>{row.label}</Link>
+                      ) : (
+                        <span>{row.label}</span>
+                      )}
                       <strong>{money(row.totalMinor)}</strong>
                     </div>
                     <div className="overview-track">
@@ -313,7 +323,9 @@ export default async function OverviewPage({
               <span>
                 Total <strong>{money(categoryTotal)}</strong>
               </span>
-              <Link href={categoriesHref}>Ver categorías →</Link>
+              {isAdvanced && (
+                <Link href={categoriesHref}>Ver categorías →</Link>
+              )}
             </div>
             {data.categories.length > 6 && (
               <p className="overview-muted">
@@ -390,9 +402,11 @@ export default async function OverviewPage({
               <span>IVA protegido actualmente</span>
               <strong>{money(summary?.protectedReserveMinor ?? 0)}</strong>
             </div>
-            <Link className="overview-action" href="/dashboard">
-              Abrir planificación mensual →
-            </Link>
+            {isAdvanced && (
+              <Link className="overview-action" href="/dashboard">
+                Abrir planificación mensual →
+              </Link>
+            )}
             <p className="overview-muted">
               El efectivo es el saldo actual; ingresos, egresos y proyección
               corresponden al mes elegido. Los pagos próximos se calculan desde

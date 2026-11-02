@@ -1,7 +1,12 @@
 export const roles = ["owner", "editor", "viewer", "accountant"] as const;
 export type Role = (typeof roles)[number];
 
-export type AuthenticatedUser = { id: string; email: string };
+export type ViewMode = "basic" | "advanced";
+export type AuthenticatedUser = {
+  id: string;
+  email: string;
+  viewMode: ViewMode;
+};
 export type Membership = {
   id: string;
   householdId: string;

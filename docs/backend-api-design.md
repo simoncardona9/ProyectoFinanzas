@@ -188,6 +188,9 @@ Authentication is first-party and database-backed. There is no public registrati
 | `POST /auth/logout`           | none                      | Revoke the current session and clear its cookie.                                  |
 | `GET /auth/me`                | none                      | Return the current user, active household membership, and selectable memberships. |
 | `POST /auth/active-household` | body: `householdId`       | Set the active household after verifying the user has an active membership.       |
+| `PATCH /auth/view-mode` | body: `viewMode` (`basic` or `advanced`) | Save the signed-in user's display preference across sessions and households. |
+
+`PATCH /auth/view-mode` is available to every authenticated household role. It updates only that user's preference and timestamp. It does not change permissions, financial records, balances, or household data; repeating the same choice has the same result. Invalid values return `VALIDATION_ERROR` (400), and unauthenticated calls return 401.
 
 ### 1. `households.controller`
 

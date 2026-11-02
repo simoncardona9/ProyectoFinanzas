@@ -10,7 +10,11 @@ import {
 } from "./financial-period.service";
 
 const ownerContext = {
-  user: { id: "owner-id", email: "owner@example.com" },
+  user: {
+    id: "owner-id",
+    email: "owner@example.com",
+    viewMode: "basic" as const,
+  },
   membership: {
     id: "membership-id",
     householdId: "household-id",
